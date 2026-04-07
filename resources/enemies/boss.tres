@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "boss"
+display_name = "余烬监工"
+behavior = "shooter"
+max_health = 720.0
+move_speed = 60.0
+touch_damage = 22.0
+experience_reward = 150
+size = 28.0
+spawn_weight = 0.0
+color = Color(0.82, 0.26, 0.31, 1)
+preferred_distance = 260.0
+projectile_cooldown = 1.15
+projectile_speed = 260.0
+projectile_damage = 14.0

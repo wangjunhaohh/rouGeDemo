@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "split_round"
+display_name = "散射校准"
+description = "主武器弹体数量 +1"
+rarity_weight = 0.72
+max_level = 3
+effect_type = "projectile_count"
+amount = 1.0

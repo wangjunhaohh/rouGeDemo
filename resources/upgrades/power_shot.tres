@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "power_shot"
+display_name = "重击弹头"
+description = "主武器伤害 +6"
+rarity_weight = 1.15
+max_level = 5
+effect_type = "projectile_damage"
+amount = 6.0

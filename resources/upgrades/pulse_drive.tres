@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "pulse_drive"
+display_name = "脉冲驱动"
+description = "脉冲冷却 -0.35 秒"
+rarity_weight = 0.78
+max_level = 4
+effect_type = "pulse_cooldown"
+amount = -0.35

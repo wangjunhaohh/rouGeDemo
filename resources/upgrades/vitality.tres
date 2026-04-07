@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "vitality"
+display_name = "生命扩容"
+description = "最大生命 +20，并回复同等生命"
+rarity_weight = 0.85
+max_level = 4
+effect_type = "max_health"
+amount = 20.0

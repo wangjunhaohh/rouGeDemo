@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "shooter"
+display_name = "远程怪"
+behavior = "shooter"
+max_health = 34.0
+move_speed = 88.0
+touch_damage = 7.0
+experience_reward = 10
+size = 14.0
+spawn_weight = 0.8
+color = Color(0.34, 0.64, 0.92, 1)
+preferred_distance = 235.0
+projectile_cooldown = 2.1
+projectile_speed = 230.0
+projectile_damage = 13.0

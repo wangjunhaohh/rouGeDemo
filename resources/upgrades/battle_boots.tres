@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "battle_boots"
+display_name = "战地靴"
+description = "移动速度 +25"
+rarity_weight = 0.85
+max_level = 3
+effect_type = "move_speed"
+amount = 25.0

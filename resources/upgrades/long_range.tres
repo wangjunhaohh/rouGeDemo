@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "long_range"
+display_name = "长程校准"
+description = "主武器射程 +90"
+rarity_weight = 0.9
+max_level = 3
+effect_type = "projectile_range"
+amount = 90.0
