@@ -2,6 +2,16 @@ extends RefCounted
 class_name MetaProgression
 
 const SAVE_PATH := "user://meta_progression.save"
+const UPGRADE_ORDER := [
+	"endurance",
+	"drill",
+	"magnet",
+	"stride",
+	"cadence",
+	"piercer",
+	"furnace",
+	"salvage"
+]
 const DEFINITIONS := {
 	"endurance": {
 		"name": "钢骨训练",
@@ -38,6 +48,48 @@ const DEFINITIONS := {
 		"max_level": 4,
 		"effect_type": "move_speed",
 		"amount": 14.0
+	},
+	"cadence": {
+		"name": "连发组件",
+		"description": "开局主武器冷却 -0.08 秒",
+		"cost": 28,
+		"cost_step": 18,
+		"max_level": 4,
+		"effect_type": "projectile_cooldown",
+		"amount": -0.08,
+		"requires": {"drill": 1}
+	},
+	"piercer": {
+		"name": "破甲芯轴",
+		"description": "开局主武器穿透 +1",
+		"cost": 34,
+		"cost_step": 20,
+		"max_level": 2,
+		"effect_type": "projectile_pierce",
+		"amount": 1.0,
+		"requires": {"cadence": 1}
+	},
+	"furnace": {
+		"name": "余烬电容",
+		"description": "开局解锁脉冲，并让脉冲伤害 +6",
+		"cost": 36,
+		"cost_step": 20,
+		"max_level": 1,
+		"effect_type": "unlock_pulse",
+		"amount": 1.0,
+		"secondary_effect_type": "pulse_damage",
+		"secondary_amount": 6.0,
+		"requires": {"drill": 2}
+	},
+	"salvage": {
+		"name": "残响回收",
+		"description": "结算暗核碎片 +12%",
+		"cost": 26,
+		"cost_step": 16,
+		"max_level": 3,
+		"effect_type": "shard_bonus_rate",
+		"amount": 0.12,
+		"requires": {"magnet": 1}
 	}
 }
 
@@ -87,6 +139,8 @@ func can_purchase(upgrade_id: String) -> bool:
 		return false
 	if get_level(upgrade_id) >= int(definition.get("max_level", 0)):
 		return false
+	if not _requirements_met(Dictionary(definition.get("requires", {}))):
+		return false
 	return shards >= get_cost(upgrade_id)
 
 
@@ -104,13 +158,14 @@ func apply_to_player(player: Player) -> void:
 		var definition: Dictionary = DEFINITIONS.get(upgrade_id, {})
 		var level := get_level(upgrade_id)
 		for _i in range(level):
-			player.apply_meta_bonus(String(definition.get("effect_type", "")), float(definition.get("amount", 0.0)))
+			_apply_run_effect(player, String(definition.get("effect_type", "")), float(definition.get("amount", 0.0)))
+			_apply_run_effect(player, String(definition.get("secondary_effect_type", "")), float(definition.get("secondary_amount", 0.0)))
 	player.refresh_health_ui()
 
 
 func build_upgrade_view_models() -> Array[Dictionary]:
 	var items: Array[Dictionary] = []
-	for upgrade_id in DEFINITIONS.keys():
+	for upgrade_id in UPGRADE_ORDER:
 		var definition: Dictionary = DEFINITIONS[upgrade_id]
 		items.append({
 			"id": upgrade_id,
@@ -119,6 +174,54 @@ func build_upgrade_view_models() -> Array[Dictionary]:
 			"level": get_level(upgrade_id),
 			"max_level": int(definition["max_level"]),
 			"cost": get_cost(upgrade_id),
-			"can_buy": can_purchase(upgrade_id)
+			"can_buy": can_purchase(upgrade_id),
+			"locked_reason": get_locked_reason(upgrade_id)
 		})
 	return items
+
+
+func get_locked_reason(upgrade_id: String) -> String:
+	var definition: Dictionary = DEFINITIONS.get(upgrade_id, {})
+	if definition.is_empty():
+		return ""
+	var requirements: Dictionary = Dictionary(definition.get("requires", {}))
+	if requirements.is_empty():
+		return ""
+	var parts: Array[String] = []
+	for requirement_id in requirements.keys():
+		var required_level: int = int(requirements[requirement_id])
+		if get_level(String(requirement_id)) >= required_level:
+			continue
+		var requirement_definition: Dictionary = DEFINITIONS.get(requirement_id, {})
+		var requirement_name: String = String(requirement_definition.get("name", requirement_id))
+		parts.append("%s Lv.%d" % [requirement_name, required_level])
+	return "需要 %s" % " / ".join(parts)
+
+
+func get_total_effect_value(effect_type: String) -> float:
+	var total: float = 0.0
+	for upgrade_id in upgrades.keys():
+		var definition: Dictionary = DEFINITIONS.get(upgrade_id, {})
+		if definition.is_empty():
+			continue
+		var level: int = get_level(String(upgrade_id))
+		if String(definition.get("effect_type", "")) == effect_type:
+			total += float(definition.get("amount", 0.0)) * level
+		if String(definition.get("secondary_effect_type", "")) == effect_type:
+			total += float(definition.get("secondary_amount", 0.0)) * level
+	return total
+
+
+func _requirements_met(requirements: Dictionary) -> bool:
+	for requirement_id in requirements.keys():
+		if get_level(String(requirement_id)) < int(requirements[requirement_id]):
+			return false
+	return true
+
+
+func _apply_run_effect(player: Player, effect_type: String, amount: float) -> void:
+	if effect_type.is_empty():
+		return
+	if effect_type == "shard_bonus_rate":
+		return
+	player.apply_meta_bonus(effect_type, amount)

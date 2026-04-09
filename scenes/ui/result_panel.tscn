@@ -33,7 +33,7 @@ grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(660, 430)
+custom_minimum_size = Vector2(760, 620)
 
 [node name="PanelTexture" type="TextureRect" parent="CenterContainer/Panel"]
 layout_mode = 1
@@ -76,6 +76,8 @@ text = "暗核碎片 0"
 [node name="MetaUpgrades" type="GridContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 columns = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
 
 [node name="EnduranceButton" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/MetaUpgrades"]
 layout_mode = 2

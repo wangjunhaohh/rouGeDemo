@@ -1,0 +1,184 @@
+Godot Engine v4.6.stable.official.89cea1439 - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Unrecognized output string "misc2" in mapping:
+030000000d0f00000202000000000000,Horipad O Nintendo Switch 2 Controller,a:b1,b:b0,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,misc1:b13,misc2:b14,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b3,y:b2,platform:Windows,
+Unrecognized output string "misc2" in mapping:
+030000000d0f00009601000000000000,Horipad Steam,a:b0,b:b1,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b6,leftstick:b13,lefttrigger:b8,leftx:a0,lefty:a1,misc2:b2,paddle1:b5,paddle2:b15,paddle3:b18,paddle4:b19,rightshoulder:b7,rightstick:b14,righttrigger:b9,rightx:a3,righty:a4,start:b11,x:b3,y:b4,platform:Windows,
+Unrecognized output string "misc2" in mapping:
+030000007e0500006920000000000000,Nintendo Switch 2 Pro Controller,a:b0,b:b1,back:b14,dpdown:b8,dpleft:b10,dpright:b9,dpup:b11,guide:b16,leftshoulder:b12,leftstick:b15,lefttrigger:b13,leftx:a0,lefty:a1~,misc1:b17,misc2:b20,paddle1:b18,paddle2:b19,rightshoulder:b4,rightstick:b7,righttrigger:b5,rightx:a2,righty:a3~,start:b6,x:b2,y:b3,platform:Windows,
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+CORE API HASH: 3663110324
+EDITOR API HASH: 835956462
+SceneTreeFTI: traversal method DEFAULT
+Loading resource: C:/Users/OMEN/AppData/Roaming/Godot/editor_settings-4.6.tres
+EditorSettings: Load OK!
+EditorTheme: Generating new theme for the config '3810048042'.
+EditorTheme: Generating new icons.
+EditorTheme: Generating new fonts.
+EditorTheme: Generating new styles.
+Loading resource: C:/Users/OMEN/AppData/Local/Godot/editor_doc_cache-4.6.res
+Loaded system CA certificates
+Failed to bind socket. Error: 3.
+[   0% ] first_scan_filesystem | Started 项目初始化 (5 steps)
+[   0% ] first_scan_filesystem | 正在扫描文件结构……
+[  16% ] first_scan_filesystem | 正在加载全局类名……
+[  33% ] first_scan_filesystem | 正在校验 GDExtension……
+[  50% ] first_scan_filesystem | 正在创建自动加载脚本……
+[  66% ] first_scan_filesystem | 正在初始化插件……
+[  83% ] first_scan_filesystem | 正在启动文件扫描……
+[ DONE ] first_scan_filesystem
+
+Loading resource: res://icon.svg
+Loading resource: res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex
+Loading resource: res://icon.svg
+Loading resource: res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex
+[   0% ] savepack | Started 打包中 (102 steps)
+[   1% ] savepack | 保存文件：res://.godot/imported/arena_overlay.png-a82862e070c9aacaaa0da7d14255ad1d.ctex
+[   1% ] savepack | 保存文件：res://art/backgrounds/arena_overlay.png.import
+[   2% ] savepack | 保存文件：res://.godot/imported/arena_tile.png-abc14ecdb79902a1e0b0ee87f2a64f3d.ctex
+[   2% ] savepack | 保存文件：res://art/backgrounds/arena_tile.png.import
+[   4% ] savepack | 保存文件：res://.godot/imported/panel_tile.png-20034b3ae98c39696e0e2bbaa4a8c6d6.ctex
+[   4% ] savepack | 保存文件：res://art/backgrounds/panel_tile.png.import
+[   5% ] savepack | 保存文件：res://.godot/imported/vignette.png-d05979329376e3946077fc323a6bcf53.ctex
+[   5% ] savepack | 保存文件：res://art/backgrounds/vignette.png.import
+[   7% ] savepack | 保存文件：res://.godot/imported/enemy_boss.png-ce5f5104556a6b6153c9660ab8d4f923.ctex
+[   7% ] savepack | 保存文件：res://art/sprites/enemy_boss.png.import
+[   8% ] savepack | 保存文件：res://.godot/imported/enemy_brute.png-866b754b45ad0029ebbb19a819be61c0.ctex
+[   8% ] savepack | 保存文件：res://art/sprites/enemy_brute.png.import
+[  10% ] savepack | 保存文件：res://.godot/imported/enemy_elite.png-ff8e1d6fff456a14ce7c2396b1a84911.ctex
+[  10% ] savepack | 保存文件：res://art/sprites/enemy_elite.png.import
+[  11% ] savepack | 保存文件：res://.godot/imported/enemy_runner.png-ececbb114ed8e1eae871e3be30cbba7a.ctex
+[  11% ] savepack | 保存文件：res://art/sprites/enemy_runner.png.import
+[  13% ] savepack | 保存文件：res://.godot/imported/enemy_shooter.png-0c41e4f0a9f86bc5235c1b4c892361b5.ctex
+[  13% ] savepack | 保存文件：res://art/sprites/enemy_shooter.png.import
+[  14% ] savepack | 保存文件：res://.godot/imported/experience_orb.png-044aec2c82ddae3e45654bda52527c19.ctex
+[  14% ] savepack | 保存文件：res://art/sprites/experience_orb.png.import
+[  16% ] savepack | 保存文件：res://.godot/imported/player.png-d2786ae8d6617c03b4b215c1c13b7de0.ctex
+[  16% ] savepack | 保存文件：res://art/sprites/player.png.import
+[  17% ] savepack | 保存文件：res://.godot/imported/projectile_enemy.png-864d034f18d5b023453433d783649bab.ctex
+[  17% ] savepack | 保存文件：res://art/sprites/projectile_enemy.png.import
+[  19% ] savepack | 保存文件：res://.godot/imported/projectile_player.png-40672f8a5d89fb98f5f5ae5848bfeea9.ctex
+[  19% ] savepack | 保存文件：res://art/sprites/projectile_player.png.import
+[  20% ] savepack | 保存文件：res://.godot/imported/boss_spawn.wav-23a739e7640463b7e64904d9e1ef28ab.sample
+[  20% ] savepack | 保存文件：res://audio/sfx/boss_spawn.wav.import
+[  22% ] savepack | 保存文件：res://.godot/imported/defeat.wav-4cad04e341f4ba4adac201a84df8482c.sample
+[  22% ] savepack | 保存文件：res://audio/sfx/defeat.wav.import
+[  23% ] savepack | 保存文件：res://.godot/imported/elite_spawn.wav-e4a17c42b56ba6643801b241be25dd0a.sample
+[  23% ] savepack | 保存文件：res://audio/sfx/elite_spawn.wav.import
+[  25% ] savepack | 保存文件：res://.godot/imported/enemy_die.wav-89f378851937f0987c5421313bcc6b57.sample
+[  25% ] savepack | 保存文件：res://audio/sfx/enemy_die.wav.import
+[  26% ] savepack | 保存文件：res://.godot/imported/hit.wav-c4e45b57fbe9fe41b04c129f1f721831.sample
+[  26% ] savepack | 保存文件：res://audio/sfx/hit.wav.import
+[  28% ] savepack | 保存文件：res://.godot/imported/hurt.wav-070a1d90b4f20e0190267ae2225dc033.sample
+[  28% ] savepack | 保存文件：res://audio/sfx/hurt.wav.import
+[  29% ] savepack | 保存文件：res://.godot/imported/level_up.wav-ece26f72aed5076e3d0c65913ce9932d.sample
+[  29% ] savepack | 保存文件：res://audio/sfx/level_up.wav.import
+[  31% ] savepack | 保存文件：res://.godot/imported/pickup.wav-8f1df0dbaf980a99488429b0935e3f87.sample
+[  31% ] savepack | 保存文件：res://audio/sfx/pickup.wav.import
+[  32% ] savepack | 保存文件：res://.godot/imported/shoot.wav-9f061d91fb81a9ec411c90a01cce4148.sample
+[  32% ] savepack | 保存文件：res://audio/sfx/shoot.wav.import
+[  33% ] savepack | 保存文件：res://.godot/imported/victory.wav-74a81b89c99d39042d3e33c16df9fa58.sample
+[  33% ] savepack | 保存文件：res://audio/sfx/victory.wav.import
+[  34% ] savepack | 保存文件：res://.godot/exported/133200997/export-c11604fddc8fedd87696f9bcce38c416-boss.res
+[  36% ] savepack | 保存文件：res://.godot/exported/133200997/export-d6e92348fb8de12acbf421e9e02e8eb1-brute.res
+[  37% ] savepack | 保存文件：res://.godot/exported/133200997/export-df9f47617c66f6e69dca8c5557a07600-runner.res
+[  39% ] savepack | 保存文件：res://.godot/exported/133200997/export-9af9c039b7faf00167f855a86f2b88f4-shooter.res
+[  40% ] savepack | 保存文件：res://.godot/exported/133200997/export-54fefaea76112bf06b39f93978bea128-battle_boots.res
+[  42% ] savepack | 保存文件：res://.godot/exported/133200997/export-2c82b802348a70a2527b08b05fc3beb3-long_range.res
+[  43% ] savepack | 保存文件：res://.godot/exported/133200997/export-d4495225a55d9faab32d66e01b549503-piercing_round.res
+[  45% ] savepack | 保存文件：res://.godot/exported/133200997/export-c67ed3cf6630df5fea8f1f82f20a4d66-power_shot.res
+[  46% ] savepack | 保存文件：res://.godot/exported/133200997/export-f15a9f9c5611247ec4c44f6ff4dae0bf-pulse_core.res
+[  48% ] savepack | 保存文件：res://.godot/exported/133200997/export-ea6bcffbe5fbe7ac3f45ea4334e962ff-pulse_drive.res
+[  50% ] savepack | 保存文件：res://.godot/exported/133200997/export-3a944ed6bae5f71020e1bf74a3f2260b-pulse_emitter.res
+[  51% ] savepack | 保存文件：res://.godot/exported/133200997/export-9e8c5c4b20c461dd69160e524a88a2ca-rapid_fire.res
+[  53% ] savepack | 保存文件：res://.godot/exported/133200997/export-45f5a3667a20557e3d4b61706032a87a-split_round.res
+[  54% ] savepack | 保存文件：res://.godot/exported/133200997/export-6e681e727f70dc6287bd33c9ceae4d4a-vitality.res
+[  56% ] savepack | 保存文件：res://.godot/exported/133200997/export-d496fb4024c05fbba0fd73b9befafeea-enemy.scn
+[  57% ] savepack | 保存文件：res://.godot/exported/133200997/export-fb4079035b5ec772698c1dedb2bcc8b7-enemy_projectile.scn
+[  59% ] savepack | 保存文件：res://.godot/exported/133200997/export-f39996a6d27a38698d16421ab974097b-main.scn
+[  60% ] savepack | 保存文件：res://.godot/exported/133200997/export-c2c62cb8c73458cd122faf659769dc80-player.scn
+[  62% ] savepack | 保存文件：res://.godot/exported/133200997/export-11ef672b041ffb5bc8c1674211546bb2-experience_orb.scn
+[  63% ] savepack | 保存文件：res://.godot/exported/133200997/export-f26fe175837e58804f1c48b99041ac16-hud.scn
+[  65% ] savepack | 保存文件：res://.godot/exported/133200997/export-a3bf49f81676e103ce1c01d3a344d617-level_up_panel.scn
+[  66% ] savepack | 保存文件：res://.godot/exported/133200997/export-d071647e01eed5590540b06d01d2cd79-result_panel.scn
+[  67% ] savepack | 保存文件：res://.godot/exported/133200997/export-3e0c062fd7005569bb6b99bd16c4e4ef-player_projectile.scn
+[  68% ] savepack | 保存文件：res://.godot/exported/133200997/export-1448efe5f0cd0060e34b08396c746f6f-pulse_wave.scn
+[  70% ] savepack | 保存文件：res://scripts/actors/enemy.gdc
+[  71% ] savepack | 保存文件：res://scripts/actors/enemy_projectile.gdc
+[  73% ] savepack | 保存文件：res://scripts/actors/player.gdc
+[  74% ] savepack | 保存文件：res://scripts/core/arena.gdc
+[  76% ] savepack | 保存文件：res://scripts/core/audio_manager.gdc
+[  77% ] savepack | 保存文件：res://scripts/core/game_manager.gdc
+[  79% ] savepack | 保存文件：res://scripts/core/meta_progression.gdc
+[  80% ] savepack | 保存文件：res://scripts/data/content_catalog.gdc
+[  82% ] savepack | 保存文件：res://scripts/data/enemy_data.gdc
+[  83% ] savepack | 保存文件：res://scripts/data/upgrade_data.gdc
+[  85% ] savepack | 保存文件：res://scripts/effects/pixel_burst.gdc
+[  86% ] savepack | 保存文件：res://scripts/systems/experience_orb.gdc
+[  88% ] savepack | 保存文件：res://scripts/tools/generate_pixel_assets.gdc
+[  89% ] savepack | 保存文件：res://scripts/ui/hud.gdc
+[  91% ] savepack | 保存文件：res://scripts/ui/level_up_panel.gdc
+[  92% ] savepack | 保存文件：res://scripts/ui/result_panel.gdc
+[  94% ] savepack | 保存文件：res://scripts/weapons/player_projectile.gdc
+[  95% ] savepack | 保存文件：res://scripts/weapons/pulse_wave.gdc
+[  97% ] savepack | 保存文件：res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex
+[  97% ] savepack | 保存文件：res://icon.svg.import
+[  97% ] savepack | 保存文件：res://resources/enemies/boss.tres.remap
+[  97% ] savepack | 保存文件：res://resources/enemies/brute.tres.remap
+[  97% ] savepack | 保存文件：res://resources/enemies/runner.tres.remap
+[  97% ] savepack | 保存文件：res://resources/enemies/shooter.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/battle_boots.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/long_range.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/piercing_round.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/power_shot.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/pulse_core.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/pulse_drive.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/pulse_emitter.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/rapid_fire.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/split_round.tres.remap
+[  97% ] savepack | 保存文件：res://resources/upgrades/vitality.tres.remap
+[  97% ] savepack | 保存文件：res://scenes/enemies/enemy.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/enemies/enemy_projectile.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/main/main.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/player/player.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/props/experience_orb.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/ui/hud.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/ui/level_up_panel.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/ui/result_panel.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/weapons/player_projectile.tscn.remap
+[  97% ] savepack | 保存文件：res://scenes/weapons/pulse_wave.tscn.remap
+[  97% ] savepack | 保存文件：res://scripts/actors/enemy.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/actors/enemy_projectile.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/actors/player.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/core/arena.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/core/audio_manager.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/core/game_manager.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/core/meta_progression.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/data/content_catalog.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/data/enemy_data.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/data/upgrade_data.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/effects/pixel_burst.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/systems/experience_orb.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/tools/generate_pixel_assets.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/ui/hud.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/ui/level_up_panel.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/ui/result_panel.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/weapons/player_projectile.gd.remap
+[  97% ] savepack | 保存文件：res://scripts/weapons/pulse_wave.gd.remap
+[  97% ] savepack | 保存文件：res://.godot/global_script_class_cache.cfg
+[  97% ] savepack | 保存文件：res://icon.svg
+[  97% ] savepack | 保存文件：res://.godot/uid_cache.bin
+[  97% ] savepack | 保存文件：res://project.binary
+[ DONE ] savepack
+
+Failed to bind socket. Error: 3.
+Script docs haven't been properly loaded or regenerated, so don't save them to disk.
+EditorSettings: Save OK!
+XR: Clearing primary interface
+XR: Removed interface "Native mobile"
+XR: Removed interface "OpenXR"
+Orphan StringName: Node (static: 3, total: 4)
+StringName: 1 unclaimed string names at exit.

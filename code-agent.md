@@ -73,6 +73,25 @@ res://
 - 关键资源要做导出一致性验证
 - 动态扫描目录和字符串路径加载要谨慎
 - 敌人、音频、UI、配置资源都要考虑导出包可访问性
+- 只要改动了资源加载、资源定义、导出配置、主流程脚本，就要主动考虑导出链路是否会失效
+- 新增 `EnemyData`、`UpgradeData` 等资源时，不能只把 `.tres` 放进目录，必须同步更新 [content_catalog.gd](D:\javaweb\godot\rouGeDemo\test-rou\scripts\data\content_catalog.gd) 的显式清单
+
+### 导出命令
+默认使用下面这条命令导出 Windows 调试包：
+
+```powershell
+& 'D:\edge\Godot_v4.6-stable_win64.exe' --headless --path 'D:\javaweb\godot\rouGeDemo\test-rou' --export-debug 'Windows Desktop' 'D:\javaweb\godot\port\test.exe'
+```
+
+### 导出后校验要求
+- Code Agent 需要时刻关注“编辑器可运行但导出不可运行”的情况
+- 涉及资源加载、动态内容注册、输入映射、主场景初始化的改动后，默认至少做一次导出校验
+- 导出后优先运行导出版做验证，而不是只验证编辑器内运行
+- 如需查看导出版资源是否真正被打包，可使用：
+
+```powershell
+& 'D:\javaweb\godot\port\test.console.exe' --headless --quit-after 240 --verbose
+```
 
 ## 系统实现：特殊技能卡
 
@@ -157,3 +176,11 @@ res://
 - 10 分钟内能完成一个可重复游玩的战斗闭环
 - 新增一个敌人或升级项时，不需要重写底层系统
 - 稳定支持快速迭代与反复试玩
+
+## 新实现需求：武器动画系统
+
+### 实现要求
+- 人物攻击动作与武器动画解耦
+- 动画播放需支持和攻击判定同步
+- 支持按武器类型切换不同动画资源
+- 支持后续扩展前摇、后摇、连击和蓄力

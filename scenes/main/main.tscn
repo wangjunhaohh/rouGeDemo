@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/level_up_panel.tscn" id="5"]
 [ext_resource type="PackedScene" path="res://scenes/ui/result_panel.tscn" id="6"]
 [ext_resource type="Script" uid="uid://cf8mxi7yn7vbo" path="res://scripts/core/audio_manager.gd" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/ui/special_card_panel.tscn" id="8"]
 
 [node name="Game" type="Node2D" unique_id=1618156083]
 process_mode = 3
@@ -23,6 +24,8 @@ script = ExtResource("3")
 
 [node name="Drops" type="Node2D" parent="." unique_id=1710310890]
 
+[node name="Cards" type="Node2D" parent="." unique_id=1164317001]
+
 [node name="Effects" type="Node2D" parent="." unique_id=909608874]
 
 [node name="AudioManager" type="Node" parent="." unique_id=1142034112]
@@ -36,3 +39,5 @@ script = ExtResource("7")
 [node name="LevelUpPanel" parent="UI" unique_id=515869690 instance=ExtResource("5")]
 
 [node name="ResultPanel" parent="UI" unique_id=766103562 instance=ExtResource("6")]
+
+[node name="SpecialCardPanel" parent="UI" unique_id=131058901 instance=ExtResource("8")]

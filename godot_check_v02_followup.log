@@ -1,0 +1,77 @@
+Godot Engine v4.6.stable.official.89cea1439 - https://godotengine.org
+TextServer: Added interface "Dummy"
+TextServer: Added interface "ICU / HarfBuzz / Graphite (Built-in)"
+Unrecognized output string "misc2" in mapping:
+030000000d0f00000202000000000000,Horipad O Nintendo Switch 2 Controller,a:b1,b:b0,back:b8,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b4,leftstick:b10,lefttrigger:b6,leftx:a0,lefty:a1,misc1:b13,misc2:b14,rightshoulder:b5,rightstick:b11,righttrigger:b7,rightx:a2,righty:a3,start:b9,x:b3,y:b2,platform:Windows,
+Unrecognized output string "misc2" in mapping:
+030000000d0f00009601000000000000,Horipad Steam,a:b0,b:b1,back:b10,dpdown:h0.4,dpleft:h0.8,dpright:h0.2,dpup:h0.1,guide:b12,leftshoulder:b6,leftstick:b13,lefttrigger:b8,leftx:a0,lefty:a1,misc2:b2,paddle1:b5,paddle2:b15,paddle3:b18,paddle4:b19,rightshoulder:b7,rightstick:b14,righttrigger:b9,rightx:a3,righty:a4,start:b11,x:b3,y:b4,platform:Windows,
+Unrecognized output string "misc2" in mapping:
+030000007e0500006920000000000000,Nintendo Switch 2 Pro Controller,a:b0,b:b1,back:b14,dpdown:b8,dpleft:b10,dpright:b9,dpup:b11,guide:b16,leftshoulder:b12,leftstick:b15,lefttrigger:b13,leftx:a0,lefty:a1~,misc1:b17,misc2:b20,paddle1:b18,paddle2:b19,rightshoulder:b4,rightstick:b7,righttrigger:b5,rightx:a2,righty:a3~,start:b6,x:b2,y:b3,platform:Windows,
+Using "default" pen tablet driver...
+
+TextServer: Primary interface set to: "ICU / HarfBuzz / Graphite (Built-in)".
+CORE API HASH: 3663110324
+EDITOR API HASH: 835956462
+SceneTreeFTI: traversal method DEFAULT
+Loaded system CA certificates
+Loading resource: res://scenes/main/main.tscn
+Loading resource: res://scripts/core/game_manager.gd
+Loading resource: res://scenes/enemies/enemy.tscn
+Loading resource: res://scripts/actors/enemy.gd
+Loading resource: res://scenes/enemies/enemy_projectile.tscn
+Loading resource: res://scenes/props/experience_orb.tscn
+Loading resource: res://scripts/systems/experience_orb.gd
+Loading resource: res://audio/sfx/shoot.wav
+Loading resource: res://.godot/imported/shoot.wav-9f061d91fb81a9ec411c90a01cce4148.sample
+Loading resource: res://audio/sfx/hit.wav
+Loading resource: res://.godot/imported/hit.wav-c4e45b57fbe9fe41b04c129f1f721831.sample
+Loading resource: res://audio/sfx/pickup.wav
+Loading resource: res://.godot/imported/pickup.wav-8f1df0dbaf980a99488429b0935e3f87.sample
+Loading resource: res://audio/sfx/level_up.wav
+Loading resource: res://.godot/imported/level_up.wav-ece26f72aed5076e3d0c65913ce9932d.sample
+Loading resource: res://audio/sfx/hurt.wav
+Loading resource: res://.godot/imported/hurt.wav-070a1d90b4f20e0190267ae2225dc033.sample
+Loading resource: res://audio/sfx/enemy_die.wav
+Loading resource: res://.godot/imported/enemy_die.wav-89f378851937f0987c5421313bcc6b57.sample
+Loading resource: res://audio/sfx/elite_spawn.wav
+Loading resource: res://.godot/imported/elite_spawn.wav-e4a17c42b56ba6643801b241be25dd0a.sample
+Loading resource: res://audio/sfx/boss_spawn.wav
+Loading resource: res://.godot/imported/boss_spawn.wav-23a739e7640463b7e64904d9e1ef28ab.sample
+Loading resource: res://audio/sfx/victory.wav
+Loading resource: res://.godot/imported/victory.wav-74a81b89c99d39042d3e33c16df9fa58.sample
+Loading resource: res://audio/sfx/defeat.wav
+Loading resource: res://.godot/imported/defeat.wav-4cad04e341f4ba4adac201a84df8482c.sample
+Loading resource: res://scenes/player/player.tscn
+Loading resource: res://scenes/weapons/player_projectile.tscn
+Loading resource: res://scenes/weapons/pulse_wave.tscn
+Loading resource: res://scripts/core/arena.gd
+Loading resource: res://scenes/ui/hud.tscn
+Loading resource: res://scenes/ui/level_up_panel.tscn
+Loading resource: res://art/backgrounds/panel_tile.png
+Loading resource: res://.godot/imported/panel_tile.png-20034b3ae98c39696e0e2bbaa4a8c6d6.ctex
+Loading resource: res://scenes/ui/result_panel.tscn
+Loading resource: res://art/backgrounds/arena_tile.png
+Loading resource: res://.godot/imported/arena_tile.png-abc14ecdb79902a1e0b0ee87f2a64f3d.ctex
+Loading resource: res://art/backgrounds/arena_overlay.png
+Loading resource: res://.godot/imported/arena_overlay.png-a82862e070c9aacaaa0da7d14255ad1d.ctex
+Loading resource: res://art/sprites/player.png
+Loading resource: res://.godot/imported/player.png-d2786ae8d6617c03b4b215c1c13b7de0.ctex
+Loading resource: res://art/backgrounds/vignette.png
+Loading resource: res://.godot/imported/vignette.png-d05979329376e3946077fc323a6bcf53.ctex
+Loading resource: res://resources/enemies/boss.tres
+Loading resource: res://resources/enemies/brute.tres
+Loading resource: res://resources/enemies/runner.tres
+Loading resource: res://resources/enemies/shooter.tres
+Loading resource: res://resources/upgrades/battle_boots.tres
+Loading resource: res://resources/upgrades/long_range.tres
+Loading resource: res://resources/upgrades/piercing_round.tres
+Loading resource: res://resources/upgrades/power_shot.tres
+Loading resource: res://resources/upgrades/pulse_core.tres
+Loading resource: res://resources/upgrades/pulse_drive.tres
+Loading resource: res://resources/upgrades/pulse_emitter.tres
+Loading resource: res://resources/upgrades/rapid_fire.tres
+Loading resource: res://resources/upgrades/split_round.tres
+Loading resource: res://resources/upgrades/vitality.tres
+XR: Clearing primary interface
+XR: Removed interface "Native mobile"
+XR: Removed interface "OpenXR"

@@ -1,10 +1,12 @@
 extends Node2D
 class_name GameManager
 
-const TOTAL_RUN_TIME := 600.0
-const BOSS_SPAWN_TIME := 540.0
+const BOSS_SPAWN_TIME := 390.0
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const EXPERIENCE_SCENE := preload("res://scenes/props/experience_orb.tscn")
+const CONTENT_CATALOG := preload("res://scripts/data/content_catalog.gd")
+const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
+const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
 
 const STAGE_CONFIGS := [
 	{
@@ -18,7 +20,7 @@ const STAGE_CONFIGS := [
 	},
 	{
 		"name": "围压",
-		"start": 80.0,
+		"start": 70.0,
 		"spawn_rate": 1.2,
 		"pack_min": 1,
 		"pack_max": 2,
@@ -27,7 +29,7 @@ const STAGE_CONFIGS := [
 	},
 	{
 		"name": "火线",
-		"start": 190.0,
+		"start": 150.0,
 		"spawn_rate": 1.7,
 		"pack_min": 2,
 		"pack_max": 2,
@@ -36,7 +38,7 @@ const STAGE_CONFIGS := [
 	},
 	{
 		"name": "崩压",
-		"start": 350.0,
+		"start": 250.0,
 		"spawn_rate": 2.25,
 		"pack_min": 2,
 		"pack_max": 3,
@@ -45,7 +47,7 @@ const STAGE_CONFIGS := [
 	},
 	{
 		"name": "终幕",
-		"start": 500.0,
+		"start": 340.0,
 		"spawn_rate": 2.8,
 		"pack_min": 3,
 		"pack_max": 3,
@@ -58,8 +60,10 @@ var enemy_definitions: Array[EnemyData] = []
 var enemy_by_id: Dictionary = {}
 var upgrade_definitions: Array[UpgradeData] = []
 var current_upgrade_options: Array[UpgradeData] = []
+var current_special_card_options: Array[Dictionary] = []
 var upgrade_levels: Dictionary = {}
 var meta_progression: MetaProgression
+var selected_special_cards: Array[String] = []
 
 var elapsed_time := 0.0
 var kills := 0
@@ -69,9 +73,12 @@ var level := 1
 var pending_level_ups := 0
 var spawn_budget := 0.0
 var shard_gain_this_run := 0
+var next_card_event_index := 0
+var run_seed := 0
 
 var manual_pause := false
 var level_up_active := false
+var special_card_active := false
 var run_finished := false
 var current_stage_index := -1
 var elite_timer := 90.0
@@ -79,35 +86,45 @@ var wave_timer := 24.0
 var boss_spawned := false
 var boss_defeated := false
 var active_boss: Enemy
+var card_rng := RandomNumberGenerator.new()
+var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 
+@onready var arena: Node2D = $Arena
 @onready var player: Player = $Player
 @onready var enemies_layer: Node2D = $Enemies
 @onready var projectiles_layer: Node2D = $Projectiles
 @onready var drops_layer: Node2D = $Drops
+@onready var cards_layer: Node2D = $Cards
 @onready var effects_layer: Node2D = $Effects
 @onready var audio_manager: AudioManager = $AudioManager
 @onready var hud: HUD = $UI/HUD
 @onready var level_up_panel: LevelUpPanel = $UI/LevelUpPanel
 @onready var result_panel: ResultPanel = $UI/ResultPanel
+@onready var special_card_panel: SpecialCardPanel = $UI/SpecialCardPanel
 
 
 func _ready() -> void:
 	randomize()
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	run_seed = int(Time.get_unix_time_from_system()) ^ randi()
+	card_rng.seed = run_seed
 	_ensure_input_map()
 	add_to_group("game")
 	meta_progression = MetaProgression.load_or_create()
 	_load_definitions()
 	_connect_signals()
 	meta_progression.apply_to_player(player)
+	player.sync_upgrade_levels(upgrade_levels)
+	hud.configure_boss_goal(BOSS_SPAWN_TIME)
 	_update_stage(true)
 	_refresh_hud()
-	hud.set_build_text(player.get_build_summary())
+	hud.set_build_text(_compose_build_summary())
 	hud.set_pause_state(false)
-	hud.show_event("暗黑像素版已接入，撑过 10 分钟", 2.8)
+	hud.show_event("暗黑像素版已接入，顶住前线并击败首领", 2.8)
 
 
 func _process(delta: float) -> void:
-	if manual_pause or level_up_active or run_finished:
+	if manual_pause or level_up_active or special_card_active or run_finished:
 		return
 
 	elapsed_time += delta
@@ -117,31 +134,30 @@ func _process(delta: float) -> void:
 
 	if not boss_spawned and elapsed_time >= BOSS_SPAWN_TIME:
 		_spawn_boss()
-
-	if elapsed_time >= TOTAL_RUN_TIME:
-		_finish_run(true)
+	if boss_spawned:
 		return
 
+	_update_special_card_event()
 	spawn_budget += delta * _current_spawn_rate()
 	while spawn_budget >= 1.0:
 		spawn_budget -= 1.0
 		_spawn_enemy_pack()
 
-	if elapsed_time >= 120.0 and not boss_spawned:
+	if elapsed_time >= 120.0:
 		elite_timer -= delta
 		if elite_timer <= 0.0:
 			_spawn_elite()
 			elite_timer = maxf(42.0, 78.0 - float(current_stage_index) * 7.0)
 
-	if elapsed_time >= 60.0 and not boss_spawned:
+	if elapsed_time >= 60.0:
 		wave_timer -= delta
 		if wave_timer <= 0.0:
 			_spawn_wave_event()
 			wave_timer = maxf(15.0, 28.0 - float(current_stage_index) * 3.5)
 
 
-func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_game") and not run_finished and not level_up_active:
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause_game") and not run_finished and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
@@ -156,6 +172,7 @@ func _connect_signals() -> void:
 	level_up_panel.option_selected.connect(_on_upgrade_selected)
 	result_panel.restart_requested.connect(_restart_run)
 	result_panel.meta_upgrade_requested.connect(_on_meta_upgrade_requested)
+	special_card_panel.card_selected.connect(_on_special_card_selected)
 
 
 func _ensure_input_map() -> void:
@@ -189,28 +206,13 @@ func _register_action(action_name: String, keycodes: Array[int]) -> void:
 func _load_definitions() -> void:
 	enemy_definitions.clear()
 	enemy_by_id.clear()
-	for resource in _load_resources("res://resources/enemies"):
-		if resource is EnemyData:
-			enemy_definitions.append(resource)
-			enemy_by_id[resource.enemy_id] = resource
+	for definition in CONTENT_CATALOG.get_enemy_definitions():
+		enemy_definitions.append(definition)
+		enemy_by_id[definition.enemy_id] = definition
 
 	upgrade_definitions.clear()
-	for resource in _load_resources("res://resources/upgrades"):
-		if resource is UpgradeData:
-			upgrade_definitions.append(resource)
-
-
-func _load_resources(path: String) -> Array[Resource]:
-	var resources: Array[Resource] = []
-	var files: PackedStringArray = DirAccess.get_files_at(path)
-	files.sort()
-	for file_name in files:
-		if file_name.get_extension() != "tres":
-			continue
-		var resource: Resource = load(path.path_join(file_name)) as Resource
-		if resource != null:
-			resources.append(resource)
-	return resources
+	for definition in CONTENT_CATALOG.get_upgrade_definitions():
+		upgrade_definitions.append(definition)
 
 
 func _current_stage_config() -> Dictionary:
@@ -228,6 +230,7 @@ func _update_stage(force: bool) -> void:
 
 	current_stage_index = new_stage_index
 	var stage: Dictionary = _current_stage_config()
+	hud.set_stage_text(current_stage_index + 1, String(stage["name"]))
 	hud.show_event("阶段 %d - %s\n%s" % [
 		current_stage_index + 1,
 		String(stage["name"]),
@@ -282,6 +285,7 @@ func _spawn_enemy_by_id(enemy_id: String, elite: bool, spawn_position: Vector2) 
 	enemy.setup(definition, player, elite)
 	enemy.defeated.connect(_on_enemy_defeated)
 	enemy.projectile_spawned.connect(_on_projectile_spawned)
+	enemy.boss_skill_triggered.connect(_on_boss_skill_triggered)
 	return enemy
 
 
@@ -319,13 +323,17 @@ func _spawn_wave_event() -> void:
 
 
 func _spawn_boss() -> void:
+	_clear_special_card_pickups()
 	var boss_position := _pick_spawn_position_from_angle(randf() * TAU, 620.0)
 	active_boss = _spawn_enemy_by_id("boss", false, boss_position)
 	if active_boss == null:
 		return
 	boss_spawned = true
+	hud.set_boss_objective_active(true, "目标：击败余烬监工")
 	hud.show_event("首领降临：余烬监工", 3.0)
 	audio_manager.play_sfx("boss_spawn", 1.0, -0.5)
+	if arena.has_method("set_boss_mode"):
+		arena.set_boss_mode(true, 1)
 	_spawn_burst(active_boss.global_position, Color(0.8, 0.24, 0.32, 1.0), 7.0, 26, 0.65, 150.0)
 
 
@@ -379,7 +387,12 @@ func _on_enemy_defeated(world_position: Vector2, experience_reward: int, enemy_i
 	if was_boss:
 		active_boss = null
 		boss_defeated = true
-		hud.show_event("首领被击溃，终幕压力解除", 2.4)
+		hud.show_event("首领被击溃，战区已经稳定", 2.6)
+		hud.set_boss_objective_active(false, "目标：已完成")
+		if arena.has_method("set_boss_mode"):
+			arena.set_boss_mode(false, 0)
+		_finish_run(true)
+		return
 	elif was_elite:
 		hud.show_event("精英已击杀，获得额外回旋空间", 1.4)
 
@@ -445,12 +458,12 @@ func _pick_upgrade_options(count: int) -> Array[UpgradeData]:
 	while selected.size() < count and not candidates.is_empty():
 		var total_weight := 0.0
 		for candidate in candidates:
-			total_weight += candidate.rarity_weight
+			total_weight += _upgrade_candidate_weight(candidate)
 		var roll: float = randf() * total_weight
 		var cumulative := 0.0
 		var chosen_index := 0
 		for index in range(candidates.size()):
-			cumulative += candidates[index].rarity_weight
+			cumulative += _upgrade_candidate_weight(candidates[index])
 			if roll <= cumulative:
 				chosen_index = index
 				break
@@ -466,7 +479,8 @@ func _on_upgrade_selected(index: int) -> void:
 	var upgrade: UpgradeData = current_upgrade_options[index]
 	upgrade_levels[upgrade.upgrade_id] = int(upgrade_levels.get(upgrade.upgrade_id, 0)) + 1
 	player.apply_upgrade(upgrade)
-	hud.set_build_text(player.get_build_summary())
+	player.sync_upgrade_levels(upgrade_levels)
+	hud.set_build_text(_compose_build_summary())
 	_refresh_hud()
 	pending_level_ups = maxi(pending_level_ups - 1, 0)
 	level_up_panel.hide_panel()
@@ -487,7 +501,9 @@ func _finish_run(victory: bool) -> void:
 	run_finished = true
 	manual_pause = false
 	level_up_active = false
+	special_card_active = false
 	level_up_panel.hide_panel()
+	special_card_panel.hide_panel()
 	hud.set_pause_state(false)
 	hud.hide_boss()
 	get_tree().paused = true
@@ -510,7 +526,7 @@ func _finish_run(victory: bool) -> void:
 		level,
 		kills,
 		"已击败" if boss_defeated else ("已现身" if boss_spawned else "未出现"),
-		player.get_build_summary()
+		_compose_build_summary()
 	]
 	_refresh_result_panel(title, summary)
 
@@ -533,6 +549,9 @@ func _calculate_shard_gain(victory: bool) -> int:
 		gain += 8
 	if victory:
 		gain += 24
+	var shard_bonus_rate: float = meta_progression.get_total_effect_value("shard_bonus_rate")
+	if shard_bonus_rate > 0.0:
+		gain = int(round(float(gain) * (1.0 + shard_bonus_rate)))
 	return maxi(gain, 6)
 
 
@@ -563,11 +582,49 @@ func _refresh_hud() -> void:
 	hud.set_kills(kills)
 
 
+func _compose_build_summary() -> String:
+	var summary: String = player.get_build_summary()
+	if not selected_special_cards.is_empty():
+		summary += " | 卡牌 " + " / ".join(selected_special_cards)
+	return summary
+
+
 func _format_time(seconds: float) -> String:
 	var total_seconds: int = int(seconds)
 	var minutes: int = total_seconds / 60
 	var remainder: int = total_seconds % 60
 	return "%02d:%02d" % [minutes, remainder]
+
+
+func _upgrade_candidate_weight(candidate: UpgradeData) -> float:
+	var weight: float = candidate.rarity_weight
+	match candidate.upgrade_id:
+		"rapid_fire":
+			if int(upgrade_levels.get("power_shot", 0)) > 0:
+				weight *= 1.35
+		"power_shot":
+			if int(upgrade_levels.get("rapid_fire", 0)) > 0:
+				weight *= 1.35
+		"split_round":
+			if int(upgrade_levels.get("piercing_round", 0)) > 0:
+				weight *= 1.4
+		"piercing_round":
+			if int(upgrade_levels.get("split_round", 0)) > 0:
+				weight *= 1.45
+		"pulse_emitter":
+			if level >= 4:
+				weight *= 1.2
+		"pulse_core":
+			if player.pulse_enabled or int(upgrade_levels.get("pulse_emitter", 0)) > 0:
+				weight *= 1.28
+			if int(upgrade_levels.get("pulse_drive", 0)) > 0:
+				weight *= 1.18
+		"pulse_drive":
+			if player.pulse_enabled or int(upgrade_levels.get("pulse_emitter", 0)) > 0:
+				weight *= 1.24
+			if int(upgrade_levels.get("pulse_core", 0)) > 0:
+				weight *= 1.22
+	return weight
 
 
 func on_enemy_hit(world_position: Vector2, enemy_id: String, was_elite: bool, was_boss: bool, died_now: bool) -> void:
@@ -593,6 +650,160 @@ func on_player_feedback(feedback_name: String, world_position: Vector2) -> void:
 	if feedback_name == "hurt":
 		audio_manager.play_sfx("hurt", randf_range(0.94, 1.02), -4.0)
 		_spawn_burst(world_position, Color(0.8, 0.2, 0.24, 1.0), 4.0, 10, 0.22, 95.0)
+
+
+func _on_boss_skill_triggered(skill_name: String, world_position: Vector2, phase: int) -> void:
+	match skill_name:
+		"phase_shift":
+			hud.show_event("余烬监工进入二阶段，弹幕和压迫都会升级", 2.6)
+			hud.set_boss_objective_active(true, "目标：撑住二阶段并击溃首领")
+			audio_manager.play_sfx("boss_spawn", 1.08, -1.0)
+			if arena.has_method("set_boss_mode"):
+				arena.set_boss_mode(true, phase)
+			_spawn_burst(world_position, Color(0.95, 0.38, 0.32, 1.0), 8.0, 30, 0.72, 180.0)
+		"ember_burst":
+			hud.show_event("首领技能：扇形弹幕", 1.1)
+			audio_manager.play_sfx("shoot", 0.88, -2.0)
+		"ember_charge":
+			hud.show_event("首领技能：灼火突进", 1.1)
+			audio_manager.play_sfx("hurt", 1.08, -5.0)
+			_spawn_burst(world_position, Color(0.92, 0.28, 0.24, 1.0), 5.0, 12, 0.28, 96.0)
+		"ring_burst":
+			hud.show_event("首领技能：余烬环爆", 1.2)
+			audio_manager.play_sfx("boss_spawn", 1.12, -3.0)
+			_spawn_burst(world_position, Color(0.98, 0.42, 0.33, 1.0), 6.0, 18, 0.36, 124.0)
+		"summon_guards":
+			hud.show_event("首领技能：召集护卫", 1.2)
+			audio_manager.play_sfx("elite_spawn", 0.94, -2.0)
+			_spawn_burst(world_position, Color(0.86, 0.62, 0.24, 1.0), 5.5, 16, 0.34, 120.0)
+			_spawn_boss_support_wave(phase, world_position)
+
+
+func _update_special_card_event() -> void:
+	if next_card_event_index >= card_event_times.size():
+		return
+	if special_card_active or cards_layer.get_child_count() > 0:
+		return
+	if elapsed_time < card_event_times[next_card_event_index]:
+		return
+	next_card_event_index += 1
+	_spawn_special_card_pickup()
+
+
+func _spawn_special_card_pickup() -> void:
+	var pickup: SpecialCardPickup = SPECIAL_CARD_SCENE.instantiate() as SpecialCardPickup
+	cards_layer.add_child(pickup)
+	pickup.global_position = _pick_card_spawn_position()
+	pickup.picked_up.connect(_on_special_card_pickup)
+	hud.show_event("检测到特殊技能卡，靠近后可触发一次额外抉择", 2.0)
+
+
+func _pick_card_spawn_position() -> Vector2:
+	var angle: float = card_rng.randf_range(0.0, TAU)
+	var distance: float = card_rng.randf_range(160.0, 260.0)
+	var raw_position: Vector2 = player.global_position + Vector2.RIGHT.rotated(angle) * distance
+	return Vector2(
+		clampf(raw_position.x, -1460.0, 1460.0),
+		clampf(raw_position.y, -1460.0, 1460.0)
+	)
+
+
+func _on_special_card_pickup(pickup: SpecialCardPickup) -> void:
+	if pickup != null and is_instance_valid(pickup):
+		pickup.queue_free()
+	current_special_card_options = _pick_special_card_offers(3)
+	if current_special_card_options.is_empty():
+		return
+	special_card_active = true
+	get_tree().paused = true
+	hud.show_event("特殊技能卡启动，选择一张改变本局节奏", 1.8)
+	special_card_panel.present(current_special_card_options, "选择一张技能卡。高收益卡通常伴随代价。")
+
+
+func _pick_special_card_offers(count: int) -> Array[Dictionary]:
+	var definitions: Array[Dictionary] = SPECIAL_CARD_CATALOG.get_card_definitions()
+	var selected: Array[Dictionary] = []
+	while selected.size() < count and not definitions.is_empty():
+		var total_weight: float = 0.0
+		for definition in definitions:
+			total_weight += _special_card_weight(definition)
+		var roll: float = card_rng.randf() * total_weight
+		var cumulative: float = 0.0
+		var chosen_index: int = 0
+		for index in range(definitions.size()):
+			cumulative += _special_card_weight(definitions[index])
+			if roll <= cumulative:
+				chosen_index = index
+				break
+		selected.append(SPECIAL_CARD_CATALOG.resolve_card_effects(definitions[chosen_index], card_rng, player.pulse_enabled))
+		definitions.remove_at(chosen_index)
+	return selected
+
+
+func _special_card_weight(definition: Dictionary) -> float:
+	var weight: float = float(definition.get("weight", 1.0))
+	var card_type: String = String(definition.get("type", ""))
+	var card_id: String = String(definition.get("id", ""))
+	if card_type == "风险" and current_stage_index >= 2:
+		weight *= 1.22
+	if card_type == "未知" and next_card_event_index >= 2:
+		weight *= 1.15
+	if card_id == "pulse_prism" and player.pulse_enabled:
+		weight *= 1.35
+	if card_id == "pulse_prism" and int(upgrade_levels.get("pulse_core", 0)) > 0:
+		weight *= 1.28
+	if card_id == "feral_script" and int(upgrade_levels.get("rapid_fire", 0)) > 0:
+		weight *= 1.25
+	if card_id == "glass_engine" and int(upgrade_levels.get("split_round", 0)) > 0:
+		weight *= 1.3
+	return weight
+
+
+func _on_special_card_selected(index: int) -> void:
+	if index < 0 or index >= current_special_card_options.size():
+		return
+	var card: Dictionary = current_special_card_options[index]
+	var resolved_effects: Array[Dictionary] = []
+	for effect in Array(card.get("resolved_effects", [])):
+		resolved_effects.append(Dictionary(effect).duplicate(true))
+	for effect in resolved_effects:
+		player.apply_meta_bonus(String(effect.get("type", "")), float(effect.get("amount", 0.0)))
+	selected_special_cards.append(String(card.get("name", "")))
+	player.refresh_health_ui()
+	_refresh_hud()
+	hud.set_build_text(_compose_build_summary())
+	hud.show_event("技能卡生效：%s\n%s" % [
+		String(card.get("name", "")),
+		SPECIAL_CARD_CATALOG.describe_effects(resolved_effects)
+	], 2.4)
+	audio_manager.play_sfx("level_up", 0.94, -3.0)
+	current_special_card_options.clear()
+	special_card_active = false
+	special_card_panel.hide_panel()
+	get_tree().paused = false
+
+
+func _clear_special_card_pickups() -> void:
+	for child in cards_layer.get_children():
+		child.queue_free()
+
+
+func _spawn_boss_support_wave(phase: int, origin: Vector2) -> void:
+	var support_ids: Array[String] = ["runner", "runner", "brute"]
+	if phase >= 2:
+		support_ids.append("shooter")
+	for index in range(support_ids.size()):
+		var angle: float = TAU * float(index) / float(support_ids.size()) + randf_range(-0.18, 0.18)
+		var distance: float = 110.0 + 26.0 * float(index % 2)
+		var spawn_position: Vector2 = origin + Vector2.RIGHT.rotated(angle) * distance
+		_spawn_enemy_by_id(
+			support_ids[index],
+			false,
+			Vector2(
+				clampf(spawn_position.x, -1540.0, 1540.0),
+				clampf(spawn_position.y, -1540.0, 1540.0)
+			)
+		)
 
 
 func _spawn_burst(world_position: Vector2, color: Color, size: float, count: int, duration: float, spread: float) -> void:

@@ -3,6 +3,7 @@ class_name Enemy
 
 signal defeated(world_position: Vector2, experience_reward: int, enemy_id: String, was_elite: bool, was_boss: bool)
 signal projectile_spawned(projectile: Node2D)
+signal boss_skill_triggered(skill_name: String, world_position: Vector2, phase: int)
 
 @export var projectile_scene: PackedScene
 
@@ -26,6 +27,11 @@ var _contact_cooldown_left := 0.0
 var _shot_cooldown_left := 0.0
 var _flash_left := 0.0
 var _strafe_sign := 1.0
+var _boss_phase := 1
+var _boss_skill_cooldown_left := 0.0
+var _boss_pattern_index := 0
+var _boss_charge_time_left := 0.0
+var _boss_charge_direction := Vector2.ZERO
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var body_visual: Sprite2D = $Body
@@ -44,6 +50,11 @@ func setup(config: EnemyData, target_player: Player, elite: bool = false) -> voi
 	is_elite = elite
 	is_boss = data.enemy_id == "boss"
 	_strafe_sign = -1.0 if randf() < 0.5 else 1.0
+	_boss_phase = 1
+	_boss_skill_cooldown_left = 3.8
+	_boss_pattern_index = 0
+	_boss_charge_time_left = 0.0
+	_boss_charge_direction = Vector2.ZERO
 	_setup_runtime_stats()
 	_apply_data()
 
@@ -56,19 +67,36 @@ func _physics_process(delta: float) -> void:
 	var distance := to_player.length()
 	var direction := Vector2.ZERO
 
-	match data.behavior:
-		"shooter":
-			if distance > preferred_distance_runtime + 30.0:
-				direction = to_player.normalized()
-			elif distance < preferred_distance_runtime - 30.0:
-				direction = -to_player.normalized()
-			else:
-				direction = to_player.normalized().orthogonal() * _strafe_sign
-			_handle_shooting(to_player, distance, delta)
-		_:
+	if is_boss:
+		_update_boss_phase()
+		_handle_boss_skills(to_player, distance, delta)
+		if _boss_charge_time_left > 0.0:
+			direction = _boss_charge_direction
+			_boss_charge_time_left = maxf(_boss_charge_time_left - delta, 0.0)
+		elif distance > preferred_distance_runtime + 42.0:
 			direction = to_player.normalized()
+		elif distance < preferred_distance_runtime - 36.0:
+			direction = -to_player.normalized() * 0.72
+		else:
+			direction = to_player.normalized().orthogonal() * _strafe_sign
+		_handle_shooting(to_player, distance, delta)
+	else:
+		match data.behavior:
+			"shooter":
+				if distance > preferred_distance_runtime + 30.0:
+					direction = to_player.normalized()
+				elif distance < preferred_distance_runtime - 30.0:
+					direction = -to_player.normalized()
+				else:
+					direction = to_player.normalized().orthogonal() * _strafe_sign
+				_handle_shooting(to_player, distance, delta)
+			_:
+				direction = to_player.normalized()
 
-	velocity = velocity.move_toward(direction * move_speed_runtime, move_speed_runtime * 8.0 * delta)
+	var speed_multiplier: float = 1.0
+	if is_boss and _boss_charge_time_left > 0.0:
+		speed_multiplier = 4.6 if _boss_phase >= 2 else 4.0
+	velocity = velocity.move_toward(direction * move_speed_runtime * speed_multiplier, move_speed_runtime * 8.0 * speed_multiplier * delta)
 	move_and_slide()
 	_handle_contact_damage(distance, delta)
 	_handle_flash(delta)
@@ -89,6 +117,8 @@ func take_damage(amount: float, source_position: Vector2, knockback_force: float
 func _handle_shooting(to_player: Vector2, distance: float, delta: float) -> void:
 	if projectile_scene == null:
 		return
+	if is_boss and _boss_charge_time_left > 0.0:
+		return
 	_shot_cooldown_left -= delta
 	if _shot_cooldown_left > 0.0 or distance > preferred_distance_runtime + 140.0:
 		return
@@ -102,6 +132,75 @@ func _handle_shooting(to_player: Vector2, distance: float, delta: float) -> void
 		projectile_damage_runtime,
 		body_visual.modulate.lightened(0.12)
 	)
+	projectile_spawned.emit(projectile)
+
+
+func _handle_boss_skills(to_player: Vector2, _distance: float, delta: float) -> void:
+	if not is_boss:
+		return
+	if _boss_charge_time_left > 0.0:
+		return
+	_boss_skill_cooldown_left = maxf(_boss_skill_cooldown_left - delta, 0.0)
+	if _boss_skill_cooldown_left > 0.0:
+		return
+
+	if _boss_phase == 1:
+		if _boss_pattern_index % 2 == 0:
+			_cast_boss_cone(to_player.normalized(), 5, 0.22, 1.0, 1.0)
+			boss_skill_triggered.emit("ember_burst", global_position, _boss_phase)
+		else:
+			_start_boss_charge(to_player.normalized(), 0.52)
+			boss_skill_triggered.emit("ember_charge", global_position, _boss_phase)
+		_boss_skill_cooldown_left = 5.0
+	else:
+		match _boss_pattern_index % 3:
+			0:
+				_cast_boss_ring(10)
+				boss_skill_triggered.emit("ring_burst", global_position, _boss_phase)
+			1:
+				_start_boss_charge(to_player.normalized(), 0.66)
+				boss_skill_triggered.emit("ember_charge", global_position, _boss_phase)
+			_:
+				boss_skill_triggered.emit("summon_guards", global_position, _boss_phase)
+		_boss_skill_cooldown_left = 4.1
+	_boss_pattern_index += 1
+
+
+func _cast_boss_cone(direction: Vector2, projectile_count: int, spread_step: float, speed_scale: float, damage_scale: float) -> void:
+	var center_index: float = float(projectile_count - 1) * 0.5
+	for index in range(projectile_count):
+		var offset: float = (float(index) - center_index) * spread_step
+		_spawn_custom_projectile(
+			direction.rotated(offset),
+			projectile_speed_runtime * speed_scale,
+			projectile_damage_runtime * damage_scale,
+			Color(1.0, 0.56, 0.48, 1.0)
+		)
+
+
+func _cast_boss_ring(projectile_count: int) -> void:
+	for index in range(projectile_count):
+		var angle: float = TAU * float(index) / float(projectile_count)
+		_spawn_custom_projectile(
+			Vector2.RIGHT.rotated(angle),
+			projectile_speed_runtime * 1.08,
+			projectile_damage_runtime * 1.05,
+			Color(1.0, 0.44, 0.34, 1.0)
+		)
+
+
+func _start_boss_charge(direction: Vector2, duration: float) -> void:
+	_boss_charge_direction = direction
+	_boss_charge_time_left = duration
+	_contact_cooldown_left = 0.0
+
+
+func _spawn_custom_projectile(direction: Vector2, speed: float, damage: float, tint: Color) -> void:
+	if projectile_scene == null:
+		return
+	var projectile: EnemyProjectile = projectile_scene.instantiate() as EnemyProjectile
+	projectile.global_position = global_position
+	projectile.setup(direction.normalized(), speed, damage, tint)
 	projectile_spawned.emit(projectile)
 
 
@@ -163,6 +262,21 @@ func _setup_runtime_stats() -> void:
 	projectile_cooldown_runtime = data.projectile_cooldown * (0.92 if is_elite else 1.0)
 	projectile_speed_runtime = data.projectile_speed * (1.05 if is_elite else 1.0)
 	projectile_damage_runtime = data.projectile_damage * damage_multiplier
+
+
+func _update_boss_phase() -> void:
+	if not is_boss or _boss_phase >= 2:
+		return
+	if current_health > max_health_runtime * 0.55:
+		return
+	_boss_phase = 2
+	move_speed_runtime = data.move_speed * 1.22
+	preferred_distance_runtime = maxf(data.preferred_distance - 18.0, 180.0)
+	projectile_cooldown_runtime = maxf(0.82, data.projectile_cooldown * 0.76)
+	projectile_speed_runtime = data.projectile_speed * 1.18
+	projectile_damage_runtime = data.projectile_damage * 1.22
+	_boss_skill_cooldown_left = 2.3
+	boss_skill_triggered.emit("phase_shift", global_position, _boss_phase)
 
 
 func _resolve_texture() -> Texture2D:

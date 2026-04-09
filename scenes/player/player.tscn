@@ -18,6 +18,14 @@ shape = SubResource("1")
 [node name="Body" type="Sprite2D" parent="."]
 texture_filter = 0
 
+[node name="Weapon" type="Sprite2D" parent="."]
+texture_filter = 0
+z_index = 1
+
+[node name="WeaponFlash" type="Sprite2D" parent="."]
+texture_filter = 0
+z_index = 2
+
 [node name="Camera2D" type="Camera2D" parent="."]
 position_smoothing_enabled = true
 position_smoothing_speed = 7.0

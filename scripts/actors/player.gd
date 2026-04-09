@@ -1,6 +1,11 @@
 extends CharacterBody2D
 class_name Player
 
+const CAMERA_EDGE_MARGIN := 12
+const EIGHT_WAY_STEP := PI / 4.0
+const WEAPON_TEXTURE := preload("res://art/sprites/weapon_blaster.png")
+const WEAPON_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
+
 signal projectile_spawned(projectile: Node2D)
 signal effect_spawned(effect: Node2D)
 signal health_changed(current_health: float, max_health: float)
@@ -38,8 +43,17 @@ var _invulnerability_left := 0.0
 var _last_move_direction := Vector2.RIGHT
 var _shake_time_left := 0.0
 var _shake_strength := 0.0
+var _attack_sequence := 0
+var _upgrade_levels: Dictionary = {}
+var _aim_direction := Vector2.RIGHT
+var _weapon_recoil_strength := 0.0
+var _weapon_flash_left := 0.0
+var _weapon_pulse_left := 0.0
+var _weapon_flash_color := Color(1.0, 0.92, 0.74, 0.0)
 
 @onready var body_visual: Sprite2D = $Body
+@onready var weapon_visual: Sprite2D = $Weapon
+@onready var weapon_flash: Sprite2D = $WeaponFlash
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var camera: Camera2D = $Camera2D
 
@@ -52,6 +66,7 @@ func _ready() -> void:
 	_projectile_timer = projectile_cooldown * 0.3
 	_pulse_timer = pulse_cooldown
 	_apply_shape()
+	_configure_camera()
 	health_changed.emit(current_health, max_health)
 
 
@@ -60,6 +75,7 @@ func _physics_process(delta: float) -> void:
 	_handle_attack(delta)
 	_handle_pulse(delta)
 	_handle_invulnerability(delta)
+	_update_weapon_animation(delta)
 	_update_camera_shake(delta)
 
 
@@ -91,6 +107,10 @@ func apply_meta_bonus(effect_type: String, amount: float) -> void:
 	_apply_effect(effect_type, amount)
 
 
+func sync_upgrade_levels(levels: Dictionary) -> void:
+	_upgrade_levels = levels.duplicate(true)
+
+
 func refresh_health_ui() -> void:
 	health_changed.emit(current_health, max_health)
 
@@ -99,19 +119,25 @@ func get_build_summary() -> String:
 	var pulse_text := "未解锁"
 	if pulse_enabled:
 		pulse_text = "伤害 %.0f / 冷却 %.1fs" % [pulse_damage, pulse_cooldown]
-	return "主武器 %d 发 | %.1fs 冷却 | %.0f 伤害 | 穿透 %d | 脉冲 %s" % [
+	var summary := "主武器 %d 发 | %.1fs 冷却 | %.0f 伤害 | 穿透 %d | 脉冲 %s" % [
 		projectile_count,
 		projectile_cooldown,
 		projectile_damage,
 		projectile_pierce,
 		pulse_text
 	]
+	var synergy_names: Array[String] = _get_active_synergy_names()
+	if not synergy_names.is_empty():
+		summary += " | 联动 %s" % " / ".join(synergy_names)
+	return summary
 
 
 func _handle_movement(delta: float) -> void:
 	var input_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_direction.length() > 0.0:
 		_last_move_direction = input_direction.normalized()
+		if _weapon_flash_left <= 0.0:
+			_aim_direction = _last_move_direction
 		velocity = velocity.move_toward(_last_move_direction * move_speed, acceleration * delta)
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
@@ -121,7 +147,7 @@ func _handle_movement(delta: float) -> void:
 		clampf(global_position.x, -arena_half_size.x, arena_half_size.x),
 		clampf(global_position.y, -arena_half_size.y, arena_half_size.y)
 	)
-	body_visual.rotation = _last_move_direction.angle()
+	body_visual.rotation = snappedf(_last_move_direction.angle() + PI * 0.5, EIGHT_WAY_STEP)
 
 
 func _handle_attack(delta: float) -> void:
@@ -136,20 +162,34 @@ func _handle_attack(delta: float) -> void:
 		return
 
 	_projectile_timer = projectile_cooldown
-	for shot_index in range(projectile_count):
+	_attack_sequence += 1
+	var shot_count: int = projectile_count + _get_bonus_projectile_count()
+	var overcharge_active: bool = _has_overcharge_synergy() and _attack_sequence % 4 == 0
+	_trigger_weapon_fire((targets[0].global_position - global_position).normalized(), overcharge_active)
+	for shot_index in range(shot_count):
 		var target: Node2D = targets[shot_index % targets.size()]
-		var direction: Vector2 = (target.global_position - global_position).normalized()
+		var base_direction: Vector2 = (target.global_position - global_position).normalized()
+		var spread_offset: float = _get_spread_offset(shot_index, shot_count)
+		var direction: Vector2 = base_direction.rotated(spread_offset)
 		var projectile: PlayerProjectile = projectile_scene.instantiate() as PlayerProjectile
 		projectile.global_position = global_position
+		var projectile_damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
+		var projectile_speed_value: float = projectile_speed * (1.12 if overcharge_active else 1.0)
+		var projectile_range_value: float = projectile_range + (32.0 if _has_linebreak_synergy() else 0.0)
+		var projectile_pierce_value: int = projectile_pierce
+		if _has_linebreak_synergy() and shot_index == shot_count - 1:
+			projectile_pierce_value += 1
 		projectile.setup(
-			projectile_damage,
+			projectile_damage_value,
 			direction,
-			projectile_speed,
-			projectile_range,
-			projectile_pierce,
-			knockback_force
+			projectile_speed_value,
+			projectile_range_value,
+			projectile_pierce_value,
+			knockback_force * (1.3 if overcharge_active else 1.0)
 		)
 		projectile_spawned.emit(projectile)
+	if overcharge_active:
+		trigger_camera_shake(3.0, 0.07)
 	shot_fired.emit("projectile")
 
 
@@ -163,8 +203,13 @@ func _handle_pulse(delta: float) -> void:
 	_pulse_timer = pulse_cooldown
 	var pulse: PulseWave = pulse_scene.instantiate() as PulseWave
 	pulse.global_position = global_position
-	pulse.setup(pulse_damage, pulse_radius, 0.35, pulse_knockback)
+	var pulse_damage_value: float = pulse_damage * (1.18 if _has_pulse_feedback_synergy() else 1.0)
+	pulse.setup(pulse_damage_value, pulse_radius, 0.35, pulse_knockback)
 	effect_spawned.emit(pulse)
+	_trigger_pulse_fire()
+	if _has_pulse_feedback_synergy():
+		_projectile_timer = minf(_projectile_timer, 0.12)
+		trigger_camera_shake(2.4, 0.05)
 	shot_fired.emit("pulse")
 
 
@@ -219,7 +264,7 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			move_speed += amount
 		"max_health":
 			max_health += amount
-			current_health = minf(current_health + amount, max_health)
+			current_health = clampf(current_health + amount, 1.0, max_health)
 		"pickup_radius":
 			pickup_radius += amount
 		"unlock_pulse":
@@ -242,6 +287,102 @@ func _apply_shape() -> void:
 	body_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	body_visual.centered = true
 	body_visual.texture = load("res://art/sprites/player.png") as Texture2D
+	weapon_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	weapon_visual.centered = true
+	weapon_visual.texture = WEAPON_TEXTURE
+	weapon_flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	weapon_flash.centered = true
+	weapon_flash.texture = WEAPON_FLASH_TEXTURE
+	weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+
+func _configure_camera() -> void:
+	camera.limit_smoothed = true
+	camera.limit_left = int(-arena_half_size.x) + CAMERA_EDGE_MARGIN
+	camera.limit_right = int(arena_half_size.x) - CAMERA_EDGE_MARGIN
+	camera.limit_top = int(-arena_half_size.y) + CAMERA_EDGE_MARGIN
+	camera.limit_bottom = int(arena_half_size.y) - CAMERA_EDGE_MARGIN
+
+
+func _trigger_weapon_fire(direction: Vector2, overcharge_active: bool) -> void:
+	_aim_direction = direction
+	_weapon_recoil_strength = 5.4 if overcharge_active else 4.2
+	_weapon_flash_left = 0.09 if overcharge_active else 0.07
+	_weapon_flash_color = Color(1.0, 0.94, 0.78, 0.95) if not overcharge_active else Color(1.0, 0.78, 0.4, 1.0)
+	body_visual.scale = Vector2(1.04, 0.97)
+
+
+func _trigger_pulse_fire() -> void:
+	_weapon_flash_left = maxf(_weapon_flash_left, 0.11)
+	_weapon_pulse_left = 0.18
+	_weapon_flash_color = Color(0.48, 0.9, 1.0, 0.88)
+	body_visual.scale = Vector2(1.06, 0.95)
+
+
+func _update_weapon_animation(delta: float) -> void:
+	_weapon_recoil_strength = lerpf(_weapon_recoil_strength, 0.0, minf(delta * 16.0, 1.0))
+	_weapon_flash_left = maxf(_weapon_flash_left - delta, 0.0)
+	_weapon_pulse_left = maxf(_weapon_pulse_left - delta, 0.0)
+	body_visual.scale = body_visual.scale.lerp(Vector2.ONE, minf(delta * 10.0, 1.0))
+
+	var direction: Vector2 = _aim_direction.normalized()
+	if direction == Vector2.ZERO:
+		direction = _last_move_direction
+	var base_offset: Vector2 = direction * 15.0 + Vector2(0.0, -2.0)
+	var recoil_offset: Vector2 = -direction * _weapon_recoil_strength
+	weapon_visual.position = base_offset + recoil_offset
+	weapon_visual.rotation = direction.angle()
+	weapon_visual.scale = Vector2.ONE * (1.0 + _weapon_pulse_left * 0.45)
+
+	weapon_flash.position = direction * 25.0
+	weapon_flash.rotation = direction.angle()
+	if _weapon_flash_left > 0.0:
+		var flash_ratio: float = _weapon_flash_left / 0.11
+		weapon_flash.modulate = Color(_weapon_flash_color.r, _weapon_flash_color.g, _weapon_flash_color.b, minf(flash_ratio, 1.0))
+		weapon_flash.scale = Vector2.ONE * (0.9 + flash_ratio * 0.45)
+	else:
+		weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+
+func _get_upgrade_level(upgrade_id: String) -> int:
+	return int(_upgrade_levels.get(upgrade_id, 0))
+
+
+func _has_overcharge_synergy() -> bool:
+	return _get_upgrade_level("power_shot") >= 2 and _get_upgrade_level("rapid_fire") >= 2
+
+
+func _has_linebreak_synergy() -> bool:
+	return _get_upgrade_level("split_round") >= 2 and _get_upgrade_level("piercing_round") >= 1
+
+
+func _has_pulse_feedback_synergy() -> bool:
+	return pulse_enabled and _get_upgrade_level("pulse_core") >= 2 and _get_upgrade_level("pulse_drive") >= 1
+
+
+func _get_bonus_projectile_count() -> int:
+	return 1 if _has_linebreak_synergy() else 0
+
+
+func _get_spread_offset(shot_index: int, shot_count: int) -> float:
+	if shot_count <= 1:
+		return 0.0
+	var center_index: float = float(shot_count - 1) * 0.5
+	var base_step: float = 0.11
+	if _has_linebreak_synergy():
+		base_step = 0.145
+	return (float(shot_index) - center_index) * base_step
+
+
+func _get_active_synergy_names() -> Array[String]:
+	var names: Array[String] = []
+	if _has_overcharge_synergy():
+		names.append("过载连射")
+	if _has_linebreak_synergy():
+		names.append("裂穿扩散")
+	if _has_pulse_feedback_synergy():
+		names.append("脉冲回流")
+	return names
 
 
 func _trigger_feedback(feedback_name: String) -> void:
