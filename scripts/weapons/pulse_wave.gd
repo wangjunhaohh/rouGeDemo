@@ -5,6 +5,9 @@ var damage := 18.0
 var max_radius := 96.0
 var duration := 0.35
 var knockback_force := 180.0
+var status_type := ""
+var status_duration := 0.0
+var status_value := 0.0
 
 var _elapsed := 0.0
 var _hit_targets: Dictionary = {}
@@ -28,6 +31,12 @@ func setup(pulse_damage: float, pulse_radius: float, pulse_duration: float, puls
 	knockback_force = pulse_knockback
 
 
+func set_status_effect(next_status_type: String, next_duration: float, next_value: float) -> void:
+	status_type = next_status_type
+	status_duration = next_duration
+	status_value = next_value
+
+
 func _physics_process(delta: float) -> void:
 	_elapsed += delta
 	var progress: float = minf(_elapsed / duration, 1.0)
@@ -46,6 +55,8 @@ func _physics_process(delta: float) -> void:
 			continue
 		_hit_targets[target_id] = true
 		enemy_body.take_damage(damage, global_position, knockback_force)
+		if not status_type.is_empty():
+			enemy_body.apply_status_effect(status_type, status_duration, status_value)
 
 	if progress >= 1.0:
 		queue_free()

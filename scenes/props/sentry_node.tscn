@@ -1,0 +1,18 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/systems/sentry_node.gd" id="1"]
+
+[node name="SentryNode" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Glow" type="Sprite2D" parent="."]
+centered = true
+scale = Vector2(0.42, 0.42)
+
+[node name="Base" type="Sprite2D" parent="."]
+centered = true
+scale = Vector2(0.5, 0.5)
+
+[node name="Beam" type="Line2D" parent="."]
+width = 5.0
+default_color = Color(0.58, 0.95, 1.0, 1.0)

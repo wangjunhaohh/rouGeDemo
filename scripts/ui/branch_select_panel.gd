@@ -1,12 +1,12 @@
 extends Control
-class_name LevelUpPanel
+class_name BranchSelectPanel
 
-signal option_selected(index: int)
+signal branch_selected(index: int)
 
 var _buttons: Array[Button] = []
 
 @onready var title_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/TitleLabel
-@onready var subtitle_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/SubtitleLabel
+@onready var subtitle_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/SubTitleLabel
 
 
 func _ready() -> void:
@@ -21,26 +21,24 @@ func _ready() -> void:
 		_buttons[index].pressed.connect(_on_button_pressed.bind(index))
 
 
-func present(options: Array, levels: Dictionary, branch_name: String = "") -> void:
-	title_label.text = "等级提升"
-	subtitle_label.text = "选择一个即时生效的成长项"
-	if not branch_name.is_empty():
-		subtitle_label.text += " | 当前主分支：%s" % branch_name
+func present(branches: Array[Dictionary]) -> void:
+	title_label.text = "选择本局主分支"
+	subtitle_label.text = "主分支会改变本局升级刷新倾向，并提供一个立刻生效的被动风格。"
 	show()
 	for index in range(_buttons.size()):
 		var button: Button = _buttons[index]
-		if index >= options.size():
+		if index >= branches.size():
+			button.visible = false
 			button.disabled = true
-			button.text = "无可用升级"
 			continue
-		var upgrade: UpgradeData = options[index]
-		var current_level: int = int(levels.get(upgrade.upgrade_id, 0))
+		var branch: Dictionary = branches[index]
+		button.visible = true
 		button.disabled = false
-		button.text = "%s\n%s\nLv.%d/%d" % [
-			upgrade.display_name,
-			upgrade.description,
-			current_level + 1,
-			upgrade.max_level
+		button.modulate = Color(branch.get("accent_color", Color(1.0, 1.0, 1.0, 1.0)))
+		button.text = "%s\n%s\n%s" % [
+			String(branch.get("name", "")),
+			String(branch.get("summary", "")),
+			String(branch.get("description", ""))
 		]
 
 
@@ -49,4 +47,4 @@ func hide_panel() -> void:
 
 
 func _on_button_pressed(index: int) -> void:
-	option_selected.emit(index)
+	branch_selected.emit(index)

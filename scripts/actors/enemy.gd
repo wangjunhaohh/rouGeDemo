@@ -32,6 +32,9 @@ var _boss_skill_cooldown_left := 0.0
 var _boss_pattern_index := 0
 var _boss_charge_time_left := 0.0
 var _boss_charge_direction := Vector2.ZERO
+var _burn_time_left := 0.0
+var _burn_tick_left := 0.0
+var _burn_damage := 0.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var body_visual: Sprite2D = $Body
@@ -61,6 +64,10 @@ func setup(config: EnemyData, target_player: Player, elite: bool = false) -> voi
 
 func _physics_process(delta: float) -> void:
 	if data == null or player == null or not is_instance_valid(player):
+		return
+
+	_handle_status_effects(delta)
+	if current_health <= 0.0:
 		return
 
 	var to_player := player.global_position - global_position
@@ -103,12 +110,26 @@ func _physics_process(delta: float) -> void:
 
 
 func take_damage(amount: float, source_position: Vector2, knockback_force: float) -> void:
+	_apply_damage(amount, source_position, knockback_force, true)
+
+
+func apply_status_effect(status_type: String, duration: float, value: float) -> void:
+	match status_type:
+		"burn":
+			_burn_time_left = maxf(_burn_time_left, duration)
+			_burn_tick_left = minf(_burn_tick_left, 0.18) if _burn_tick_left > 0.0 else 0.18
+			_burn_damage = maxf(_burn_damage, value)
+			_flash_left = maxf(_flash_left, 0.05)
+
+
+func _apply_damage(amount: float, source_position: Vector2, knockback_force: float, notify_feedback: bool) -> void:
 	if current_health <= 0.0:
 		return
 	current_health -= amount
 	_flash_left = 0.08
 	velocity += (global_position - source_position).normalized() * knockback_force
-	_notify_hit_feedback(current_health <= 0.0)
+	if notify_feedback:
+		_notify_hit_feedback(current_health <= 0.0)
 	if current_health <= 0.0:
 		defeated.emit(global_position, experience_reward_runtime, enemy_id, is_elite, is_boss)
 		queue_free()
@@ -212,6 +233,17 @@ func _handle_contact_damage(distance: float, delta: float) -> void:
 	player.apply_contact_damage(touch_damage_runtime, global_position)
 
 
+func _handle_status_effects(delta: float) -> void:
+	if _burn_time_left <= 0.0:
+		return
+	_burn_time_left = maxf(_burn_time_left - delta, 0.0)
+	_burn_tick_left = maxf(_burn_tick_left - delta, 0.0)
+	if _burn_tick_left > 0.0:
+		return
+	_burn_tick_left = 0.42
+	_apply_damage(_burn_damage, global_position, 0.0, false)
+
+
 func _handle_flash(delta: float) -> void:
 	if _flash_left > 0.0:
 		_flash_left -= delta
@@ -296,6 +328,8 @@ func _resolve_texture() -> Texture2D:
 
 
 func _get_display_color() -> Color:
+	if _burn_time_left > 0.0:
+		return Color(1.0, 0.7, 0.52, 1.0)
 	if is_boss:
 		return Color(1.0, 1.0, 1.0, 1.0)
 	if is_elite:

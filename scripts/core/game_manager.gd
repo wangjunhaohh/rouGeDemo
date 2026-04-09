@@ -5,6 +5,7 @@ const BOSS_SPAWN_TIME := 390.0
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const EXPERIENCE_SCENE := preload("res://scenes/props/experience_orb.tscn")
 const CONTENT_CATALOG := preload("res://scripts/data/content_catalog.gd")
+const BRANCH_CATALOG := preload("res://scripts/data/branch_catalog.gd")
 const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
 
@@ -64,6 +65,9 @@ var current_special_card_options: Array[Dictionary] = []
 var upgrade_levels: Dictionary = {}
 var meta_progression: MetaProgression
 var selected_special_cards: Array[String] = []
+var current_branch_options: Array[Dictionary] = []
+var selected_branch_id := ""
+var selected_branch_name := ""
 
 var elapsed_time := 0.0
 var kills := 0
@@ -77,6 +81,7 @@ var next_card_event_index := 0
 var run_seed := 0
 
 var manual_pause := false
+var branch_selection_active := false
 var level_up_active := false
 var special_card_active := false
 var run_finished := false
@@ -98,6 +103,7 @@ var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 @onready var effects_layer: Node2D = $Effects
 @onready var audio_manager: AudioManager = $AudioManager
 @onready var hud: HUD = $UI/HUD
+@onready var branch_select_panel: BranchSelectPanel = $UI/BranchSelectPanel
 @onready var level_up_panel: LevelUpPanel = $UI/LevelUpPanel
 @onready var result_panel: ResultPanel = $UI/ResultPanel
 @onready var special_card_panel: SpecialCardPanel = $UI/SpecialCardPanel
@@ -120,11 +126,11 @@ func _ready() -> void:
 	_refresh_hud()
 	hud.set_build_text(_compose_build_summary())
 	hud.set_pause_state(false)
-	hud.show_event("暗黑像素版已接入，顶住前线并击败首领", 2.8)
+	_present_branch_selection()
 
 
 func _process(delta: float) -> void:
-	if manual_pause or level_up_active or special_card_active or run_finished:
+	if manual_pause or branch_selection_active or level_up_active or special_card_active or run_finished:
 		return
 
 	elapsed_time += delta
@@ -157,7 +163,7 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_game") and not run_finished and not level_up_active and not special_card_active:
+	if event.is_action_pressed("pause_game") and not run_finished and not branch_selection_active and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
@@ -169,10 +175,37 @@ func _connect_signals() -> void:
 	player.health_changed.connect(_on_player_health_changed)
 	player.shot_fired.connect(_on_player_shot_fired)
 	player.died.connect(_on_player_died)
+	branch_select_panel.branch_selected.connect(_on_branch_selected)
 	level_up_panel.option_selected.connect(_on_upgrade_selected)
 	result_panel.restart_requested.connect(_restart_run)
 	result_panel.meta_upgrade_requested.connect(_on_meta_upgrade_requested)
 	special_card_panel.card_selected.connect(_on_special_card_selected)
+
+
+func _present_branch_selection() -> void:
+	current_branch_options = BRANCH_CATALOG.get_branch_definitions()
+	branch_selection_active = true
+	hud.set_objective_text("目标：先选择本局主分支")
+	hud.show_event("选择一个主分支，决定本局成长倾向和武器风格", 2.4)
+	_set_modal_pause(true)
+	branch_select_panel.present(current_branch_options)
+
+
+func _on_branch_selected(index: int) -> void:
+	if index < 0 or index >= current_branch_options.size():
+		return
+	var branch: Dictionary = current_branch_options[index]
+	selected_branch_id = String(branch.get("id", ""))
+	selected_branch_name = String(branch.get("name", ""))
+	player.set_branch_definition(branch)
+	player.sync_upgrade_levels(upgrade_levels)
+	current_branch_options.clear()
+	branch_selection_active = false
+	branch_select_panel.hide_panel()
+	_set_modal_pause(false)
+	hud.configure_boss_goal(BOSS_SPAWN_TIME)
+	hud.set_build_text(_compose_build_summary())
+	hud.show_event("已接入主分支：%s" % selected_branch_name, 2.0)
 
 
 func _ensure_input_map() -> void:
@@ -377,6 +410,7 @@ func _on_player_shot_fired(weapon_name: String) -> void:
 
 
 func _on_player_died() -> void:
+	projectiles_layer.process_mode = Node.PROCESS_MODE_DISABLED
 	_finish_run(false)
 
 
@@ -432,9 +466,9 @@ func _present_level_up() -> void:
 		return
 
 	level_up_active = true
-	get_tree().paused = true
+	_set_modal_pause(true)
 	audio_manager.play_sfx("level_up", 1.0, -1.5)
-	level_up_panel.present(current_upgrade_options, upgrade_levels)
+	level_up_panel.present(current_upgrade_options, upgrade_levels, selected_branch_name)
 
 
 func _pick_upgrade_options(count: int) -> Array[UpgradeData]:
@@ -456,14 +490,15 @@ func _pick_upgrade_options(count: int) -> Array[UpgradeData]:
 		selected.append(forced_upgrade)
 
 	while selected.size() < count and not candidates.is_empty():
+		var primary_pick: bool = selected.size() < count - 1
 		var total_weight := 0.0
 		for candidate in candidates:
-			total_weight += _upgrade_candidate_weight(candidate)
+			total_weight += _upgrade_candidate_weight(candidate, primary_pick)
 		var roll: float = randf() * total_weight
 		var cumulative := 0.0
 		var chosen_index := 0
 		for index in range(candidates.size()):
-			cumulative += _upgrade_candidate_weight(candidates[index])
+			cumulative += _upgrade_candidate_weight(candidates[index], primary_pick)
 			if roll <= cumulative:
 				chosen_index = index
 				break
@@ -491,7 +526,7 @@ func _on_upgrade_selected(index: int) -> void:
 		return
 
 	level_up_active = false
-	get_tree().paused = false
+	_set_modal_pause(false)
 
 
 func _finish_run(victory: bool) -> void:
@@ -500,8 +535,10 @@ func _finish_run(victory: bool) -> void:
 
 	run_finished = true
 	manual_pause = false
+	branch_selection_active = false
 	level_up_active = false
 	special_card_active = false
+	branch_select_panel.hide_panel()
 	level_up_panel.hide_panel()
 	special_card_panel.hide_panel()
 	hud.set_pause_state(false)
@@ -596,7 +633,7 @@ func _format_time(seconds: float) -> String:
 	return "%02d:%02d" % [minutes, remainder]
 
 
-func _upgrade_candidate_weight(candidate: UpgradeData) -> float:
+func _upgrade_candidate_weight(candidate: UpgradeData, primary_pick: bool = true) -> float:
 	var weight: float = candidate.rarity_weight
 	match candidate.upgrade_id:
 		"rapid_fire":
@@ -624,6 +661,7 @@ func _upgrade_candidate_weight(candidate: UpgradeData) -> float:
 				weight *= 1.24
 			if int(upgrade_levels.get("pulse_core", 0)) > 0:
 				weight *= 1.22
+	weight *= BRANCH_CATALOG.get_branch_weight_multiplier(candidate, selected_branch_id, primary_pick)
 	return weight
 
 
@@ -715,7 +753,7 @@ func _on_special_card_pickup(pickup: SpecialCardPickup) -> void:
 	if current_special_card_options.is_empty():
 		return
 	special_card_active = true
-	get_tree().paused = true
+	_set_modal_pause(true)
 	hud.show_event("特殊技能卡启动，选择一张改变本局节奏", 1.8)
 	special_card_panel.present(current_special_card_options, "选择一张技能卡。高收益卡通常伴随代价。")
 
@@ -756,6 +794,12 @@ func _special_card_weight(definition: Dictionary) -> float:
 		weight *= 1.25
 	if card_id == "glass_engine" and int(upgrade_levels.get("split_round", 0)) > 0:
 		weight *= 1.3
+	if selected_branch_id == "tank" and (card_id == "rift_stride" or card_id == "pulse_prism"):
+		weight *= 1.16
+	if selected_branch_id == "debuff" and (card_id == "blood_contract" or card_id == "feral_script"):
+		weight *= 1.22
+	if selected_branch_id == "building" and (card_id == "pulse_prism" or card_id == "glass_engine"):
+		weight *= 1.18
 	return weight
 
 
@@ -780,7 +824,7 @@ func _on_special_card_selected(index: int) -> void:
 	current_special_card_options.clear()
 	special_card_active = false
 	special_card_panel.hide_panel()
-	get_tree().paused = false
+	_set_modal_pause(false)
 
 
 func _clear_special_card_pickups() -> void:
@@ -804,6 +848,10 @@ func _spawn_boss_support_wave(phase: int, origin: Vector2) -> void:
 				clampf(spawn_position.y, -1540.0, 1540.0)
 			)
 		)
+
+
+func _set_modal_pause(active: bool) -> void:
+	get_tree().paused = active
 
 
 func _spawn_burst(world_position: Vector2, color: Color, size: float, count: int, duration: float, spread: float) -> void:

@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="UpgradeData" format=3 uid="uid://b078sg0or06wl"]
 
-[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+[ext_resource type="Script" uid="uid://bg6el37a7nyai" path="res://scripts/data/upgrade_data.gd" id="1"]
 
 [resource]
 script = ExtResource("1")
@@ -9,5 +9,7 @@ display_name = "脉冲驱动"
 description = "脉冲冷却 -0.35 秒"
 rarity_weight = 0.78
 max_level = 4
+tags = PackedStringArray("tank", "building")
+synergy_tags = PackedStringArray("pulse", "tempo")
 effect_type = "pulse_cooldown"
 amount = -0.35
