@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "skeleton"
+display_name = "Skeleton"
+behavior = "chase"
+max_health = 40.0
+move_speed = 102.0
+touch_damage = 10.0
+experience_reward = 7
+size = 13.0
+spawn_weight = 1.0
+color = Color(0.9, 0.9, 0.82, 1)

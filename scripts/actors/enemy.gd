@@ -312,14 +312,24 @@ func _update_boss_phase() -> void:
 
 
 func _resolve_texture() -> Texture2D:
-	var path: String = "res://art/sprites/enemy_runner.png"
+	var path: String = "res://art/sprites/enemy_slime.png"
 	match enemy_id:
-		"runner":
-			path = "res://art/sprites/enemy_runner.png"
-		"brute":
-			path = "res://art/sprites/enemy_brute.png"
-		"shooter":
-			path = "res://art/sprites/enemy_shooter.png"
+		"slime":
+			path = "res://art/sprites/enemy_slime.png"
+		"bat":
+			path = "res://art/sprites/enemy_bat.png"
+		"skeleton":
+			path = "res://art/sprites/enemy_skeleton.png"
+		"goblin":
+			path = "res://art/sprites/enemy_goblin.png"
+		"mushroom":
+			path = "res://art/sprites/enemy_mushroom.png"
+		"ghost":
+			path = "res://art/sprites/enemy_ghost.png"
+		"imp":
+			path = "res://art/sprites/enemy_imp.png"
+		"demon":
+			path = "res://art/sprites/enemy_demon.png"
 		"boss":
 			path = "res://art/sprites/enemy_boss.png"
 	if is_elite and not is_boss:

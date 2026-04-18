@@ -2,9 +2,14 @@ extends RefCounted
 class_name ContentCatalog
 
 const ENEMY_DEFINITIONS := [
-	preload("res://resources/enemies/runner.tres"),
-	preload("res://resources/enemies/brute.tres"),
-	preload("res://resources/enemies/shooter.tres"),
+	preload("res://resources/enemies/slime.tres"),
+	preload("res://resources/enemies/bat.tres"),
+	preload("res://resources/enemies/skeleton.tres"),
+	preload("res://resources/enemies/goblin.tres"),
+	preload("res://resources/enemies/mushroom.tres"),
+	preload("res://resources/enemies/ghost.tres"),
+	preload("res://resources/enemies/imp.tres"),
+	preload("res://resources/enemies/demon.tres"),
 	preload("res://resources/enemies/boss.tres")
 ]
 

@@ -1,6 +1,8 @@
 extends Area2D
 class_name ExperienceOrb
 
+const ORB_VISUAL_SCALE := 0.6
+
 signal collected(amount: int)
 
 var amount := 5
@@ -15,6 +17,7 @@ func _ready() -> void:
 	collision_mask = 1
 	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	visual.texture = load("res://art/sprites/experience_orb.png") as Texture2D
+	visual.scale = Vector2.ONE * ORB_VISUAL_SCALE
 	body_entered.connect(_on_body_entered)
 
 

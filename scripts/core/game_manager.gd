@@ -16,7 +16,7 @@ const STAGE_CONFIGS := [
 		"spawn_rate": 0.95,
 		"pack_min": 1,
 		"pack_max": 1,
-		"weights": {"runner": 1.0},
+		"weights": {"slime": 1.0, "bat": 0.55},
 		"message": "冷街苏醒，先建立基础节奏"
 	},
 	{
@@ -25,7 +25,7 @@ const STAGE_CONFIGS := [
 		"spawn_rate": 1.2,
 		"pack_min": 1,
 		"pack_max": 2,
-		"weights": {"runner": 1.0, "brute": 0.55},
+		"weights": {"slime": 0.95, "bat": 0.85, "skeleton": 0.8, "mushroom": 0.5},
 		"message": "肉盾开始封路，注意走位空间"
 	},
 	{
@@ -34,7 +34,7 @@ const STAGE_CONFIGS := [
 		"spawn_rate": 1.7,
 		"pack_min": 2,
 		"pack_max": 2,
-		"weights": {"runner": 0.95, "brute": 0.7, "shooter": 0.4},
+		"weights": {"slime": 0.82, "bat": 0.9, "skeleton": 0.8, "mushroom": 0.62, "goblin": 0.7, "ghost": 0.58},
 		"message": "远程火力加入，敌人开始混编"
 	},
 	{
@@ -43,7 +43,7 @@ const STAGE_CONFIGS := [
 		"spawn_rate": 2.25,
 		"pack_min": 2,
 		"pack_max": 3,
-		"weights": {"runner": 1.15, "brute": 0.85, "shooter": 0.8},
+		"weights": {"slime": 0.75, "bat": 0.86, "skeleton": 0.9, "mushroom": 0.72, "goblin": 0.82, "ghost": 0.76, "imp": 0.56},
 		"message": "敌群密度提高，精英会更频繁出现"
 	},
 	{
@@ -52,7 +52,7 @@ const STAGE_CONFIGS := [
 		"spawn_rate": 2.8,
 		"pack_min": 3,
 		"pack_max": 3,
-		"weights": {"runner": 1.3, "brute": 1.0, "shooter": 1.0},
+		"weights": {"slime": 0.64, "bat": 0.78, "skeleton": 0.94, "mushroom": 0.82, "goblin": 0.9, "ghost": 0.88, "imp": 0.72, "demon": 0.58},
 		"message": "终幕逼近，准备迎接首领"
 	}
 ]
@@ -324,9 +324,13 @@ func _spawn_enemy_by_id(enemy_id: String, elite: bool, spawn_position: Vector2) 
 
 func _spawn_elite() -> void:
 	var stage: Dictionary = _current_stage_config()
-	var elite_pool: Array[String] = ["runner", "brute"]
+	var elite_pool: Array[String] = ["skeleton", "mushroom"]
 	if current_stage_index >= 2:
-		elite_pool.append("shooter")
+		elite_pool.append("goblin")
+		elite_pool.append("ghost")
+	if current_stage_index >= 3:
+		elite_pool.append("imp")
+		elite_pool.append("demon")
 
 	var picked_id: String = elite_pool[randi() % elite_pool.size()]
 	var enemy := _spawn_enemy_by_id(picked_id, true, _pick_spawn_position())
@@ -342,17 +346,25 @@ func _spawn_wave_event() -> void:
 	match current_stage_index:
 		0:
 			for offset in [-0.18, 0.0, 0.18]:
-				_spawn_enemy_by_id("runner", false, _pick_spawn_position_from_angle(base_angle + offset, 640.0))
+				_spawn_enemy_by_id("slime", false, _pick_spawn_position_from_angle(base_angle + offset, 640.0))
+			for offset in [-0.14, 0.14]:
+				_spawn_enemy_by_id("bat", false, _pick_spawn_position_from_angle(base_angle + PI + offset, 590.0))
 		1:
 			for offset in [-0.22, 0.22]:
-				_spawn_enemy_by_id("brute", false, _pick_spawn_position_from_angle(base_angle + offset, 620.0))
+				_spawn_enemy_by_id("mushroom", false, _pick_spawn_position_from_angle(base_angle + offset, 620.0))
 			for offset in [-0.3, 0.0, 0.3]:
-				_spawn_enemy_by_id("runner", false, _pick_spawn_position_from_angle(base_angle + PI + offset, 560.0))
+				_spawn_enemy_by_id("skeleton", false, _pick_spawn_position_from_angle(base_angle + PI + offset, 560.0))
 		_:
 			for offset in [-0.24, 0.0, 0.24]:
-				_spawn_enemy_by_id("shooter", false, _pick_spawn_position_from_angle(base_angle + offset, 600.0))
+				_spawn_enemy_by_id("goblin", false, _pick_spawn_position_from_angle(base_angle + offset, 600.0))
+			for offset in [-0.16, 0.16]:
+				_spawn_enemy_by_id("ghost", false, _pick_spawn_position_from_angle(base_angle + 0.42 + offset, 610.0))
 			for offset in [-0.34, -0.12, 0.12, 0.34]:
-				_spawn_enemy_by_id("runner", false, _pick_spawn_position_from_angle(base_angle + PI + offset, 560.0))
+				_spawn_enemy_by_id("bat", false, _pick_spawn_position_from_angle(base_angle + PI + offset, 560.0))
+			if current_stage_index >= 3:
+				_spawn_enemy_by_id("imp", false, _pick_spawn_position_from_angle(base_angle + PI * 0.5, 540.0))
+			if current_stage_index >= 4:
+				_spawn_enemy_by_id("demon", false, _pick_spawn_position_from_angle(base_angle - PI * 0.5, 560.0))
 
 
 func _spawn_boss() -> void:
@@ -667,10 +679,22 @@ func _upgrade_candidate_weight(candidate: UpgradeData, primary_pick: bool = true
 
 func on_enemy_hit(world_position: Vector2, enemy_id: String, was_elite: bool, was_boss: bool, died_now: bool) -> void:
 	var color := Color(0.95, 0.3, 0.28, 1.0)
-	if enemy_id == "shooter":
-		color = Color(0.44, 0.78, 0.97, 1.0)
-	elif enemy_id == "brute":
-		color = Color(0.9, 0.66, 0.32, 1.0)
+	if enemy_id == "slime":
+		color = Color(0.46, 0.9, 0.36, 1.0)
+	elif enemy_id == "bat":
+		color = Color(0.45, 0.38, 0.84, 1.0)
+	elif enemy_id == "skeleton":
+		color = Color(0.9, 0.9, 0.82, 1.0)
+	elif enemy_id == "goblin":
+		color = Color(0.44, 0.82, 0.36, 1.0)
+	elif enemy_id == "mushroom":
+		color = Color(0.96, 0.42, 0.35, 1.0)
+	elif enemy_id == "ghost":
+		color = Color(0.56, 0.88, 0.98, 1.0)
+	elif enemy_id == "imp":
+		color = Color(0.96, 0.34, 0.24, 1.0)
+	elif enemy_id == "demon":
+		color = Color(0.35, 0.38, 0.66, 1.0)
 	elif was_elite:
 		color = Color(1.0, 0.86, 0.45, 1.0)
 	elif was_boss:
@@ -833,9 +857,10 @@ func _clear_special_card_pickups() -> void:
 
 
 func _spawn_boss_support_wave(phase: int, origin: Vector2) -> void:
-	var support_ids: Array[String] = ["runner", "runner", "brute"]
+	var support_ids: Array[String] = ["slime", "bat", "skeleton", "goblin"]
 	if phase >= 2:
-		support_ids.append("shooter")
+		support_ids.append("ghost")
+		support_ids.append("imp")
 	for index in range(support_ids.size()):
 		var angle: float = TAU * float(index) / float(support_ids.size()) + randf_range(-0.18, 0.18)
 		var distance: float = 110.0 + 26.0 * float(index % 2)

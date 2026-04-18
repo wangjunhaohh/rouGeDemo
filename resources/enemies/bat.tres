@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "bat"
+display_name = "Bat"
+behavior = "chase"
+max_health = 20.0
+move_speed = 178.0
+touch_damage = 6.0
+experience_reward = 5
+size = 10.0
+spawn_weight = 1.2
+color = Color(0.35, 0.4, 0.86, 1)

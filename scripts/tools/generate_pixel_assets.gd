@@ -301,188 +301,214 @@ func _generate_player_sprite() -> Image:
 func _generate_runner_sprite() -> Image:
 	return _sprite_from_pattern([
 		"................",
-		"................",
-		".....RRRR.......",
-		"....RrrrrR......",
-		"...RrrMMrrR.....",
-		"...RrMMMMrR.....",
-		"...RrMMMMrR.....",
-		"...RrMMMMrR.....",
-		"....RMMMMR......",
-		"....rRMMRr......",
-		"...r..MM..r.....",
-		"...r..MM..r.....",
-		"..rr..MM..rr....",
-		"..r...MM...r....",
-		"......MM........",
-		"......MM........"
+		".....aaAA.......",
+		"....aABBAa......",
+		"...aABCCBAa.....",
+		"...aBCCCCBa.....",
+		"..aBDCCCCDBa....",
+		"..aBDCCCCDBa....",
+		"..aABCCCCBAa....",
+		"...aBBCCBBa.....",
+		"...d.BCCB.d.....",
+		"..dd.BCCB.dd....",
+		"..d..BCCB..d....",
+		".....BCCB.......",
+		"....dB..Bd......",
+		"...dd....dd.....",
+		"................"
 	], {
 		".": TRANSPARENT,
-		"R": Color8(162, 54, 59),
-		"r": Color8(108, 32, 36),
-		"M": Color8(241, 231, 215)
+		"a": Color8(93, 24, 32),
+		"A": Color8(173, 54, 73),
+		"B": Color8(131, 42, 55),
+		"C": Color8(244, 226, 200),
+		"D": Color8(255, 248, 230),
+		"d": Color8(64, 20, 27)
 	}, 4)
 
 
 func _generate_brute_sprite() -> Image:
 	return _sprite_from_pattern([
 		"................",
-		"....OOOOOO......",
-		"...OooooooO.....",
-		"..OooMMMMooO....",
-		"..OooMMMMooO....",
-		"..OooooooooO....",
-		"..OooOOOOooO....",
-		"..OooOOOOooO....",
-		"..OooOOOOooO....",
-		"..OOoOOOOoOO....",
-		"...OooOOooO.....",
-		"...O..OO..O.....",
-		"..OO..OO..OO....",
-		"..OO..OO..OO....",
-		"...O..OO..O.....",
-		"......OO........"
+		"...ttOOOOtt.....",
+		"..tOoooAAooOt...",
+		"..OooABBBBAooO..",
+		".tOoABCCCCBAoOt.",
+		".OOABCDDDDCBAOO.",
+		".OOABCDDDDCBAOO.",
+		".OOABCDDDDCBAOO.",
+		".OOABBCCCCBBAOO.",
+		".tOOABBBBBBAOOt.",
+		"..OOAABBBBAAOO..",
+		"..OOAABBBBAAOO..",
+		"...OO..BB..OO...",
+		"..tOO..BB..OOt..",
+		"...tt..BB..tt...",
+		"................"
 	], {
 		".": TRANSPARENT,
-		"O": Color8(151, 104, 43),
-		"o": Color8(102, 69, 25),
-		"M": Color8(231, 209, 181)
+		"t": Color8(90, 58, 23),
+		"O": Color8(132, 86, 34),
+		"o": Color8(101, 66, 24),
+		"A": Color8(171, 116, 50),
+		"B": Color8(120, 81, 35),
+		"C": Color8(243, 221, 190),
+		"D": Color8(255, 247, 225)
 	}, 4)
 
 
 func _generate_shooter_sprite() -> Image:
 	return _sprite_from_pattern([
 		"................",
-		"......CC........",
-		".....CccC.......",
-		"....Cccccc......",
-		"...CcMMMMcC.....",
-		"...CccMMccC.....",
-		"...CccccccC.....",
-		"...CccccccC.....",
-		"....CccccC......",
-		"...bbCccCbb.....",
-		"..bb..CC..bb....",
-		"..b...CC...b....",
-		"......CC........",
-		".....bCCb.......",
-		"....bb..bb......",
+		".....ssCC.......",
+		"...ssCccccCs....",
+		"...sCcABBAcCs...",
+		"..sCcABDDBAcCs..",
+		"..CCaBDEEDBaCC..",
+		"..CCaBDEEDBaCC..",
+		"..CCaBDDDDBaCC..",
+		"..sCCaBBBBaCCs..",
+		"...sCCaBBaCCs...",
+		"..bb.sCCCCs.bb..",
+		"..b..sCCCCs..b..",
+		".....sCCCCs.....",
+		"....bbC..Cbb....",
+		"...bbb....bbb...",
 		"................"
 	], {
 		".": TRANSPARENT,
-		"C": Color8(69, 144, 196),
-		"c": Color8(33, 91, 131),
-		"M": Color8(220, 236, 246),
-		"b": Color8(46, 54, 72)
+		"s": Color8(27, 56, 86),
+		"C": Color8(63, 132, 184),
+		"c": Color8(35, 88, 128),
+		"a": Color8(86, 179, 225),
+		"A": Color8(47, 101, 146),
+		"B": Color8(77, 161, 206),
+		"D": Color8(212, 232, 245),
+		"E": Color8(246, 252, 255),
+		"b": Color8(39, 49, 70)
 	}, 4)
 
 
 func _generate_elite_sprite() -> Image:
 	return _sprite_from_pattern([
 		"................",
-		".....GGGG.......",
-		"....GggggG......",
-		"...GgMMMMgG.....",
-		"...GgMMMMgG.....",
-		"...GggggggG.....",
-		"..GGgGGGGgGG....",
-		"..GggGGGGggG....",
-		"..GggGGGGggG....",
-		"...GgGGGGgG.....",
-		"..AA.GGGG.AA....",
-		"..A..GGGG..A....",
-		".....GGGG.......",
-		"...AAGGGGAA.....",
-		"...AA....AA.....",
+		".....rrGG.......",
+		"...rrGggggGr....",
+		"...rGgABBAgGr...",
+		"..rGgABCCBAgGr..",
+		"..GGABCDDCBAGG..",
+		".rGGABCDDCBAGGr.",
+		".rGGABCCCCBAGGr.",
+		"..GGgABBBBAgGG..",
+		"..rGGgABBAgGGr..",
+		"..RR.GGGGGG.RR..",
+		"..R..GGGGGG..R..",
+		".....GGGGGG.....",
+		"...RRGG..GGRR...",
+		"..RRR......RRR..",
 		"................"
 	], {
 		".": TRANSPARENT,
+		"r": Color8(128, 29, 37),
+		"R": Color8(161, 40, 48),
 		"G": Color8(212, 160, 62),
-		"g": Color8(123, 78, 24),
-		"M": Color8(255, 232, 189),
-		"A": Color8(161, 42, 43)
+		"g": Color8(129, 83, 27),
+		"A": Color8(180, 132, 44),
+		"B": Color8(143, 99, 28),
+		"C": Color8(255, 226, 177),
+		"D": Color8(255, 245, 216)
 	}, 4)
 
 
 func _generate_boss_sprite() -> Image:
 	return _sprite_from_pattern([
-		"................",
-		"......TT........",
-		".....TWWT.......",
-		"....TWWWWT......",
-		"...TWWMMWWT.....",
-		"..TWWMMMMWWT....",
-		"..TWWMMMMWWT....",
-		"..TWWMMMMWWT....",
-		"..TWWMMMMWWT....",
-		"..TWWWMMWWWT....",
-		"...TWWWWWWT.....",
-		"..RRTWWWWTRR....",
-		".RRR.TTTT.RRR...",
-		".R....TT....R...",
-		"......TT........",
-		".....R..R......."
+		"....rrTTTTrr....",
+		"...rTWWAAWWTr...",
+		"..rTWABBBBAWTr..",
+		"..TWABCCCCBAWT..",
+		".rWABCDDDDCBAWr.",
+		".TWABCDFFDCBAWT.",
+		".TWABCDFFDCBAWT.",
+		".TWABCDDDDCBAWT.",
+		".TWABCCCCCCBAWT.",
+		".rTWABBBBBBAWTr.",
+		"..rTWABBBBAWTr..",
+		"..RR.TWGGWT.RR..",
+		".RR...TGGT...RR.",
+		".R....TGGT....R.",
+		"......T..T......",
+		".....RR..RR....."
 	], {
 		".": TRANSPARENT,
-		"T": Color8(87, 98, 125),
-		"W": Color8(34, 44, 58),
-		"M": Color8(223, 241, 255),
-		"R": Color8(122, 28, 39)
+		"r": Color8(81, 20, 30),
+		"R": Color8(117, 29, 40),
+		"T": Color8(74, 88, 112),
+		"W": Color8(34, 45, 61),
+		"A": Color8(61, 73, 96),
+		"B": Color8(50, 61, 80),
+		"C": Color8(164, 188, 210),
+		"D": Color8(214, 232, 247),
+		"F": Color8(246, 252, 255),
+		"G": Color8(203, 84, 63)
 	}, 5)
 
 
 func _generate_player_projectile_sprite() -> Image:
 	return _sprite_from_pattern([
-		"......Y.........",
-		".....YYY........",
-		"....YYYYY.......",
-		"...YYYYYYY......",
-		"....YYYYY.......",
-		".....YYY........",
-		"......Y.........",
+		"......gg........",
+		".....gWWg.......",
+		"...ggWYYWgg.....",
+		"..ggWYYYYWgg....",
+		"...ggWYYWgg.....",
+		".....gWWg.......",
+		"......gg........",
 		"................"
 	], {
 		".": TRANSPARENT,
-		"Y": Color8(248, 225, 107)
+		"g": Color8(237, 141, 42),
+		"W": Color8(255, 236, 180),
+		"Y": Color8(255, 249, 236)
 	}, 4)
 
 
 func _generate_enemy_projectile_sprite() -> Image:
 	return _sprite_from_pattern([
-		"......B.........",
-		".....BBB........",
-		"....BBRBB.......",
-		"...BBRRRBB......",
-		"....BBRBB.......",
-		".....BBB........",
-		"......B.........",
+		"......dd........",
+		".....dCCd.......",
+		"...ddCRRCdd.....",
+		"..ddCRRRRCdd....",
+		"...ddCRRCdd.....",
+		".....dCCd.......",
+		"......dd........",
 		"................"
 	], {
 		".": TRANSPARENT,
-		"B": Color8(80, 173, 220),
-		"R": Color8(184, 58, 72)
+		"d": Color8(45, 132, 196),
+		"C": Color8(108, 214, 255),
+		"R": Color8(255, 122, 151)
 	}, 4)
 
 
 func _generate_experience_orb_sprite() -> Image:
 	return _sprite_from_pattern([
 		"................",
-		"......GG........",
-		"....GGllGG......",
-		"...GllllllG.....",
-		"...GllWWllG.....",
-		"..GlllWWlllG....",
-		"..GlllWWlllG....",
-		"..GllWWWWllG....",
-		"...GllllllG.....",
-		"...GGllllGG.....",
-		".....GGGG.......",
+		".....nnnn.......",
+		"...nnNNNNnn.....",
+		"...nNCCCCNn.....",
+		"..nNCCWWCCNn....",
+		"..nNCWWWWCNn....",
+		"..nNCWWWWCNn....",
+		"..nNCCWWCCNn....",
+		"...nNCCCCNn.....",
+		"...nnNNNNnn.....",
+		".....nnnn.......",
 		"................"
 	], {
 		".": TRANSPARENT,
-		"G": Color8(74, 220, 138),
-		"l": Color8(28, 151, 88),
-		"W": Color8(213, 255, 223)
+		"n": Color8(18, 152, 123),
+		"N": Color8(45, 225, 170),
+		"C": Color8(119, 255, 213),
+		"W": Color8(240, 255, 250)
 	}, 4)
 
 

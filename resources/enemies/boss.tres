@@ -5,16 +5,16 @@
 [resource]
 script = ExtResource("1")
 enemy_id = "boss"
-display_name = "余烬监工"
+display_name = "Spider Core"
 behavior = "shooter"
-max_health = 720.0
-move_speed = 60.0
+max_health = 760.0
+move_speed = 58.0
 touch_damage = 22.0
 experience_reward = 150
-size = 28.0
+size = 29.0
 spawn_weight = 0.0
-color = Color(0.82, 0.26, 0.31, 1)
-preferred_distance = 260.0
-projectile_cooldown = 1.15
-projectile_speed = 260.0
-projectile_damage = 14.0
+color = Color(0.76, 0.32, 0.34, 1)
+preferred_distance = 265.0
+projectile_cooldown = 1.1
+projectile_speed = 270.0
+projectile_damage = 15.0

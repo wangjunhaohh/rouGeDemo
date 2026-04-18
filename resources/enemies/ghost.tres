@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "ghost"
+display_name = "Ghost"
+behavior = "shooter"
+max_health = 30.0
+move_speed = 110.0
+touch_damage = 8.0
+experience_reward = 10
+size = 14.0
+spawn_weight = 0.85
+color = Color(0.5, 0.88, 0.96, 1)
+preferred_distance = 250.0
+projectile_cooldown = 1.7
+projectile_speed = 250.0
+projectile_damage = 11.0

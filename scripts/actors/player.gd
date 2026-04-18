@@ -2,10 +2,21 @@ extends CharacterBody2D
 class_name Player
 
 const CAMERA_EDGE_MARGIN := 12
-const EIGHT_WAY_STEP := PI / 4.0
 const WEAPON_TEXTURE := preload("res://art/sprites/weapon_blaster.png")
 const WEAPON_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
 const SENTRY_NODE_SCENE := preload("res://scenes/props/sentry_node.tscn")
+const WEAPON_BASE_SCALE := 0.68
+const WEAPON_FLASH_BASE_SCALE := 0.72
+const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
+	"down": preload("res://art/sprites/player_dirs/player_down.png"),
+	"down_right": preload("res://art/sprites/player_dirs/player_down_right.png"),
+	"right": preload("res://art/sprites/player_dirs/player_right.png"),
+	"up_right": preload("res://art/sprites/player_dirs/player_up_right.png"),
+	"up": preload("res://art/sprites/player_dirs/player_up.png"),
+	"up_left": preload("res://art/sprites/player_dirs/player_up_left.png"),
+	"left": preload("res://art/sprites/player_dirs/player_left.png"),
+	"down_left": preload("res://art/sprites/player_dirs/player_down_left.png")
+}
 
 signal projectile_spawned(projectile: Node2D)
 signal effect_spawned(effect: Node2D)
@@ -60,6 +71,7 @@ var _branch_burn_duration := 0.0
 var _branch_sentry_shot_interval := 0
 var _branch_weapon_tint := Color(1.0, 1.0, 1.0, 1.0)
 var _branch_flash_tint := Color(1.0, 0.92, 0.74, 0.95)
+var _body_direction_key := "right"
 
 @onready var body_visual: Sprite2D = $Body
 @onready var weapon_visual: Sprite2D = $Weapon
@@ -190,7 +202,7 @@ func _handle_movement(delta: float) -> void:
 		clampf(global_position.x, -arena_half_size.x, arena_half_size.x),
 		clampf(global_position.y, -arena_half_size.y, arena_half_size.y)
 	)
-	body_visual.rotation = snappedf(_last_move_direction.angle() + PI * 0.5, EIGHT_WAY_STEP)
+	_update_body_direction_sprite(_last_move_direction)
 
 
 func _handle_attack(delta: float) -> void:
@@ -336,14 +348,18 @@ func _apply_shape() -> void:
 		circle.radius = 14.0
 	body_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	body_visual.centered = true
-	body_visual.texture = load("res://art/sprites/player.png") as Texture2D
+	body_visual.texture = PLAYER_DIRECTION_TEXTURES["right"] as Texture2D
+	body_visual.rotation = 0.0
 	weapon_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	weapon_visual.centered = true
 	weapon_visual.texture = WEAPON_TEXTURE
+	weapon_visual.scale = Vector2.ONE * WEAPON_BASE_SCALE
 	weapon_flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	weapon_flash.centered = true
 	weapon_flash.texture = WEAPON_FLASH_TEXTURE
+	weapon_flash.scale = Vector2.ONE * WEAPON_FLASH_BASE_SCALE
 	weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_update_body_direction_sprite(_last_move_direction, true)
 	_apply_branch_visual_style()
 
 
@@ -381,18 +397,18 @@ func _update_weapon_animation(delta: float) -> void:
 	var direction: Vector2 = _aim_direction.normalized()
 	if direction == Vector2.ZERO:
 		direction = _last_move_direction
-	var base_offset: Vector2 = direction * 15.0 + Vector2(0.0, -2.0)
+	var base_offset: Vector2 = direction * 13.0 + Vector2(0.0, -2.0)
 	var recoil_offset: Vector2 = -direction * _weapon_recoil_strength
 	weapon_visual.position = base_offset + recoil_offset
 	weapon_visual.rotation = direction.angle()
-	weapon_visual.scale = Vector2.ONE * (1.0 + _weapon_pulse_left * 0.45)
+	weapon_visual.scale = Vector2.ONE * WEAPON_BASE_SCALE * (1.0 + _weapon_pulse_left * 0.45)
 
-	weapon_flash.position = direction * 25.0
+	weapon_flash.position = direction * 21.0
 	weapon_flash.rotation = direction.angle()
 	if _weapon_flash_left > 0.0:
 		var flash_ratio: float = _weapon_flash_left / 0.11
 		weapon_flash.modulate = Color(_weapon_flash_color.r, _weapon_flash_color.g, _weapon_flash_color.b, minf(flash_ratio, 1.0))
-		weapon_flash.scale = Vector2.ONE * (0.9 + flash_ratio * 0.45)
+		weapon_flash.scale = Vector2.ONE * WEAPON_FLASH_BASE_SCALE * (0.9 + flash_ratio * 0.45)
 	else:
 		weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
 
@@ -465,3 +481,37 @@ func _trigger_feedback(feedback_name: String) -> void:
 	var game: Node = get_tree().get_first_node_in_group("game")
 	if game != null and game.has_method("on_player_feedback"):
 		game.on_player_feedback(feedback_name, global_position)
+
+
+func _direction_to_sprite_key(direction: Vector2) -> String:
+	if direction == Vector2.ZERO:
+		return _body_direction_key
+	var normalized_angle: float = wrapf(direction.angle(), 0.0, TAU)
+	var octant: int = int(floor((normalized_angle + PI / 8.0) / (PI / 4.0))) % 8
+	match octant:
+		0:
+			return "right"
+		1:
+			return "down_right"
+		2:
+			return "down"
+		3:
+			return "down_left"
+		4:
+			return "left"
+		5:
+			return "up_left"
+		6:
+			return "up"
+		_:
+			return "up_right"
+
+
+func _update_body_direction_sprite(direction: Vector2, force: bool = false) -> void:
+	var key: String = _direction_to_sprite_key(direction)
+	if not force and key == _body_direction_key:
+		return
+	_body_direction_key = key
+	var texture: Texture2D = PLAYER_DIRECTION_TEXTURES.get(key, null) as Texture2D
+	if texture != null:
+		body_visual.texture = texture

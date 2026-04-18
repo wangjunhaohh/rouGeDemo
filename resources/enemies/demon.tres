@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "demon"
+display_name = "Demon"
+behavior = "shooter"
+max_health = 66.0
+move_speed = 92.0
+touch_damage = 15.0
+experience_reward = 14
+size = 16.0
+spawn_weight = 0.45
+color = Color(0.28, 0.3, 0.55, 1)
+preferred_distance = 240.0
+projectile_cooldown = 1.5
+projectile_speed = 280.0
+projectile_damage = 13.0

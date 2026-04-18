@@ -1,6 +1,8 @@
 extends Area2D
 class_name EnemyProjectile
 
+const PROJECTILE_VISUAL_SCALE := 0.62
+
 var direction := Vector2.RIGHT
 var speed := 220.0
 var damage := 8.0
@@ -15,6 +17,7 @@ func _ready() -> void:
 	collision_mask = 1
 	visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	visual.texture = load("res://art/sprites/projectile_enemy.png") as Texture2D
+	visual.scale = Vector2.ONE * PROJECTILE_VISUAL_SCALE
 	visual.modulate = _pending_tint
 	body_entered.connect(_on_body_entered)
 

@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "imp"
+display_name = "Imp"
+behavior = "chase"
+max_health = 52.0
+move_speed = 128.0
+touch_damage = 14.0
+experience_reward = 12
+size = 15.0
+spawn_weight = 0.65
+color = Color(0.98, 0.3, 0.24, 1)
