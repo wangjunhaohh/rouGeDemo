@@ -15,6 +15,11 @@ const ENEMY_DEFINITIONS := [
 
 const UPGRADE_DEFINITIONS := [
 	preload("res://resources/upgrades/battle_boots.tres"),
+	preload("res://resources/upgrades/bulwark_stride.tres"),
+	preload("res://resources/upgrades/cinder_field.tres"),
+	preload("res://resources/upgrades/ember_chain.tres"),
+	preload("res://resources/upgrades/fortress_plating.tres"),
+	preload("res://resources/upgrades/iron_reverb.tres"),
 	preload("res://resources/upgrades/long_range.tres"),
 	preload("res://resources/upgrades/piercing_round.tres"),
 	preload("res://resources/upgrades/power_shot.tres"),
@@ -22,6 +27,10 @@ const UPGRADE_DEFINITIONS := [
 	preload("res://resources/upgrades/pulse_drive.tres"),
 	preload("res://resources/upgrades/pulse_emitter.tres"),
 	preload("res://resources/upgrades/rapid_fire.tres"),
+	preload("res://resources/upgrades/relay_beacon.tres"),
+	preload("res://resources/upgrades/scorching_payload.tres"),
+	preload("res://resources/upgrades/sentry_array.tres"),
+	preload("res://resources/upgrades/sentry_overclock.tres"),
 	preload("res://resources/upgrades/split_round.tres"),
 	preload("res://resources/upgrades/vitality.tres")
 ]

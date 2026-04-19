@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "scorching_payload"
+display_name = "蚀火载荷"
+description = "燃烧伤害 +1.8，主武器伤害 +3"
+rarity_weight = 0.76
+max_level = 4
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("burn", "damage")
+effect_type = "branch_burn_damage"
+amount = 1.8
+secondary_effect_type = "projectile_damage"
+secondary_amount = 3.0

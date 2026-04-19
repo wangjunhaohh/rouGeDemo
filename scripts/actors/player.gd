@@ -5,6 +5,8 @@ const CAMERA_EDGE_MARGIN := 12
 const WEAPON_TEXTURE := preload("res://art/sprites/weapon_blaster.png")
 const WEAPON_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
 const SENTRY_NODE_SCENE := preload("res://scenes/props/sentry_node.tscn")
+const GUARD_BURST_SCENE := preload("res://scenes/effects/guard_burst.tscn")
+const SCORCH_ORB_SCENE := preload("res://scenes/weapons/scorch_orb.tscn")
 const WEAPON_BASE_SCALE := 0.68
 const WEAPON_FLASH_BASE_SCALE := 0.72
 const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
@@ -68,7 +70,28 @@ var _selected_branch_name := ""
 var _branch_damage_taken_multiplier := 1.0
 var _branch_burn_damage := 0.0
 var _branch_burn_duration := 0.0
+var _branch_guard_shot_interval := 0
+var _branch_guard_damage := 0.0
+var _branch_guard_radius := 0.0
+var _branch_guard_knockback := 0.0
+var _branch_scorch_orb_shot_interval := 0
+var _branch_scorch_orb_damage := 0.0
+var _branch_scorch_orb_speed := 0.0
+var _branch_scorch_orb_range := 0.0
+var _branch_scorch_field_radius := 0.0
+var _branch_scorch_field_duration := 0.0
+var _branch_scorch_field_tick_damage := 0.0
+var _branch_scorch_field_tick_interval := 0.5
+var _branch_scorch_slow_duration := 0.0
+var _branch_scorch_slow_amount := 1.0
 var _branch_sentry_shot_interval := 0
+var _branch_sentry_lifetime := 8.0
+var _branch_sentry_fire_interval := 0.78
+var _branch_sentry_damage_multiplier := 0.42
+var _branch_sentry_range := 340.0
+var _branch_sentry_pulse_damage := 0.0
+var _branch_sentry_pulse_radius := 0.0
+var _branch_sentry_pulse_interval := 0.0
 var _branch_weapon_tint := Color(1.0, 1.0, 1.0, 1.0)
 var _branch_flash_tint := Color(1.0, 0.92, 0.74, 0.95)
 var _body_direction_key := "right"
@@ -115,6 +138,8 @@ func apply_contact_damage(amount: float, source_position: Vector2) -> void:
 	health_changed.emit(current_health, max_health)
 	_trigger_feedback("hurt")
 	trigger_camera_shake(8.0, 0.16)
+	if _branch_guard_damage > 0.0 and _branch_guard_radius > 0.0:
+		_spawn_guard_burst(0.72, 0.86)
 	if current_health <= 0.0:
 		_dead = true
 		_weapon_flash_left = 0.0
@@ -143,7 +168,28 @@ func set_branch_definition(definition: Dictionary) -> void:
 	_branch_damage_taken_multiplier = float(definition.get("damage_taken_multiplier", 1.0))
 	_branch_burn_damage = float(definition.get("burn_damage", 0.0))
 	_branch_burn_duration = float(definition.get("burn_duration", 0.0))
+	_branch_guard_shot_interval = int(definition.get("guard_shot_interval", 0))
+	_branch_guard_damage = float(definition.get("guard_damage", 0.0))
+	_branch_guard_radius = float(definition.get("guard_radius", 0.0))
+	_branch_guard_knockback = float(definition.get("guard_knockback", 0.0))
+	_branch_scorch_orb_shot_interval = int(definition.get("scorch_orb_shot_interval", 0))
+	_branch_scorch_orb_damage = float(definition.get("scorch_orb_damage", 0.0))
+	_branch_scorch_orb_speed = float(definition.get("scorch_orb_speed", 0.0))
+	_branch_scorch_orb_range = float(definition.get("scorch_orb_range", 0.0))
+	_branch_scorch_field_radius = float(definition.get("scorch_field_radius", 0.0))
+	_branch_scorch_field_duration = float(definition.get("scorch_field_duration", 0.0))
+	_branch_scorch_field_tick_damage = float(definition.get("scorch_field_tick_damage", 0.0))
+	_branch_scorch_field_tick_interval = float(definition.get("scorch_field_tick_interval", 0.5))
+	_branch_scorch_slow_duration = float(definition.get("scorch_slow_duration", 0.0))
+	_branch_scorch_slow_amount = float(definition.get("scorch_slow_amount", 1.0))
 	_branch_sentry_shot_interval = int(definition.get("sentry_shot_interval", 0))
+	_branch_sentry_lifetime = float(definition.get("sentry_lifetime", 8.0))
+	_branch_sentry_fire_interval = float(definition.get("sentry_fire_interval", 0.78))
+	_branch_sentry_damage_multiplier = float(definition.get("sentry_damage_multiplier", 0.42))
+	_branch_sentry_range = float(definition.get("sentry_range", 340.0))
+	_branch_sentry_pulse_damage = float(definition.get("sentry_pulse_damage", 0.0))
+	_branch_sentry_pulse_radius = float(definition.get("sentry_pulse_radius", 0.0))
+	_branch_sentry_pulse_interval = float(definition.get("sentry_pulse_interval", 0.0))
 	_branch_weapon_tint = definition.get("weapon_tint", Color(1.0, 1.0, 1.0, 1.0)) as Color
 	_branch_flash_tint = definition.get("flash_color", Color(1.0, 0.92, 0.74, 0.95)) as Color
 	for effect in Array(definition.get("starting_effects", [])):
@@ -181,6 +227,9 @@ func get_build_summary() -> String:
 	]
 	if not _selected_branch_name.is_empty():
 		summary = "分支 %s | %s" % [_selected_branch_name, summary]
+	var branch_mechanic_text := _branch_mechanic_summary()
+	if not branch_mechanic_text.is_empty():
+		summary += " | 机制 %s" % branch_mechanic_text
 	var synergy_names: Array[String] = _get_active_synergy_names()
 	if not synergy_names.is_empty():
 		summary += " | 联动 %s" % " / ".join(synergy_names)
@@ -246,6 +295,10 @@ func _handle_attack(delta: float) -> void:
 		if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
 			projectile.set_status_effect("burn", _branch_burn_duration, _branch_burn_damage)
 		projectile_spawned.emit(projectile)
+	if _branch_guard_shot_interval > 0 and _attack_sequence % _branch_guard_shot_interval == 0:
+		_spawn_guard_burst()
+	if _branch_scorch_orb_shot_interval > 0 and _attack_sequence % _branch_scorch_orb_shot_interval == 0:
+		_spawn_scorch_orb((targets[0].global_position - global_position).normalized())
 	if _branch_sentry_shot_interval > 0 and _attack_sequence % _branch_sentry_shot_interval == 0:
 		_spawn_branch_sentry()
 	if overcharge_active:
@@ -338,6 +391,48 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			pulse_radius += amount
 		"pulse_cooldown":
 			pulse_cooldown = maxf(0.8, pulse_cooldown + amount)
+		"branch_damage_taken_multiplier":
+			_branch_damage_taken_multiplier = clampf(_branch_damage_taken_multiplier * amount, 0.4, 1.35)
+		"branch_burn_damage":
+			_branch_burn_damage = maxf(_branch_burn_damage + amount, 0.0)
+		"branch_burn_duration":
+			_branch_burn_duration = clampf(_branch_burn_duration + amount, 0.0, 12.0)
+		"guard_burst_damage":
+			_branch_guard_damage = maxf(_branch_guard_damage + amount, 0.0)
+		"guard_burst_radius":
+			_branch_guard_radius = clampf(_branch_guard_radius + amount, 24.0, 240.0)
+		"guard_shot_interval_delta":
+			if _branch_guard_shot_interval <= 0:
+				_branch_guard_shot_interval = 5
+			_branch_guard_shot_interval = clampi(_branch_guard_shot_interval + int(amount), 2, 12)
+		"scorch_orb_interval_delta":
+			if _branch_scorch_orb_shot_interval <= 0:
+				_branch_scorch_orb_shot_interval = 5
+			_branch_scorch_orb_shot_interval = clampi(_branch_scorch_orb_shot_interval + int(amount), 2, 12)
+		"scorch_field_radius":
+			_branch_scorch_field_radius = clampf(_branch_scorch_field_radius + amount, 32.0, 240.0)
+		"scorch_field_duration":
+			_branch_scorch_field_duration = clampf(_branch_scorch_field_duration + amount, 0.4, 12.0)
+		"scorch_field_tick_damage":
+			_branch_scorch_field_tick_damage = maxf(_branch_scorch_field_tick_damage + amount, 0.0)
+		"sentry_shot_interval_delta":
+			if _branch_sentry_shot_interval <= 0:
+				_branch_sentry_shot_interval = 6
+			_branch_sentry_shot_interval = clampi(_branch_sentry_shot_interval + int(amount), 2, 14)
+		"sentry_damage_multiplier":
+			_branch_sentry_damage_multiplier = clampf(_branch_sentry_damage_multiplier + amount, 0.2, 1.8)
+		"sentry_lifetime":
+			_branch_sentry_lifetime = clampf(_branch_sentry_lifetime + amount, 2.0, 22.0)
+		"sentry_fire_interval":
+			_branch_sentry_fire_interval = clampf(_branch_sentry_fire_interval + amount, 0.25, 2.0)
+		"sentry_range":
+			_branch_sentry_range = clampf(_branch_sentry_range + amount, 140.0, 680.0)
+		"sentry_pulse_damage":
+			_branch_sentry_pulse_damage = maxf(_branch_sentry_pulse_damage + amount, 0.0)
+		"sentry_pulse_radius":
+			_branch_sentry_pulse_radius = clampf(_branch_sentry_pulse_radius + amount, 18.0, 220.0)
+		"sentry_pulse_interval":
+			_branch_sentry_pulse_interval = clampf(_branch_sentry_pulse_interval + amount, 0.25, 3.0)
 		_:
 			push_warning("Unknown upgrade effect: %s" % effect_type)
 
@@ -425,13 +520,75 @@ func _current_projectile_tint(overcharge_active: bool) -> Color:
 	return _branch_weapon_tint
 
 
+func _branch_mechanic_summary() -> String:
+	if _branch_guard_shot_interval > 0:
+		return "震荡护环/%d射" % _branch_guard_shot_interval
+	if _branch_scorch_orb_shot_interval > 0:
+		return "蚀火法球/%d射" % _branch_scorch_orb_shot_interval
+	if _branch_sentry_shot_interval > 0:
+		return "哨戒节点/%d射" % _branch_sentry_shot_interval
+	return ""
+
+
+func _spawn_guard_burst(damage_scale: float = 1.0, radius_scale: float = 1.0) -> void:
+	if _branch_guard_damage <= 0.0 or _branch_guard_radius <= 0.0:
+		return
+	var burst := GUARD_BURST_SCENE.instantiate()
+	burst.global_position = global_position
+	burst.setup(
+		_branch_guard_damage * damage_scale,
+		_branch_guard_radius * radius_scale,
+		0.2,
+		maxf(_branch_guard_knockback, 180.0),
+		_branch_weapon_tint
+	)
+	effect_spawned.emit(burst)
+	trigger_camera_shake(1.8, 0.05)
+
+
+func _spawn_scorch_orb(direction: Vector2) -> void:
+	if _branch_scorch_orb_damage <= 0.0 or _branch_scorch_field_radius <= 0.0:
+		return
+	if direction == Vector2.ZERO:
+		direction = _last_move_direction
+	var orb := SCORCH_ORB_SCENE.instantiate()
+	orb.global_position = global_position
+	orb.setup(
+		direction,
+		_branch_scorch_orb_speed,
+		_branch_scorch_orb_range,
+		_branch_scorch_orb_damage,
+		knockback_force * 0.55,
+		_branch_scorch_field_radius,
+		_branch_scorch_field_duration,
+		_branch_scorch_field_tick_interval,
+		_branch_scorch_field_tick_damage,
+		maxf(_branch_burn_duration, 0.8),
+		maxf(_branch_burn_damage, 1.0),
+		_branch_scorch_slow_duration,
+		_branch_scorch_slow_amount,
+		_branch_weapon_tint.lerp(Color(1.0, 0.36, 0.18, 1.0), 0.55)
+	)
+	projectile_spawned.emit(orb)
+	trigger_camera_shake(1.4, 0.04)
+
+
 func _spawn_branch_sentry() -> void:
 	var sentry: SentryNode = SENTRY_NODE_SCENE.instantiate() as SentryNode
 	var direction: Vector2 = _aim_direction.normalized()
 	if direction == Vector2.ZERO:
 		direction = _last_move_direction
 	sentry.global_position = global_position + direction * 26.0
-	sentry.setup(8.0, 0.78, maxf(projectile_damage * 0.42, 8.0), 340.0, _branch_weapon_tint)
+	sentry.setup(
+		_branch_sentry_lifetime,
+		_branch_sentry_fire_interval,
+		maxf(projectile_damage * _branch_sentry_damage_multiplier, 8.0),
+		_branch_sentry_range,
+		_branch_weapon_tint,
+		_branch_sentry_pulse_damage,
+		_branch_sentry_pulse_radius,
+		_branch_sentry_pulse_interval
+	)
 	effect_spawned.emit(sentry)
 	trigger_camera_shake(1.3, 0.04)
 

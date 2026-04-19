@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "iron_reverb"
+display_name = "铁壁回响"
+description = "震荡护环触发间隔 -1 次射击，护环伤害 +4"
+rarity_weight = 0.66
+max_level = 3
+tags = PackedStringArray("tank")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("guard", "survival")
+effect_type = "guard_shot_interval_delta"
+amount = -1.0
+secondary_effect_type = "guard_burst_damage"
+secondary_amount = 4.0

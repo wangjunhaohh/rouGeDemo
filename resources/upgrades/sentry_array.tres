@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "sentry_array"
+display_name = "哨戒矩阵"
+description = "哨戒持续 +1.6 秒，哨戒射程 +36"
+rarity_weight = 0.7
+max_level = 3
+tags = PackedStringArray("building", "neutral")
+exclusive_branch = "building"
+synergy_tags = PackedStringArray("summon", "range")
+effect_type = "sentry_lifetime"
+amount = 1.6
+secondary_effect_type = "sentry_range"
+secondary_amount = 36.0

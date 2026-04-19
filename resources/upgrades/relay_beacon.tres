@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "relay_beacon"
+display_name = "中继信标"
+description = "哨戒脉冲伤害 +3，脉冲间隔 -0.16 秒"
+rarity_weight = 0.68
+max_level = 3
+tags = PackedStringArray("building")
+exclusive_branch = "building"
+synergy_tags = PackedStringArray("summon", "formation")
+effect_type = "sentry_pulse_damage"
+amount = 3.0
+secondary_effect_type = "sentry_pulse_interval"
+secondary_amount = -0.16

@@ -402,10 +402,12 @@ func _update_boss_hud() -> void:
 
 
 func _on_projectile_spawned(projectile: Node2D) -> void:
+	_wire_runtime_spawn(projectile)
 	projectiles_layer.add_child(projectile)
 
 
 func _on_effect_spawned(effect: Node2D) -> void:
+	_wire_runtime_spawn(effect)
 	effects_layer.add_child(effect)
 
 
@@ -423,6 +425,7 @@ func _on_player_shot_fired(weapon_name: String) -> void:
 
 func _on_player_died() -> void:
 	projectiles_layer.process_mode = Node.PROCESS_MODE_DISABLED
+	effects_layer.process_mode = Node.PROCESS_MODE_DISABLED
 	_finish_run(false)
 
 
@@ -487,6 +490,8 @@ func _pick_upgrade_options(count: int) -> Array[UpgradeData]:
 	var candidates: Array[UpgradeData] = []
 	var forced_upgrade: UpgradeData
 	for definition in upgrade_definitions:
+		if not definition.exclusive_branch.is_empty() and String(definition.exclusive_branch) != selected_branch_id:
+			continue
 		if definition.upgrade_id.begins_with("pulse_") and definition.upgrade_id != "pulse_emitter" and not player.pulse_enabled:
 			continue
 		var current_level: int = int(upgrade_levels.get(definition.upgrade_id, 0))
@@ -498,25 +503,75 @@ func _pick_upgrade_options(count: int) -> Array[UpgradeData]:
 		candidates.append(definition)
 
 	var selected: Array[UpgradeData] = []
+	var forced_slot_count := 0
 	if forced_upgrade != null:
 		selected.append(forced_upgrade)
+		forced_slot_count = 1
+
+	# 根据当前已成型内容累计联动标签，让后续可选项更连贯
+	var owned_synergy_tags: PackedStringArray = _collect_owned_synergy_tags()
+	if forced_upgrade != null:
+		_append_synergy_tags(owned_synergy_tags, forced_upgrade.synergy_tags)
 
 	while selected.size() < count and not candidates.is_empty():
 		var primary_pick: bool = selected.size() < count - 1
-		var total_weight := 0.0
-		for candidate in candidates:
-			total_weight += _upgrade_candidate_weight(candidate, primary_pick)
-		var roll: float = randf() * total_weight
-		var cumulative := 0.0
-		var chosen_index := 0
-		for index in range(candidates.size()):
-			cumulative += _upgrade_candidate_weight(candidates[index], primary_pick)
-			if roll <= cumulative:
-				chosen_index = index
-				break
-		selected.append(candidates[chosen_index])
-		candidates.remove_at(chosen_index)
+		var roll_candidates: Array[UpgradeData] = candidates
+		if selected.size() == forced_slot_count and not selected_branch_id.is_empty():
+			var primary_branch_candidates: Array[UpgradeData] = []
+			for candidate in candidates:
+				if BRANCH_CATALOG.is_primary_branch_match(candidate, selected_branch_id):
+					primary_branch_candidates.append(candidate)
+			if not primary_branch_candidates.is_empty():
+				roll_candidates = primary_branch_candidates
+		elif selected.size() == count - 1 and not selected_branch_id.is_empty():
+			var off_branch_candidates: Array[UpgradeData] = []
+			for candidate in candidates:
+				if BRANCH_CATALOG.is_primary_branch_match(candidate, selected_branch_id):
+					continue
+				off_branch_candidates.append(candidate)
+			if not off_branch_candidates.is_empty():
+				roll_candidates = off_branch_candidates
+
+		var picked: UpgradeData = _pick_weighted_upgrade(roll_candidates, primary_pick, owned_synergy_tags)
+		selected.append(picked)
+		_append_synergy_tags(owned_synergy_tags, picked.synergy_tags)
+		candidates.erase(picked)
 	return selected
+
+
+func _pick_weighted_upgrade(candidates: Array[UpgradeData], primary_pick: bool, owned_synergy_tags: PackedStringArray) -> UpgradeData:
+	if candidates.is_empty():
+		return null
+	var total_weight := 0.0
+	for candidate in candidates:
+		total_weight += _upgrade_candidate_weight(candidate, primary_pick, owned_synergy_tags)
+	if total_weight <= 0.0:
+		return candidates[0]
+
+	var roll: float = randf() * total_weight
+	var cumulative := 0.0
+	for candidate in candidates:
+		cumulative += _upgrade_candidate_weight(candidate, primary_pick, owned_synergy_tags)
+		if roll <= cumulative:
+			return candidate
+	return candidates[0]
+
+
+func _collect_owned_synergy_tags() -> PackedStringArray:
+	var tags: PackedStringArray = PackedStringArray()
+	for definition in upgrade_definitions:
+		if int(upgrade_levels.get(definition.upgrade_id, 0)) <= 0:
+			continue
+		_append_synergy_tags(tags, definition.synergy_tags)
+	return tags
+
+
+func _append_synergy_tags(target: PackedStringArray, source: PackedStringArray) -> void:
+	for raw_tag in source:
+		var tag: String = String(raw_tag)
+		if tag.is_empty() or target.has(tag):
+			continue
+		target.append(tag)
 
 
 func _on_upgrade_selected(index: int) -> void:
@@ -645,7 +700,7 @@ func _format_time(seconds: float) -> String:
 	return "%02d:%02d" % [minutes, remainder]
 
 
-func _upgrade_candidate_weight(candidate: UpgradeData, primary_pick: bool = true) -> float:
+func _upgrade_candidate_weight(candidate: UpgradeData, primary_pick: bool = true, owned_synergy_tags: PackedStringArray = PackedStringArray()) -> float:
 	var weight: float = candidate.rarity_weight
 	match candidate.upgrade_id:
 		"rapid_fire":
@@ -674,7 +729,17 @@ func _upgrade_candidate_weight(candidate: UpgradeData, primary_pick: bool = true
 			if int(upgrade_levels.get("pulse_core", 0)) > 0:
 				weight *= 1.22
 	weight *= BRANCH_CATALOG.get_branch_weight_multiplier(candidate, selected_branch_id, primary_pick)
-	return weight
+	weight *= BRANCH_CATALOG.get_branch_synergy_multiplier(candidate, selected_branch_id)
+
+	if not owned_synergy_tags.is_empty():
+		var synergy_match_count := 0
+		for raw_tag in candidate.synergy_tags:
+			if owned_synergy_tags.has(String(raw_tag)):
+				synergy_match_count += 1
+		if synergy_match_count > 0:
+			weight *= float(pow(1.12, float(synergy_match_count)))
+
+	return maxf(weight, 0.01)
 
 
 func on_enemy_hit(world_position: Vector2, enemy_id: String, was_elite: bool, was_boss: bool, died_now: bool) -> void:
@@ -877,6 +942,15 @@ func _spawn_boss_support_wave(phase: int, origin: Vector2) -> void:
 
 func _set_modal_pause(active: bool) -> void:
 	get_tree().paused = active
+
+
+func _wire_runtime_spawn(node: Node) -> void:
+	var effect_callable := Callable(self, "_on_effect_spawned")
+	if node.has_signal("effect_spawned") and not node.is_connected("effect_spawned", effect_callable):
+		node.connect("effect_spawned", effect_callable)
+	var projectile_callable := Callable(self, "_on_projectile_spawned")
+	if node.has_signal("projectile_spawned") and not node.is_connected("projectile_spawned", projectile_callable):
+		node.connect("projectile_spawned", projectile_callable)
 
 
 func _spawn_burst(world_position: Vector2, color: Color, size: float, count: int, duration: float, spread: float) -> void:

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "sentry_overclock"
+display_name = "节点超频"
+description = "哨戒部署间隔 -1 次射击，哨戒伤害系数 +0.08"
+rarity_weight = 0.74
+max_level = 3
+tags = PackedStringArray("building")
+exclusive_branch = "building"
+synergy_tags = PackedStringArray("summon", "tempo")
+effect_type = "sentry_shot_interval_delta"
+amount = -1.0
+secondary_effect_type = "sentry_damage_multiplier"
+secondary_amount = 0.08

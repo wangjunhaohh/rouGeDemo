@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "cinder_field"
+display_name = "余烬滞域"
+description = "灼地区域持续 +1.0 秒，半径 +18"
+rarity_weight = 0.7
+max_level = 3
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("burn", "pressure")
+effect_type = "scorch_field_duration"
+amount = 1.0
+secondary_effect_type = "scorch_field_radius"
+secondary_amount = 18.0

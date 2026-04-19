@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "fortress_plating"
+display_name = "堡垒装甲"
+description = "接触承伤系数 x0.9，最大生命 +12"
+rarity_weight = 0.72
+max_level = 3
+tags = PackedStringArray("tank")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("survival", "guard")
+effect_type = "branch_damage_taken_multiplier"
+amount = 0.9
+secondary_effect_type = "max_health"
+secondary_amount = 12.0

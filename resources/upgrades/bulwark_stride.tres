@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "bulwark_stride"
+display_name = "重盾步态"
+description = "移动速度 +12，拾取范围 +16"
+rarity_weight = 0.75
+max_level = 2
+tags = PackedStringArray("tank", "neutral")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("survival", "mobility")
+effect_type = "move_speed"
+amount = 12.0
+secondary_effect_type = "pickup_radius"
+secondary_amount = 16.0

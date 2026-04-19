@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/effects/guard_burst.gd" id="1"]
+
+[sub_resource type="CircleShape2D" id="1"]
+radius = 12.0
+
+[node name="GuardBurst" type="Area2D"]
+script = ExtResource("1")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")
+
+[node name="Fill" type="Polygon2D" parent="."]
+color = Color(0.96, 0.86, 0.58, 0.22)
+
+[node name="Ring" type="Line2D" parent="."]
+width = 5.0
+default_color = Color(0.96, 0.86, 0.58, 0.92)

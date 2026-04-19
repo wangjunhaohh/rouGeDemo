@@ -35,6 +35,8 @@ var _boss_charge_direction := Vector2.ZERO
 var _burn_time_left := 0.0
 var _burn_tick_left := 0.0
 var _burn_damage := 0.0
+var _slow_time_left := 0.0
+var _slow_multiplier := 1.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var body_visual: Sprite2D = $Body
@@ -103,6 +105,7 @@ func _physics_process(delta: float) -> void:
 	var speed_multiplier: float = 1.0
 	if is_boss and _boss_charge_time_left > 0.0:
 		speed_multiplier = 4.6 if _boss_phase >= 2 else 4.0
+	speed_multiplier *= _slow_multiplier
 	velocity = velocity.move_toward(direction * move_speed_runtime * speed_multiplier, move_speed_runtime * 8.0 * speed_multiplier * delta)
 	move_and_slide()
 	_handle_contact_damage(distance, delta)
@@ -119,6 +122,10 @@ func apply_status_effect(status_type: String, duration: float, value: float) -> 
 			_burn_time_left = maxf(_burn_time_left, duration)
 			_burn_tick_left = minf(_burn_tick_left, 0.18) if _burn_tick_left > 0.0 else 0.18
 			_burn_damage = maxf(_burn_damage, value)
+			_flash_left = maxf(_flash_left, 0.05)
+		"slow":
+			_slow_time_left = maxf(_slow_time_left, duration)
+			_slow_multiplier = minf(_slow_multiplier, value)
 			_flash_left = maxf(_flash_left, 0.05)
 
 
@@ -234,6 +241,10 @@ func _handle_contact_damage(distance: float, delta: float) -> void:
 
 
 func _handle_status_effects(delta: float) -> void:
+	if _slow_time_left > 0.0:
+		_slow_time_left = maxf(_slow_time_left - delta, 0.0)
+		if _slow_time_left <= 0.0:
+			_slow_multiplier = 1.0
 	if _burn_time_left <= 0.0:
 		return
 	_burn_time_left = maxf(_burn_time_left - delta, 0.0)
@@ -340,6 +351,8 @@ func _resolve_texture() -> Texture2D:
 func _get_display_color() -> Color:
 	if _burn_time_left > 0.0:
 		return Color(1.0, 0.7, 0.52, 1.0)
+	if _slow_time_left > 0.0:
+		return Color(0.72, 0.88, 1.0, 1.0)
 	if is_boss:
 		return Color(1.0, 1.0, 1.0, 1.0)
 	if is_elite:

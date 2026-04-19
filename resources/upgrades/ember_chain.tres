@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "ember_chain"
+display_name = "余烬链路"
+description = "燃烧持续 +0.55 秒，主武器冷却 -0.05 秒"
+rarity_weight = 0.68
+max_level = 3
+tags = PackedStringArray("debuff", "neutral")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("burn", "tempo")
+effect_type = "branch_burn_duration"
+amount = 0.55
+secondary_effect_type = "projectile_cooldown"
+secondary_amount = -0.05
