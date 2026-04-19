@@ -1,6 +1,39 @@
 extends RefCounted
 class_name BranchCatalog
 
+const TANK_WEAPON_FRAME_PATHS := {
+	"idle": "res://art/sprites/branch_weapons/tank_blade_idle.png",
+	"windup": "res://art/sprites/branch_weapons/tank_blade_windup.png",
+	"release": "res://art/sprites/branch_weapons/tank_blade_swing.png",
+	"recover": "res://art/sprites/branch_weapons/tank_blade_recover.png"
+}
+const TANK_FLASH_FRAME_PATHS := {
+	"a": "res://art/sprites/branch_weapons/tank_slash_a.png",
+	"b": "res://art/sprites/branch_weapons/tank_slash_b.png"
+}
+const DEBUFF_WEAPON_FRAME_PATHS := {
+	"idle": "res://art/sprites/branch_weapons/debuff_staff_idle.png",
+	"windup": "res://art/sprites/branch_weapons/debuff_staff_cast.png",
+	"release": "res://art/sprites/branch_weapons/debuff_staff_release.png",
+	"recover": "res://art/sprites/branch_weapons/debuff_staff_idle.png"
+}
+const DEBUFF_FLASH_FRAME_PATHS := {
+	"a": "res://art/sprites/branch_weapons/debuff_cast_a.png",
+	"b": "res://art/sprites/branch_weapons/debuff_cast_b.png"
+}
+const BUILDING_WEAPON_FRAME_PATHS := {
+	"idle": "res://art/sprites/branch_weapons/building_relay_idle.png",
+	"windup": "res://art/sprites/branch_weapons/building_relay_charge.png",
+	"release": "res://art/sprites/branch_weapons/building_relay_release.png",
+	"recover": "res://art/sprites/branch_weapons/building_relay_idle.png"
+}
+const BUILDING_FLASH_FRAME_PATHS := {
+	"a": "res://art/sprites/branch_weapons/building_signal_a.png",
+	"b": "res://art/sprites/branch_weapons/building_signal_b.png"
+}
+const DEBUFF_PROJECTILE_TEXTURE_PATH := "res://art/sprites/branch_weapons/debuff_orb.png"
+const BUILDING_PROJECTILE_TEXTURE_PATH := "res://art/sprites/branch_weapons/building_bolt.png"
+
 static func get_branch_definitions() -> Array[Dictionary]:
 	var items: Array[Dictionary] = []
 	for definition in _build_branch_definitions():
@@ -26,6 +59,24 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"accent_color": Color(0.9, 0.74, 0.42, 1.0),
 			"weapon_tint": Color(0.96, 0.84, 0.58, 1.0),
 			"flash_color": Color(1.0, 0.9, 0.58, 1.0),
+			"weapon_type": "melee",
+			"attack_shape": "arc",
+			"attack_range": 96.0,
+			"attack_arc": 108.0,
+			"windup_time": 0.18,
+			"recovery_time": 0.15,
+			"animation_key": "tank_blade",
+			"weapon_length": 20.0,
+			"muzzle_distance": 30.0,
+			"flash_distance": 32.0,
+			"weapon_base_scale": 0.72,
+			"flash_base_scale": 0.92,
+			"projectile_scale": 0.62,
+			"projectile_spin": 0.0,
+			"projectile_speed_multiplier": 1.0,
+			"projectile_range_multiplier": 1.0,
+			"weapon_frames": _load_frame_dictionary(TANK_WEAPON_FRAME_PATHS),
+			"flash_frames": _load_frame_dictionary(TANK_FLASH_FRAME_PATHS),
 			"damage_taken_multiplier": 0.82,
 			"guard_shot_interval": 5,
 			"guard_damage": 14.0,
@@ -46,6 +97,25 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"accent_color": Color(0.95, 0.38, 0.26, 1.0),
 			"weapon_tint": Color(0.96, 0.62, 0.42, 1.0),
 			"flash_color": Color(1.0, 0.58, 0.34, 1.0),
+			"weapon_type": "thrown",
+			"attack_shape": "orb",
+			"attack_range": 0.0,
+			"attack_arc": 0.0,
+			"windup_time": 0.2,
+			"recovery_time": 0.12,
+			"animation_key": "debuff_staff",
+			"weapon_length": 17.0,
+			"muzzle_distance": 24.0,
+			"flash_distance": 24.0,
+			"weapon_base_scale": 0.7,
+			"flash_base_scale": 0.82,
+			"projectile_scale": 0.68,
+			"projectile_spin": 7.4,
+			"projectile_speed_multiplier": 0.9,
+			"projectile_range_multiplier": 0.92,
+			"weapon_frames": _load_frame_dictionary(DEBUFF_WEAPON_FRAME_PATHS),
+			"flash_frames": _load_frame_dictionary(DEBUFF_FLASH_FRAME_PATHS),
+			"projectile_texture": _load_texture(DEBUFF_PROJECTILE_TEXTURE_PATH),
 			"burn_damage": 4.0,
 			"burn_duration": 2.4,
 			"scorch_orb_shot_interval": 5,
@@ -70,6 +140,25 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"accent_color": Color(0.42, 0.88, 0.96, 1.0),
 			"weapon_tint": Color(0.56, 0.86, 0.96, 1.0),
 			"flash_color": Color(0.58, 0.95, 1.0, 1.0),
+			"weapon_type": "ranged",
+			"attack_shape": "bolt",
+			"attack_range": 0.0,
+			"attack_arc": 0.0,
+			"windup_time": 0.14,
+			"recovery_time": 0.1,
+			"animation_key": "building_relay",
+			"weapon_length": 16.0,
+			"muzzle_distance": 25.0,
+			"flash_distance": 26.0,
+			"weapon_base_scale": 0.72,
+			"flash_base_scale": 0.84,
+			"projectile_scale": 0.66,
+			"projectile_spin": 0.0,
+			"projectile_speed_multiplier": 1.08,
+			"projectile_range_multiplier": 1.0,
+			"weapon_frames": _load_frame_dictionary(BUILDING_WEAPON_FRAME_PATHS),
+			"flash_frames": _load_frame_dictionary(BUILDING_FLASH_FRAME_PATHS),
+			"projectile_texture": _load_texture(BUILDING_PROJECTILE_TEXTURE_PATH),
 			"sentry_shot_interval": 6,
 			"sentry_lifetime": 8.0,
 			"sentry_fire_interval": 0.78,
@@ -83,6 +172,22 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"priority_synergy_tags": PackedStringArray(["summon", "range", "formation", "pulse"])
 		}
 	]
+
+
+static func _load_frame_dictionary(paths: Dictionary) -> Dictionary:
+	var frames: Dictionary = {}
+	for key in paths.keys():
+		frames[key] = _load_texture(String(paths[key]))
+	return frames
+
+
+static func _load_texture(path: String) -> Texture2D:
+	var image := Image.new()
+	var error := image.load(ProjectSettings.globalize_path(path))
+	if error != OK:
+		push_warning("Failed to load branch weapon texture: %s" % path)
+		return null
+	return ImageTexture.create_from_image(image)
 
 
 static func get_branch_name(branch_id: String) -> String:

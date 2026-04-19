@@ -9,6 +9,16 @@ const GUARD_BURST_SCENE := preload("res://scenes/effects/guard_burst.tscn")
 const SCORCH_ORB_SCENE := preload("res://scenes/weapons/scorch_orb.tscn")
 const WEAPON_BASE_SCALE := 0.68
 const WEAPON_FLASH_BASE_SCALE := 0.72
+const DEFAULT_WEAPON_FRAMES := {
+	"idle": WEAPON_TEXTURE,
+	"windup": WEAPON_TEXTURE,
+	"release": WEAPON_TEXTURE,
+	"recover": WEAPON_TEXTURE
+}
+const DEFAULT_FLASH_FRAMES := {
+	"a": WEAPON_FLASH_TEXTURE,
+	"b": WEAPON_FLASH_TEXTURE
+}
 const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
 	"down": preload("res://art/sprites/player_dirs/player_down.png"),
 	"down_right": preload("res://art/sprites/player_dirs/player_down_right.png"),
@@ -19,6 +29,8 @@ const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
 	"left": preload("res://art/sprites/player_dirs/player_left.png"),
 	"down_left": preload("res://art/sprites/player_dirs/player_down_left.png")
 }
+
+enum AttackPhase { IDLE, WINDUP, RECOVERY }
 
 signal projectile_spawned(projectile: Node2D)
 signal effect_spawned(effect: Node2D)
@@ -92,9 +104,33 @@ var _branch_sentry_range := 340.0
 var _branch_sentry_pulse_damage := 0.0
 var _branch_sentry_pulse_radius := 0.0
 var _branch_sentry_pulse_interval := 0.0
+var _branch_weapon_type := "ranged"
+var _branch_attack_shape := "bolt"
+var _branch_attack_range := 0.0
+var _branch_attack_arc := 0.0
+var _branch_windup_time := 0.12
+var _branch_recovery_time := 0.1
+var _branch_animation_key := "default"
+var _branch_weapon_length := 14.0
+var _branch_muzzle_distance := 21.0
+var _branch_flash_distance := 21.0
+var _branch_weapon_base_scale := WEAPON_BASE_SCALE
+var _branch_flash_base_scale := WEAPON_FLASH_BASE_SCALE
+var _branch_projectile_scale := 0.62
+var _branch_projectile_spin := 0.0
+var _branch_projectile_speed_multiplier := 1.0
+var _branch_projectile_range_multiplier := 1.0
+var _branch_weapon_frames: Dictionary = DEFAULT_WEAPON_FRAMES.duplicate(true)
+var _branch_flash_frames: Dictionary = DEFAULT_FLASH_FRAMES.duplicate(true)
+var _branch_projectile_texture: Texture2D
 var _branch_weapon_tint := Color(1.0, 1.0, 1.0, 1.0)
 var _branch_flash_tint := Color(1.0, 0.92, 0.74, 0.95)
 var _body_direction_key := "right"
+var _attack_phase: int = AttackPhase.IDLE
+var _attack_phase_time_left := 0.0
+var _attack_direction := Vector2.RIGHT
+var _attack_target_position := Vector2.ZERO
+var _attack_hit_resolved := false
 
 @onready var body_visual: Sprite2D = $Body
 @onready var weapon_visual: Sprite2D = $Weapon
@@ -190,8 +226,33 @@ func set_branch_definition(definition: Dictionary) -> void:
 	_branch_sentry_pulse_damage = float(definition.get("sentry_pulse_damage", 0.0))
 	_branch_sentry_pulse_radius = float(definition.get("sentry_pulse_radius", 0.0))
 	_branch_sentry_pulse_interval = float(definition.get("sentry_pulse_interval", 0.0))
+	_branch_weapon_type = String(definition.get("weapon_type", "ranged"))
+	_branch_attack_shape = String(definition.get("attack_shape", "bolt"))
+	_branch_attack_range = float(definition.get("attack_range", 0.0))
+	_branch_attack_arc = float(definition.get("attack_arc", 0.0))
+	_branch_windup_time = float(definition.get("windup_time", 0.12))
+	_branch_recovery_time = float(definition.get("recovery_time", 0.1))
+	_branch_animation_key = String(definition.get("animation_key", "default"))
+	_branch_weapon_length = float(definition.get("weapon_length", 14.0))
+	_branch_muzzle_distance = float(definition.get("muzzle_distance", 21.0))
+	_branch_flash_distance = float(definition.get("flash_distance", 21.0))
+	_branch_weapon_base_scale = float(definition.get("weapon_base_scale", WEAPON_BASE_SCALE))
+	_branch_flash_base_scale = float(definition.get("flash_base_scale", WEAPON_FLASH_BASE_SCALE))
+	_branch_projectile_scale = float(definition.get("projectile_scale", 0.62))
+	_branch_projectile_spin = float(definition.get("projectile_spin", 0.0))
+	_branch_projectile_speed_multiplier = float(definition.get("projectile_speed_multiplier", 1.0))
+	_branch_projectile_range_multiplier = float(definition.get("projectile_range_multiplier", 1.0))
+	var weapon_frames: Dictionary = definition.get("weapon_frames", DEFAULT_WEAPON_FRAMES)
+	var flash_frames: Dictionary = definition.get("flash_frames", DEFAULT_FLASH_FRAMES)
+	_branch_weapon_frames = weapon_frames.duplicate(true)
+	_branch_flash_frames = flash_frames.duplicate(true)
+	_branch_projectile_texture = definition.get("projectile_texture", null) as Texture2D
 	_branch_weapon_tint = definition.get("weapon_tint", Color(1.0, 1.0, 1.0, 1.0)) as Color
 	_branch_flash_tint = definition.get("flash_color", Color(1.0, 0.92, 0.74, 0.95)) as Color
+	_attack_phase = AttackPhase.IDLE
+	_attack_phase_time_left = 0.0
+	_attack_hit_resolved = false
+	_attack_direction = _last_move_direction
 	for effect in Array(definition.get("starting_effects", [])):
 		_apply_effect(String(effect.get("type", "")), float(effect.get("amount", 0.0)))
 	_apply_branch_visual_style()
@@ -255,9 +316,14 @@ func _handle_movement(delta: float) -> void:
 
 
 func _handle_attack(delta: float) -> void:
-	if projectile_scene == null or _dead:
+	if _dead:
 		return
-	_projectile_timer -= delta
+	if _branch_weapon_type != "melee" and projectile_scene == null:
+		return
+	_projectile_timer = maxf(_projectile_timer - delta, 0.0)
+	_update_attack_state(delta)
+	if _attack_phase != AttackPhase.IDLE:
+		return
 	if _projectile_timer > 0.0:
 		return
 
@@ -265,45 +331,164 @@ func _handle_attack(delta: float) -> void:
 	if targets.is_empty():
 		return
 
+	var target: Node2D = _pick_primary_attack_target(targets)
+	if target == null:
+		return
+	_start_primary_attack(target.global_position)
+
+
+func _pick_primary_attack_target(targets: Array[Node2D]) -> Node2D:
+	if targets.is_empty():
+		return null
+	if _branch_weapon_type != "melee":
+		return targets[0]
+	var melee_reach: float = _current_melee_reach() + 20.0
+	for target in targets:
+		if global_position.distance_to(target.global_position) <= melee_reach:
+			return target
+	return null
+
+
+func _start_primary_attack(target_position: Vector2) -> void:
+	var direction: Vector2 = (target_position - global_position).normalized()
+	if direction == Vector2.ZERO:
+		direction = _last_move_direction
+	if direction == Vector2.ZERO:
+		direction = Vector2.RIGHT
 	_projectile_timer = projectile_cooldown
+	_attack_direction = direction
+	_attack_target_position = target_position
+	_attack_phase = AttackPhase.WINDUP
+	_attack_phase_time_left = maxf(_branch_windup_time, 0.01)
+	_attack_hit_resolved = false
+	_aim_direction = direction
+	body_visual.scale = Vector2(1.03, 0.98)
+
+
+func _update_attack_state(delta: float) -> void:
+	if _attack_phase == AttackPhase.IDLE:
+		return
+	_attack_phase_time_left = maxf(_attack_phase_time_left - delta, 0.0)
+	if _attack_phase == AttackPhase.WINDUP:
+		if _attack_hit_resolved or _attack_phase_time_left > 0.0:
+			return
+		_attack_hit_resolved = true
+		_resolve_primary_attack()
+		_attack_phase = AttackPhase.RECOVERY
+		_attack_phase_time_left = maxf(_branch_recovery_time, 0.01)
+		return
+	if _attack_phase == AttackPhase.RECOVERY and _attack_phase_time_left <= 0.0:
+		_attack_phase = AttackPhase.IDLE
+		_attack_hit_resolved = false
+
+
+func _resolve_primary_attack() -> void:
 	_attack_sequence += 1
-	var shot_count: int = projectile_count + _get_bonus_projectile_count()
+	var shot_count: int = max(projectile_count + _get_bonus_projectile_count(), 1)
 	var overcharge_active: bool = _has_overcharge_synergy() and _attack_sequence % 4 == 0
-	_trigger_weapon_fire((targets[0].global_position - global_position).normalized(), overcharge_active)
-	for shot_index in range(shot_count):
-		var target: Node2D = targets[shot_index % targets.size()]
-		var base_direction: Vector2 = (target.global_position - global_position).normalized()
-		var spread_offset: float = _get_spread_offset(shot_index, shot_count)
-		var direction: Vector2 = base_direction.rotated(spread_offset)
-		var projectile: PlayerProjectile = projectile_scene.instantiate() as PlayerProjectile
-		projectile.global_position = global_position
-		var projectile_damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
-		var projectile_speed_value: float = projectile_speed * (1.12 if overcharge_active else 1.0)
-		var projectile_range_value: float = projectile_range + (32.0 if _has_linebreak_synergy() else 0.0)
-		var projectile_pierce_value: int = projectile_pierce
-		if _has_linebreak_synergy() and shot_index == shot_count - 1:
-			projectile_pierce_value += 1
-		projectile.setup(
-			projectile_damage_value,
-			direction,
-			projectile_speed_value,
-			projectile_range_value,
-			projectile_pierce_value,
-			knockback_force * (1.3 if overcharge_active else 1.0),
-			_current_projectile_tint(overcharge_active)
-		)
-		if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
-			projectile.set_status_effect("burn", _branch_burn_duration, _branch_burn_damage)
-		projectile_spawned.emit(projectile)
+	_trigger_weapon_fire(_attack_direction, overcharge_active)
+	match _branch_weapon_type:
+		"melee":
+			_perform_melee_attack(shot_count, overcharge_active)
+		"thrown":
+			_fire_primary_projectiles(shot_count, overcharge_active, 0.92)
+		_:
+			_fire_primary_projectiles(shot_count, overcharge_active, 0.78)
 	if _branch_guard_shot_interval > 0 and _attack_sequence % _branch_guard_shot_interval == 0:
 		_spawn_guard_burst()
 	if _branch_scorch_orb_shot_interval > 0 and _attack_sequence % _branch_scorch_orb_shot_interval == 0:
-		_spawn_scorch_orb((targets[0].global_position - global_position).normalized())
+		_spawn_scorch_orb(_attack_direction)
 	if _branch_sentry_shot_interval > 0 and _attack_sequence % _branch_sentry_shot_interval == 0:
 		_spawn_branch_sentry()
 	if overcharge_active:
 		trigger_camera_shake(3.0, 0.07)
-	shot_fired.emit("projectile")
+	var shot_name := "projectile"
+	if _branch_weapon_type == "melee":
+		shot_name = "melee"
+	elif _branch_weapon_type == "thrown":
+		shot_name = "spell"
+	else:
+		shot_name = "command"
+	shot_fired.emit(shot_name)
+
+
+func _perform_melee_attack(shot_count: int, overcharge_active: bool) -> void:
+	var direction: Vector2 = _attack_direction.normalized()
+	if direction == Vector2.ZERO:
+		direction = _last_move_direction
+	var slash_count: int = max(shot_count, 1)
+	var center_index: float = float(slash_count - 1) * 0.5
+	var melee_reach: float = _current_melee_reach()
+	var melee_arc_radians: float = deg_to_rad(_current_melee_arc())
+	var damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
+	var knockback_value: float = knockback_force * (1.32 if overcharge_active else 1.08)
+	var hit_any := false
+	for enemy_node in get_tree().get_nodes_in_group("enemies"):
+		var enemy: Enemy = enemy_node as Enemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		var to_enemy: Vector2 = enemy.global_position - global_position
+		if to_enemy == Vector2.ZERO or to_enemy.length() > melee_reach:
+			continue
+		var enemy_direction: Vector2 = to_enemy.normalized()
+		var enemy_hit := false
+		for slash_index in range(slash_count):
+			var slash_offset: float = (float(slash_index) - center_index) * 0.16
+			var slash_direction: Vector2 = direction.rotated(slash_offset)
+			if absf(slash_direction.angle_to(enemy_direction)) <= melee_arc_radians * 0.5:
+				enemy.take_damage(damage_value, global_position, knockback_value)
+				if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
+					enemy.apply_status_effect("burn", _branch_burn_duration, _branch_burn_damage)
+				enemy_hit = true
+				hit_any = true
+				break
+		if enemy_hit and overcharge_active:
+			enemy.velocity += direction * 26.0
+	if hit_any:
+		trigger_camera_shake(2.0 if not overcharge_active else 2.8, 0.05)
+
+
+func _fire_primary_projectiles(shot_count: int, overcharge_active: bool, spread_scale: float) -> void:
+	for shot_index in range(shot_count):
+		var spread_offset: float = _get_spread_offset(shot_index, shot_count) * spread_scale
+		var direction: Vector2 = _attack_direction.rotated(spread_offset)
+		_spawn_primary_projectile(direction, overcharge_active, shot_index == shot_count - 1 and _has_linebreak_synergy())
+
+
+func _spawn_primary_projectile(direction: Vector2, overcharge_active: bool, bonus_pierce: bool) -> void:
+	if projectile_scene == null:
+		return
+	var projectile: PlayerProjectile = projectile_scene.instantiate() as PlayerProjectile
+	if projectile == null:
+		return
+	var projectile_damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
+	var projectile_speed_value: float = projectile_speed * _branch_projectile_speed_multiplier * (1.12 if overcharge_active else 1.0)
+	var projectile_range_value: float = projectile_range * _branch_projectile_range_multiplier + (32.0 if _has_linebreak_synergy() else 0.0)
+	var projectile_pierce_value: int = projectile_pierce + (1 if bonus_pierce else 0)
+	projectile.global_position = global_position + direction.normalized() * _branch_muzzle_distance
+	projectile.setup(
+		projectile_damage_value,
+		direction,
+		projectile_speed_value,
+		projectile_range_value,
+		projectile_pierce_value,
+		knockback_force * (1.3 if overcharge_active else 1.0),
+		_current_projectile_tint(overcharge_active),
+		_branch_projectile_texture,
+		_branch_projectile_scale,
+		_branch_projectile_spin
+	)
+	if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
+		projectile.set_status_effect("burn", _branch_burn_duration, _branch_burn_damage)
+	projectile_spawned.emit(projectile)
+
+
+func _current_melee_reach() -> float:
+	return _branch_attack_range + maxf(projectile_range - 420.0, 0.0) * 0.18 + float(projectile_pierce) * 7.0
+
+
+func _current_melee_arc() -> float:
+	return _branch_attack_arc + float(projectile_pierce) * 8.0
 
 
 func _handle_pulse(delta: float) -> void:
@@ -447,12 +632,12 @@ func _apply_shape() -> void:
 	body_visual.rotation = 0.0
 	weapon_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	weapon_visual.centered = true
-	weapon_visual.texture = WEAPON_TEXTURE
-	weapon_visual.scale = Vector2.ONE * WEAPON_BASE_SCALE
+	weapon_visual.texture = _branch_weapon_frame("idle")
+	weapon_visual.scale = Vector2.ONE * _branch_weapon_base_scale
 	weapon_flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	weapon_flash.centered = true
-	weapon_flash.texture = WEAPON_FLASH_TEXTURE
-	weapon_flash.scale = Vector2.ONE * WEAPON_FLASH_BASE_SCALE
+	weapon_flash.texture = _branch_flash_frame("a")
+	weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale
 	weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
 	_update_body_direction_sprite(_last_move_direction, true)
 	_apply_branch_visual_style()
@@ -468,8 +653,19 @@ func _configure_camera() -> void:
 
 func _trigger_weapon_fire(direction: Vector2, overcharge_active: bool) -> void:
 	_aim_direction = direction
-	_weapon_recoil_strength = 5.4 if overcharge_active else 4.2
-	_weapon_flash_left = 0.09 if overcharge_active else 0.07
+	match _branch_weapon_type:
+		"melee":
+			_weapon_recoil_strength = 1.9 if overcharge_active else 1.2
+			_weapon_flash_left = 0.14 if overcharge_active else 0.11
+			_weapon_pulse_left = maxf(_weapon_pulse_left, 0.12)
+		"thrown":
+			_weapon_recoil_strength = 3.8 if overcharge_active else 2.9
+			_weapon_flash_left = 0.12 if overcharge_active else 0.1
+			_weapon_pulse_left = maxf(_weapon_pulse_left, 0.08)
+		_:
+			_weapon_recoil_strength = 4.8 if overcharge_active else 3.9
+			_weapon_flash_left = 0.1 if overcharge_active else 0.08
+			_weapon_pulse_left = maxf(_weapon_pulse_left, 0.08)
 	_weapon_flash_color = _branch_flash_tint
 	if overcharge_active:
 		_weapon_flash_color = _branch_flash_tint.lightened(0.12)
@@ -490,28 +686,114 @@ func _update_weapon_animation(delta: float) -> void:
 	body_visual.scale = body_visual.scale.lerp(Vector2.ONE, minf(delta * 10.0, 1.0))
 
 	var direction: Vector2 = _aim_direction.normalized()
+	if _attack_phase != AttackPhase.IDLE:
+		direction = _attack_direction.normalized()
 	if direction == Vector2.ZERO:
 		direction = _last_move_direction
-	var base_offset: Vector2 = direction * 13.0 + Vector2(0.0, -2.0)
-	var recoil_offset: Vector2 = -direction * _weapon_recoil_strength
-	weapon_visual.position = base_offset + recoil_offset
-	weapon_visual.rotation = direction.angle()
-	weapon_visual.scale = Vector2.ONE * WEAPON_BASE_SCALE * (1.0 + _weapon_pulse_left * 0.45)
+	var vertical_offset := Vector2(0.0, -2.0)
+	var weapon_position := direction * _branch_weapon_length + vertical_offset
+	var weapon_rotation := direction.angle()
+	var weapon_texture: Texture2D = _branch_weapon_frame("idle")
+	var flash_position := direction * _branch_flash_distance
+	var flash_rotation := direction.angle()
+	match _branch_weapon_type:
+		"melee":
+			if _attack_phase == AttackPhase.WINDUP:
+				var windup_progress := _attack_phase_progress(_branch_windup_time)
+				weapon_texture = _branch_weapon_frame("windup")
+				weapon_position = direction.rotated(-0.9) * (_branch_weapon_length - 5.0 + windup_progress * 3.0) + vertical_offset
+				weapon_rotation = direction.angle() - 1.2 + windup_progress * 0.32
+			elif _attack_phase == AttackPhase.RECOVERY:
+				var recovery_progress := _attack_phase_progress(_branch_recovery_time)
+				weapon_texture = _branch_weapon_frame("release") if recovery_progress < 0.42 else _branch_weapon_frame("recover")
+				weapon_position = direction.rotated(0.55) * (_branch_weapon_length + 4.0 - recovery_progress * 2.0) + vertical_offset
+				weapon_rotation = direction.angle() + lerpf(1.08, 0.14, recovery_progress)
+			else:
+				weapon_texture = _branch_weapon_frame("idle")
+				weapon_position = direction.rotated(-0.16) * (_branch_weapon_length - 2.0) + vertical_offset
+				weapon_rotation = direction.angle() + 0.28
+			flash_position = direction.rotated(0.38) * _branch_flash_distance
+			flash_rotation = direction.angle() + 0.24
+		"thrown":
+			if _attack_phase == AttackPhase.WINDUP:
+				var cast_progress := _attack_phase_progress(_branch_windup_time)
+				weapon_texture = _branch_weapon_frame("windup")
+				weapon_position = direction.rotated(-0.46) * (_branch_weapon_length - 4.0) + vertical_offset
+				weapon_rotation = direction.angle() - 0.72 + cast_progress * 0.18
+			elif _attack_phase == AttackPhase.RECOVERY:
+				var release_progress := _attack_phase_progress(_branch_recovery_time)
+				weapon_texture = _branch_weapon_frame("release") if release_progress < 0.58 else _branch_weapon_frame("recover")
+				weapon_position = direction * (_branch_weapon_length + 3.0 - release_progress) + vertical_offset
+				weapon_rotation = direction.angle() + lerpf(0.42, 0.08, release_progress)
+			else:
+				weapon_texture = _branch_weapon_frame("idle")
+				weapon_position = direction.rotated(0.18) * _branch_weapon_length + vertical_offset
+				weapon_rotation = direction.angle() + 0.34
+			flash_position = direction * _branch_flash_distance
+			flash_rotation = direction.angle()
+		_:
+			if _attack_phase == AttackPhase.WINDUP:
+				var charge_progress := _attack_phase_progress(_branch_windup_time)
+				weapon_texture = _branch_weapon_frame("windup")
+				weapon_position = direction * (_branch_weapon_length - 4.0) + vertical_offset
+				weapon_rotation = direction.angle() - 0.18 + charge_progress * 0.08
+			elif _attack_phase == AttackPhase.RECOVERY:
+				var release_snap_progress := _attack_phase_progress(_branch_recovery_time)
+				weapon_texture = _branch_weapon_frame("release") if release_snap_progress < 0.62 else _branch_weapon_frame("recover")
+				weapon_position = direction * (_branch_weapon_length + 4.0 - release_snap_progress * 2.0) + vertical_offset
+				weapon_rotation = direction.angle() + 0.08
+			else:
+				weapon_texture = _branch_weapon_frame("idle")
+				weapon_position = direction * _branch_weapon_length + vertical_offset
+				weapon_rotation = direction.angle() + 0.12
+			flash_position = direction * _branch_flash_distance
+			flash_rotation = direction.angle()
+	weapon_visual.texture = weapon_texture
+	weapon_visual.position = weapon_position - direction * _weapon_recoil_strength
+	weapon_visual.rotation = weapon_rotation
+	weapon_visual.scale = Vector2.ONE * _branch_weapon_base_scale * (1.0 + _weapon_pulse_left * 0.45)
 
-	weapon_flash.position = direction * 21.0
-	weapon_flash.rotation = direction.angle()
+	weapon_flash.position = flash_position
+	weapon_flash.rotation = flash_rotation
 	if _weapon_flash_left > 0.0:
-		var flash_ratio: float = _weapon_flash_left / 0.11
+		var flash_ratio: float = _weapon_flash_left / 0.14
+		weapon_flash.texture = _branch_flash_frame("a") if flash_ratio > 0.52 else _branch_flash_frame("b")
 		weapon_flash.modulate = Color(_weapon_flash_color.r, _weapon_flash_color.g, _weapon_flash_color.b, minf(flash_ratio, 1.0))
-		weapon_flash.scale = Vector2.ONE * WEAPON_FLASH_BASE_SCALE * (0.9 + flash_ratio * 0.45)
+		weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale * (0.9 + flash_ratio * 0.45)
 	else:
+		weapon_flash.texture = _branch_flash_frame("a")
 		weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale
 
 
 func _apply_branch_visual_style() -> void:
 	if weapon_visual == null or weapon_flash == null:
 		return
+	weapon_visual.texture = _branch_weapon_frame("idle")
+	weapon_visual.scale = Vector2.ONE * _branch_weapon_base_scale
 	weapon_visual.modulate = _branch_weapon_tint
+	weapon_flash.texture = _branch_flash_frame("a")
+	weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale
+
+
+func _branch_weapon_frame(frame_key: String) -> Texture2D:
+	var texture: Texture2D = _branch_weapon_frames.get(frame_key, null) as Texture2D
+	if texture != null:
+		return texture
+	return WEAPON_TEXTURE
+
+
+func _branch_flash_frame(frame_key: String) -> Texture2D:
+	var texture: Texture2D = _branch_flash_frames.get(frame_key, null) as Texture2D
+	if texture != null:
+		return texture
+	return WEAPON_FLASH_TEXTURE
+
+
+func _attack_phase_progress(total_time: float) -> float:
+	if total_time <= 0.0:
+		return 1.0
+	return clampf(1.0 - _attack_phase_time_left / total_time, 0.0, 1.0)
 
 
 func _current_projectile_tint(overcharge_active: bool) -> Color:
