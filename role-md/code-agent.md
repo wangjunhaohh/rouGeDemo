@@ -314,3 +314,109 @@ res://
 - 不允许所有武器共享同一发射子弹流程
 - 近战武器和远程武器应在逻辑层明确区分
 - 后续新增武器时，必须先确定攻击范式，再进入实现
+
+## 骨骼动画与武器挂点实现规范
+
+### 实现目标
+- 正式战斗中的武器特效攻击动画帧必须以 Spine 骨骼动画为源资产生成
+- 若运行时未直接接入 Spine，则也必须使用 Spine 导出的序列帧作为正式资源
+- 停止优先使用代码生成的像素图帧作为正式战斗动画方案
+- 改为支持角色动作、武器模型、挂点和特效分层的动画系统
+- 支持武器随角色动作驱动，并在指定时机触发攻击判定和特效
+
+### 实现要求
+- 角色动画、武器显示、攻击判定、特效播放必须解耦
+- 角色需要支持基础动作状态：
+  - idle
+  - move
+  - attack
+  - cast
+  - hit
+- 武器需要支持独立挂载到角色指定挂点
+- 武器攻击时应支持单独的挥砍、突刺、投掷、旋转、施法轨迹表现
+- 特效应支持挂点触发，而不是写死在单一子弹逻辑中
+- 武器特效攻击动画帧必须体现连续攻击中间帧，而不是仅靠 2 到 3 张静态图平移缩放伪装动作
+- 攻击动画至少应覆盖起手、出手、命中峰值、收招四个阶段
+- 动作表现需要接近“角色姿态变化 + 武器挥动轨迹 + 斩击/施法特效弧线”这种分层输出
+
+### 数据与结构要求
+- CharacterAnimationController：管理角色动作状态
+- WeaponVisualController：管理武器模型、朝向、挂点和动作
+- AttackTimingController：管理命中帧、前摇、后摇
+- VFXController：管理轨迹、命中、范围和地面特效
+- WeaponDefinition 需要增加：
+  - weapon_type
+  - animation_source
+  - spine_asset_key
+  - spine_animation
+  - spine_event_track
+  - animation_type
+  - hand_socket
+  - hit_frame
+  - vfx_key
+  - vfx_spine_key
+  - slash_arc
+  - cast_style
+
+### 资源规范
+- 武器资源应支持独立模型或部件资源
+- 特效资源应支持独立替换和复用
+- 正式使用的攻击动作帧、挥砍弧光、施法轨迹、命中特效都应来自 Spine 源文件或其导出结果
+- 角色、武器、轨迹、命中特效应按分层资源组织，避免重新退回单张贴图硬编码
+- 动画实现应优先考虑可扩展性，便于后续接入外部骨骼动画资源或导出帧动画资源
+
+### 约束
+- 不再将程序生成的 Image 动画作为主战斗表现方案
+- 武器特效攻击动画帧必须强制走 Spine 资源链路，不允许继续使用脚本直接生成正式攻击帧
+- 不允许所有攻击都走统一子弹发射流程
+- 动画事件必须可用于同步伤害判定、生成特效和播放音效
+
+## Player场景节点结构规范
+
+### 标准结构
+后续玩家角色场景必须按以下结构组织，不允许再把角色表现、攻击点位和受击区域散落在随意节点下：
+
+```text
+Player (CharacterBody2D)
+├─ AnimatedSprite2D
+├─ CollisionShape2D
+├─ Hurtbox (Area2D)
+│  └─ CollisionShape2D
+├─ AttackPoint (Node2D)
+├─ WeaponPivot (Node2D)
+│  ├─ Weapon
+│  ├─ WeaponTrail
+│  └─ WeaponImpact
+├─ SlashHitbox (Area2D)
+│  └─ CollisionShape2D
+└─ AnimationPlayer
+```
+
+### 节点职责
+- `AnimatedSprite2D`：角色主体动画，只负责角色动作帧，不承载武器贴图
+- `Hurtbox`：角色受击区域，后续敌方弹体和近身伤害优先打到这里
+- `AttackPoint`：远程射弹、施法弹体、召唤部署等攻击生成原点
+- `WeaponPivot`：武器挂点和武器特效的统一父节点，负责承接旋转、偏移和朝向
+- `Weapon`：武器本体帧
+- `WeaponTrail`：挥砍轨迹或施法轨迹
+- `WeaponImpact`：命中瞬间特效
+- `SlashHitbox`：近战攻击可开关判定区域，攻击窗口结束后必须关闭
+- `AnimationPlayer`：保留给后续更复杂的时序控制，不要删除
+
+### 实现要求
+- 后续新增角色或重构玩家场景时，节点名必须保持一致，避免脚本路径再次飘移
+- 武器相关节点必须挂在 `WeaponPivot` 下，不允许重新挂回角色根节点
+- 攻击发射点统一取 `AttackPoint`
+- 近战命中区域统一取 `SlashHitbox`
+- 敌方受击入口和玩家受击入口要优先接到 `Hurtbox`，不要继续把受击逻辑分散在多个无关节点
+
+### 剑攻击帧顺序要求
+- 剑系近战攻击动画必须按以下顺序组织：
+  - `frame_01_idle`
+  - `frame_02_ready`
+  - `frame_03_slash`
+  - `frame_04_followthrough`
+  - `frame_05_recover`
+  - `frame_06_idle_end`
+- 命中时机应落在 `slash` 段附近，而不是拖到收招末尾
+- 后续替换成正式 Spine 导出帧时，也必须维持这个动作语义顺序

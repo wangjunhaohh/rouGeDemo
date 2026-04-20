@@ -1,0 +1,50 @@
+{
+  "meta": {
+	"animation_source": "spine",
+	"spine_asset_key": "building_relay",
+	"spine_animation": "primary_attack",
+	"spine_event_track": "signal_release",
+	"vfx_spine_key": "building_signal",
+	"hit_frame_progress": 0.6
+  },
+  "weapon": {
+	"idle": [
+	  "res://art/spine/branch_attacks/building/weapon/idle/00.png",
+      "res://art/spine/branch_attacks/building/weapon/idle/01.png"
+	],
+	"windup": [
+	  "res://art/spine/branch_attacks/building/weapon/windup/00.png",
+	  "res://art/spine/branch_attacks/building/weapon/windup/01.png",
+      "res://art/spine/branch_attacks/building/weapon/windup/02.png"
+	],
+	"release": [
+	  "res://art/spine/branch_attacks/building/weapon/release/00.png",
+	  "res://art/spine/branch_attacks/building/weapon/release/01.png",
+      "res://art/spine/branch_attacks/building/weapon/release/02.png"
+	],
+	"recover": [
+	  "res://art/spine/branch_attacks/building/weapon/recover/00.png",
+	  "res://art/spine/branch_attacks/building/weapon/recover/01.png",
+      "res://art/spine/branch_attacks/building/weapon/recover/02.png"
+	]
+  },
+  "trail": {
+	"windup": [
+	  "res://art/spine/branch_attacks/building/trail/windup/00.png",
+      "res://art/spine/branch_attacks/building/trail/windup/01.png"
+	],
+	"release": [
+	  "res://art/spine/branch_attacks/building/trail/release/00.png",
+      "res://art/spine/branch_attacks/building/trail/release/01.png"
+	],
+	"recover": [
+      "res://art/spine/branch_attacks/building/trail/recover/00.png"
+	]
+  },
+  "impact": {
+	"release": [
+	  "res://art/spine/branch_attacks/building/impact/release/00.png",
+      "res://art/spine/branch_attacks/building/impact/release/01.png"
+	]
+  }
+}

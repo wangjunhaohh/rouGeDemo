@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "animation_source": "spine",
+    "spine_asset_key": "tank_blade",
+    "spine_animation": "primary_attack",
+    "spine_event_track": "primary_hit",
+    "vfx_spine_key": "tank_slash",
+    "hit_frame_progress": 0.72
+  },
+  "weapon": {
+    "idle": [
+      "res://art/spine/branch_attacks/tank/weapon/idle/00.png",
+      "res://art/spine/branch_attacks/tank/weapon/idle/01.png"
+    ],
+    "windup": [
+      "res://art/spine/branch_attacks/tank/weapon/windup/00.png",
+      "res://art/spine/branch_attacks/tank/weapon/windup/01.png",
+      "res://art/spine/branch_attacks/tank/weapon/windup/02.png"
+    ],
+    "release": [
+      "res://art/spine/branch_attacks/tank/weapon/release/00.png",
+      "res://art/spine/branch_attacks/tank/weapon/release/01.png",
+      "res://art/spine/branch_attacks/tank/weapon/release/02.png"
+    ],
+    "recover": [
+      "res://art/spine/branch_attacks/tank/weapon/recover/00.png",
+      "res://art/spine/branch_attacks/tank/weapon/recover/01.png",
+      "res://art/spine/branch_attacks/tank/weapon/recover/02.png"
+    ]
+  },
+  "trail": {
+    "windup": [
+      "res://art/spine/branch_attacks/tank/trail/windup/00.png"
+    ],
+    "release": [
+      "res://art/spine/branch_attacks/tank/trail/release/00.png",
+      "res://art/spine/branch_attacks/tank/trail/release/01.png"
+    ],
+    "recover": [
+      "res://art/spine/branch_attacks/tank/trail/recover/00.png",
+      "res://art/spine/branch_attacks/tank/trail/recover/01.png"
+    ]
+  },
+  "impact": {
+    "release": [
+      "res://art/spine/branch_attacks/tank/impact/release/00.png",
+      "res://art/spine/branch_attacks/tank/impact/release/01.png"
+    ]
+  }
+}

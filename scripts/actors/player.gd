@@ -19,6 +19,8 @@ const DEFAULT_FLASH_FRAMES := {
 	"a": WEAPON_FLASH_TEXTURE,
 	"b": WEAPON_FLASH_TEXTURE
 }
+const BODY_SWORD_ATTACK_ANIMATION := "sword_attack"
+const ATTACHMENT_PIVOT_OFFSET := Vector2(0.0, -2.0)
 const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
 	"down": preload("res://art/sprites/player_dirs/player_down.png"),
 	"down_right": preload("res://art/sprites/player_dirs/player_down_right.png"),
@@ -29,6 +31,14 @@ const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
 	"left": preload("res://art/sprites/player_dirs/player_left.png"),
 	"down_left": preload("res://art/sprites/player_dirs/player_down_left.png")
 }
+const PLAYER_SWORD_ATTACK_TEXTURES: Array[Texture2D] = [
+	preload("res://art/animations/player_sword_attack/frame_01_idle.png"),
+	preload("res://art/animations/player_sword_attack/frame_02_ready.png"),
+	preload("res://art/animations/player_sword_attack/frame_03_slash.png"),
+	preload("res://art/animations/player_sword_attack/frame_04_followthrough.png"),
+	preload("res://art/animations/player_sword_attack/frame_05_recover.png"),
+	preload("res://art/animations/player_sword_attack/frame_06_idle_end.png")
+]
 
 enum AttackPhase { IDLE, WINDUP, RECOVERY }
 
@@ -74,6 +84,7 @@ var _upgrade_levels: Dictionary = {}
 var _aim_direction := Vector2.RIGHT
 var _weapon_recoil_strength := 0.0
 var _weapon_flash_left := 0.0
+var _weapon_flash_duration := 0.0
 var _weapon_pulse_left := 0.0
 var _weapon_flash_color := Color(1.0, 0.92, 0.74, 0.0)
 var _dead := false
@@ -111,6 +122,12 @@ var _branch_attack_arc := 0.0
 var _branch_windup_time := 0.12
 var _branch_recovery_time := 0.1
 var _branch_animation_key := "default"
+var _branch_animation_source := "legacy"
+var _branch_spine_asset_key := ""
+var _branch_spine_animation := ""
+var _branch_spine_event_track := ""
+var _branch_vfx_spine_key := ""
+var _branch_hit_frame_progress := 1.0
 var _branch_weapon_length := 14.0
 var _branch_muzzle_distance := 21.0
 var _branch_flash_distance := 21.0
@@ -122,25 +139,39 @@ var _branch_projectile_speed_multiplier := 1.0
 var _branch_projectile_range_multiplier := 1.0
 var _branch_weapon_frames: Dictionary = DEFAULT_WEAPON_FRAMES.duplicate(true)
 var _branch_flash_frames: Dictionary = DEFAULT_FLASH_FRAMES.duplicate(true)
+var _branch_weapon_sequences: Dictionary = {}
+var _branch_trail_sequences: Dictionary = {}
+var _branch_impact_sequences: Dictionary = {}
 var _branch_projectile_texture: Texture2D
 var _branch_weapon_tint := Color(1.0, 1.0, 1.0, 1.0)
 var _branch_flash_tint := Color(1.0, 0.92, 0.74, 0.95)
 var _body_direction_key := "right"
+var _body_sprite_frames: SpriteFrames
 var _attack_phase: int = AttackPhase.IDLE
 var _attack_phase_time_left := 0.0
 var _attack_direction := Vector2.RIGHT
 var _attack_target_position := Vector2.ZERO
 var _attack_hit_resolved := false
 
-@onready var body_visual: Sprite2D = $Body
-@onready var weapon_visual: Sprite2D = $Weapon
-@onready var weapon_flash: Sprite2D = $WeaponFlash
+@onready var body_visual: AnimatedSprite2D = $AnimatedSprite2D
+@onready var hurtbox: Area2D = $Hurtbox
+@onready var hurtbox_shape: CollisionShape2D = $Hurtbox/CollisionShape2D
+@onready var attack_point: Node2D = $AttackPoint
+@onready var weapon_pivot: Node2D = $WeaponPivot
+@onready var weapon_visual: Sprite2D = $WeaponPivot/Weapon
+@onready var weapon_trail: Sprite2D = $WeaponPivot/WeaponTrail
+@onready var weapon_impact: Sprite2D = $WeaponPivot/WeaponImpact
+@onready var slash_hitbox: Area2D = $SlashHitbox
+@onready var slash_hitbox_shape: CollisionShape2D = $SlashHitbox/CollisionShape2D
+@onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var camera: Camera2D = $Camera2D
 
 
 func _ready() -> void:
 	add_to_group("player")
+	hurtbox.add_to_group("player_hurtbox")
+	hurtbox.set_meta("player_ref", self)
 	collision_layer = 1
 	collision_mask = 0
 	current_health = max_health
@@ -180,6 +211,7 @@ func apply_contact_damage(amount: float, source_position: Vector2) -> void:
 		_dead = true
 		_weapon_flash_left = 0.0
 		_weapon_pulse_left = 0.0
+		_set_slash_hitbox_active(false)
 		died.emit()
 
 
@@ -233,6 +265,12 @@ func set_branch_definition(definition: Dictionary) -> void:
 	_branch_windup_time = float(definition.get("windup_time", 0.12))
 	_branch_recovery_time = float(definition.get("recovery_time", 0.1))
 	_branch_animation_key = String(definition.get("animation_key", "default"))
+	_branch_animation_source = String(definition.get("animation_source", "legacy"))
+	_branch_spine_asset_key = String(definition.get("spine_asset_key", ""))
+	_branch_spine_animation = String(definition.get("spine_animation", ""))
+	_branch_spine_event_track = String(definition.get("spine_event_track", ""))
+	_branch_vfx_spine_key = String(definition.get("vfx_spine_key", ""))
+	_branch_hit_frame_progress = clampf(float(definition.get("hit_frame_progress", 1.0)), 0.15, 1.0)
 	_branch_weapon_length = float(definition.get("weapon_length", 14.0))
 	_branch_muzzle_distance = float(definition.get("muzzle_distance", 21.0))
 	_branch_flash_distance = float(definition.get("flash_distance", 21.0))
@@ -246,6 +284,9 @@ func set_branch_definition(definition: Dictionary) -> void:
 	var flash_frames: Dictionary = definition.get("flash_frames", DEFAULT_FLASH_FRAMES)
 	_branch_weapon_frames = weapon_frames.duplicate(true)
 	_branch_flash_frames = flash_frames.duplicate(true)
+	_branch_weapon_sequences = _normalize_sequence_dictionary(definition.get("weapon_sequences", {}), _branch_weapon_frames)
+	_branch_trail_sequences = _normalize_sequence_dictionary(definition.get("trail_sequences", {}), {})
+	_branch_impact_sequences = _normalize_sequence_dictionary(definition.get("impact_sequences", {}), _branch_flash_frames)
 	_branch_projectile_texture = definition.get("projectile_texture", null) as Texture2D
 	_branch_weapon_tint = definition.get("weapon_tint", Color(1.0, 1.0, 1.0, 1.0)) as Color
 	_branch_flash_tint = definition.get("flash_color", Color(1.0, 0.92, 0.74, 0.95)) as Color
@@ -362,6 +403,7 @@ func _start_primary_attack(target_position: Vector2) -> void:
 	_attack_phase_time_left = maxf(_branch_windup_time, 0.01)
 	_attack_hit_resolved = false
 	_aim_direction = direction
+	_set_slash_hitbox_active(false)
 	body_visual.scale = Vector2(1.03, 0.98)
 
 
@@ -370,16 +412,21 @@ func _update_attack_state(delta: float) -> void:
 		return
 	_attack_phase_time_left = maxf(_attack_phase_time_left - delta, 0.0)
 	if _attack_phase == AttackPhase.WINDUP:
-		if _attack_hit_resolved or _attack_phase_time_left > 0.0:
+		if _attack_hit_resolved:
+			return
+		if _attack_phase_progress(_branch_windup_time) < _branch_hit_frame_progress and _attack_phase_time_left > 0.0:
 			return
 		_attack_hit_resolved = true
 		_resolve_primary_attack()
+		if _branch_weapon_type == "melee":
+			_set_slash_hitbox_active(true)
 		_attack_phase = AttackPhase.RECOVERY
 		_attack_phase_time_left = maxf(_branch_recovery_time, 0.01)
 		return
 	if _attack_phase == AttackPhase.RECOVERY and _attack_phase_time_left <= 0.0:
 		_attack_phase = AttackPhase.IDLE
 		_attack_hit_resolved = false
+		_set_slash_hitbox_active(false)
 
 
 func _resolve_primary_attack() -> void:
@@ -465,7 +512,7 @@ func _spawn_primary_projectile(direction: Vector2, overcharge_active: bool, bonu
 	var projectile_speed_value: float = projectile_speed * _branch_projectile_speed_multiplier * (1.12 if overcharge_active else 1.0)
 	var projectile_range_value: float = projectile_range * _branch_projectile_range_multiplier + (32.0 if _has_linebreak_synergy() else 0.0)
 	var projectile_pierce_value: int = projectile_pierce + (1 if bonus_pierce else 0)
-	projectile.global_position = global_position + direction.normalized() * _branch_muzzle_distance
+	projectile.global_position = _attack_point_world_position(direction)
 	projectile.setup(
 		projectile_damage_value,
 		direction,
@@ -626,19 +673,43 @@ func _apply_shape() -> void:
 	var circle := collision_shape.shape as CircleShape2D
 	if circle != null:
 		circle.radius = 14.0
+	var hurt_circle := hurtbox_shape.shape as CircleShape2D
+	if hurt_circle != null:
+		hurt_circle.radius = 15.0
+	var slash_circle := slash_hitbox_shape.shape as CircleShape2D
+	if slash_circle != null:
+		slash_circle.radius = 42.0
 	body_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	body_visual.centered = true
-	body_visual.texture = PLAYER_DIRECTION_TEXTURES["right"] as Texture2D
+	body_visual.sprite_frames = _build_body_sprite_frames()
+	body_visual.play("right")
+	body_visual.stop()
+	body_visual.frame = 0
 	body_visual.rotation = 0.0
+	weapon_pivot.position = ATTACHMENT_PIVOT_OFFSET
 	weapon_visual.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	weapon_visual.centered = true
 	weapon_visual.texture = _branch_weapon_frame("idle")
 	weapon_visual.scale = Vector2.ONE * _branch_weapon_base_scale
-	weapon_flash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	weapon_flash.centered = true
-	weapon_flash.texture = _branch_flash_frame("a")
-	weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale
-	weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	weapon_trail.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	weapon_trail.centered = true
+	weapon_trail.texture = _sequence_frame(_branch_trail_sequences, "release", 0.0, _branch_flash_frame("a"))
+	weapon_trail.scale = Vector2.ONE * _branch_flash_base_scale
+	weapon_trail.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	weapon_impact.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	weapon_impact.centered = true
+	weapon_impact.texture = _sequence_frame(_branch_impact_sequences, "release", 0.0, _branch_flash_frame("a"))
+	weapon_impact.scale = Vector2.ONE * _branch_flash_base_scale
+	weapon_impact.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	hurtbox.collision_layer = 4
+	hurtbox.collision_mask = 0
+	hurtbox.monitoring = true
+	hurtbox.monitorable = true
+	slash_hitbox.collision_layer = 0
+	slash_hitbox.collision_mask = 2
+	slash_hitbox.monitorable = false
+	_set_slash_hitbox_active(false)
+	attack_point.position = _attack_point_local_position(_last_move_direction)
 	_update_body_direction_sprite(_last_move_direction, true)
 	_apply_branch_visual_style()
 
@@ -666,6 +737,7 @@ func _trigger_weapon_fire(direction: Vector2, overcharge_active: bool) -> void:
 			_weapon_recoil_strength = 4.8 if overcharge_active else 3.9
 			_weapon_flash_left = 0.1 if overcharge_active else 0.08
 			_weapon_pulse_left = maxf(_weapon_pulse_left, 0.08)
+	_weapon_flash_duration = _weapon_flash_left
 	_weapon_flash_color = _branch_flash_tint
 	if overcharge_active:
 		_weapon_flash_color = _branch_flash_tint.lightened(0.12)
@@ -674,6 +746,7 @@ func _trigger_weapon_fire(direction: Vector2, overcharge_active: bool) -> void:
 
 func _trigger_pulse_fire() -> void:
 	_weapon_flash_left = maxf(_weapon_flash_left, 0.11)
+	_weapon_flash_duration = _weapon_flash_left
 	_weapon_pulse_left = 0.18
 	_weapon_flash_color = _branch_flash_tint.lerp(Color(0.48, 0.9, 1.0, 0.88), 0.5)
 	body_visual.scale = Vector2(1.06, 0.95)
@@ -690,90 +763,218 @@ func _update_weapon_animation(delta: float) -> void:
 		direction = _attack_direction.normalized()
 	if direction == Vector2.ZERO:
 		direction = _last_move_direction
-	var vertical_offset := Vector2(0.0, -2.0)
-	var weapon_position := direction * _branch_weapon_length + vertical_offset
+	_update_body_animation(direction)
+	weapon_pivot.position = ATTACHMENT_PIVOT_OFFSET
+	attack_point.position = _attack_point_local_position(direction)
+	_update_slash_hitbox_transform(direction)
+	var weapon_position := direction * _branch_weapon_length
 	var weapon_rotation := direction.angle()
-	var weapon_texture: Texture2D = _branch_weapon_frame("idle")
+	var weapon_phase_key := "idle"
+	var weapon_phase_progress := 0.0
+	var weapon_texture: Texture2D = _sequence_frame(_branch_weapon_sequences, weapon_phase_key, weapon_phase_progress, _branch_weapon_frame("idle"))
 	var flash_position := direction * _branch_flash_distance
 	var flash_rotation := direction.angle()
 	match _branch_weapon_type:
 		"melee":
 			if _attack_phase == AttackPhase.WINDUP:
 				var windup_progress := _attack_phase_progress(_branch_windup_time)
-				weapon_texture = _branch_weapon_frame("windup")
-				weapon_position = direction.rotated(-0.9) * (_branch_weapon_length - 5.0 + windup_progress * 3.0) + vertical_offset
+				weapon_phase_key = "windup"
+				weapon_phase_progress = windup_progress
+				weapon_position = direction.rotated(-0.9) * (_branch_weapon_length - 5.0 + windup_progress * 3.0)
 				weapon_rotation = direction.angle() - 1.2 + windup_progress * 0.32
 			elif _attack_phase == AttackPhase.RECOVERY:
 				var recovery_progress := _attack_phase_progress(_branch_recovery_time)
-				weapon_texture = _branch_weapon_frame("release") if recovery_progress < 0.42 else _branch_weapon_frame("recover")
-				weapon_position = direction.rotated(0.55) * (_branch_weapon_length + 4.0 - recovery_progress * 2.0) + vertical_offset
+				if recovery_progress < 0.42:
+					weapon_phase_key = "release"
+					weapon_phase_progress = recovery_progress / 0.42
+				else:
+					weapon_phase_key = "recover"
+					weapon_phase_progress = (recovery_progress - 0.42) / 0.58
+				weapon_position = direction.rotated(0.55) * (_branch_weapon_length + 4.0 - recovery_progress * 2.0)
 				weapon_rotation = direction.angle() + lerpf(1.08, 0.14, recovery_progress)
 			else:
-				weapon_texture = _branch_weapon_frame("idle")
-				weapon_position = direction.rotated(-0.16) * (_branch_weapon_length - 2.0) + vertical_offset
+				weapon_phase_key = "idle"
+				weapon_phase_progress = 0.0
+				weapon_position = direction.rotated(-0.16) * (_branch_weapon_length - 2.0)
 				weapon_rotation = direction.angle() + 0.28
 			flash_position = direction.rotated(0.38) * _branch_flash_distance
 			flash_rotation = direction.angle() + 0.24
 		"thrown":
 			if _attack_phase == AttackPhase.WINDUP:
 				var cast_progress := _attack_phase_progress(_branch_windup_time)
-				weapon_texture = _branch_weapon_frame("windup")
-				weapon_position = direction.rotated(-0.46) * (_branch_weapon_length - 4.0) + vertical_offset
+				weapon_phase_key = "windup"
+				weapon_phase_progress = cast_progress
+				weapon_position = direction.rotated(-0.46) * (_branch_weapon_length - 4.0)
 				weapon_rotation = direction.angle() - 0.72 + cast_progress * 0.18
 			elif _attack_phase == AttackPhase.RECOVERY:
 				var release_progress := _attack_phase_progress(_branch_recovery_time)
-				weapon_texture = _branch_weapon_frame("release") if release_progress < 0.58 else _branch_weapon_frame("recover")
-				weapon_position = direction * (_branch_weapon_length + 3.0 - release_progress) + vertical_offset
+				if release_progress < 0.58:
+					weapon_phase_key = "release"
+					weapon_phase_progress = release_progress / 0.58
+				else:
+					weapon_phase_key = "recover"
+					weapon_phase_progress = (release_progress - 0.58) / 0.42
+				weapon_position = direction * (_branch_weapon_length + 3.0 - release_progress)
 				weapon_rotation = direction.angle() + lerpf(0.42, 0.08, release_progress)
 			else:
-				weapon_texture = _branch_weapon_frame("idle")
-				weapon_position = direction.rotated(0.18) * _branch_weapon_length + vertical_offset
+				weapon_phase_key = "idle"
+				weapon_phase_progress = 0.0
+				weapon_position = direction.rotated(0.18) * _branch_weapon_length
 				weapon_rotation = direction.angle() + 0.34
 			flash_position = direction * _branch_flash_distance
 			flash_rotation = direction.angle()
 		_:
 			if _attack_phase == AttackPhase.WINDUP:
 				var charge_progress := _attack_phase_progress(_branch_windup_time)
-				weapon_texture = _branch_weapon_frame("windup")
-				weapon_position = direction * (_branch_weapon_length - 4.0) + vertical_offset
+				weapon_phase_key = "windup"
+				weapon_phase_progress = charge_progress
+				weapon_position = direction * (_branch_weapon_length - 4.0)
 				weapon_rotation = direction.angle() - 0.18 + charge_progress * 0.08
 			elif _attack_phase == AttackPhase.RECOVERY:
 				var release_snap_progress := _attack_phase_progress(_branch_recovery_time)
-				weapon_texture = _branch_weapon_frame("release") if release_snap_progress < 0.62 else _branch_weapon_frame("recover")
-				weapon_position = direction * (_branch_weapon_length + 4.0 - release_snap_progress * 2.0) + vertical_offset
+				if release_snap_progress < 0.62:
+					weapon_phase_key = "release"
+					weapon_phase_progress = release_snap_progress / 0.62
+				else:
+					weapon_phase_key = "recover"
+					weapon_phase_progress = (release_snap_progress - 0.62) / 0.38
+				weapon_position = direction * (_branch_weapon_length + 4.0 - release_snap_progress * 2.0)
 				weapon_rotation = direction.angle() + 0.08
 			else:
-				weapon_texture = _branch_weapon_frame("idle")
-				weapon_position = direction * _branch_weapon_length + vertical_offset
+				weapon_phase_key = "idle"
+				weapon_phase_progress = 0.0
+				weapon_position = direction * _branch_weapon_length
 				weapon_rotation = direction.angle() + 0.12
 			flash_position = direction * _branch_flash_distance
 			flash_rotation = direction.angle()
+	weapon_texture = _sequence_frame(_branch_weapon_sequences, weapon_phase_key, weapon_phase_progress, _branch_weapon_frame(weapon_phase_key))
 	weapon_visual.texture = weapon_texture
 	weapon_visual.position = weapon_position - direction * _weapon_recoil_strength
 	weapon_visual.rotation = weapon_rotation
 	weapon_visual.scale = Vector2.ONE * _branch_weapon_base_scale * (1.0 + _weapon_pulse_left * 0.45)
 
-	weapon_flash.position = flash_position
-	weapon_flash.rotation = flash_rotation
-	if _weapon_flash_left > 0.0:
-		var flash_ratio: float = _weapon_flash_left / 0.14
-		weapon_flash.texture = _branch_flash_frame("a") if flash_ratio > 0.52 else _branch_flash_frame("b")
-		weapon_flash.modulate = Color(_weapon_flash_color.r, _weapon_flash_color.g, _weapon_flash_color.b, minf(flash_ratio, 1.0))
-		weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale * (0.9 + flash_ratio * 0.45)
+	var trail_texture: Texture2D = _sequence_frame(_branch_trail_sequences, weapon_phase_key, weapon_phase_progress, null)
+	weapon_trail.position = flash_position
+	weapon_trail.rotation = flash_rotation
+	weapon_trail.scale = Vector2.ONE * _branch_flash_base_scale * (0.88 + _weapon_pulse_left * 0.3)
+	if trail_texture != null and weapon_phase_key != "idle":
+		var trail_alpha := _trail_alpha_for_phase(weapon_phase_key, weapon_phase_progress)
+		weapon_trail.texture = trail_texture
+		weapon_trail.modulate = Color(_branch_flash_tint.r, _branch_flash_tint.g, _branch_flash_tint.b, trail_alpha)
 	else:
-		weapon_flash.texture = _branch_flash_frame("a")
-		weapon_flash.modulate = Color(1.0, 1.0, 1.0, 0.0)
-		weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale
+		weapon_trail.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+	weapon_impact.position = flash_position + direction * 4.0
+	weapon_impact.rotation = flash_rotation
+	if _weapon_flash_left > 0.0:
+		var flash_progress := 1.0 - (_weapon_flash_left / maxf(_weapon_flash_duration, 0.01))
+		var impact_texture: Texture2D = _sequence_frame(_branch_impact_sequences, "release", flash_progress, _branch_flash_frame("a"))
+		var flash_alpha: float = clampf(1.0 - flash_progress, 0.0, 1.0)
+		weapon_impact.texture = impact_texture
+		weapon_impact.modulate = Color(_weapon_flash_color.r, _weapon_flash_color.g, _weapon_flash_color.b, flash_alpha)
+		weapon_impact.scale = Vector2.ONE * _branch_flash_base_scale * (0.95 + flash_alpha * 0.55)
+	else:
+		weapon_impact.texture = _sequence_frame(_branch_impact_sequences, "release", 0.0, _branch_flash_frame("a"))
+		weapon_impact.modulate = Color(1.0, 1.0, 1.0, 0.0)
+		weapon_impact.scale = Vector2.ONE * _branch_flash_base_scale
 
 
 func _apply_branch_visual_style() -> void:
-	if weapon_visual == null or weapon_flash == null:
+	if weapon_visual == null or weapon_trail == null or weapon_impact == null:
 		return
-	weapon_visual.texture = _branch_weapon_frame("idle")
+	weapon_pivot.position = ATTACHMENT_PIVOT_OFFSET
+	attack_point.position = _attack_point_local_position(_last_move_direction)
+	_update_slash_hitbox_transform(_last_move_direction)
+	weapon_visual.texture = _sequence_frame(_branch_weapon_sequences, "idle", 0.0, _branch_weapon_frame("idle"))
 	weapon_visual.scale = Vector2.ONE * _branch_weapon_base_scale
 	weapon_visual.modulate = _branch_weapon_tint
-	weapon_flash.texture = _branch_flash_frame("a")
-	weapon_flash.scale = Vector2.ONE * _branch_flash_base_scale
+	weapon_trail.texture = _sequence_frame(_branch_trail_sequences, "release", 0.0, _branch_flash_frame("a"))
+	weapon_trail.scale = Vector2.ONE * _branch_flash_base_scale
+	weapon_trail.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	weapon_impact.texture = _sequence_frame(_branch_impact_sequences, "release", 0.0, _branch_flash_frame("a"))
+	weapon_impact.scale = Vector2.ONE * _branch_flash_base_scale
+	weapon_impact.modulate = Color(1.0, 1.0, 1.0, 0.0)
+
+
+func _build_body_sprite_frames() -> SpriteFrames:
+	if _body_sprite_frames != null:
+		return _body_sprite_frames
+	var frames := SpriteFrames.new()
+	for key in PLAYER_DIRECTION_TEXTURES.keys():
+		frames.add_animation(String(key))
+		frames.set_animation_loop(String(key), false)
+		frames.set_animation_speed(String(key), 1.0)
+		var texture: Texture2D = PLAYER_DIRECTION_TEXTURES[key] as Texture2D
+		if texture != null:
+			frames.add_frame(String(key), texture)
+	frames.add_animation(BODY_SWORD_ATTACK_ANIMATION)
+	frames.set_animation_loop(BODY_SWORD_ATTACK_ANIMATION, false)
+	frames.set_animation_speed(BODY_SWORD_ATTACK_ANIMATION, 18.0)
+	for texture in PLAYER_SWORD_ATTACK_TEXTURES:
+		frames.add_frame(BODY_SWORD_ATTACK_ANIMATION, texture)
+	_body_sprite_frames = frames
+	return _body_sprite_frames
+
+
+func _set_body_animation(animation_key: String, frame_index: int, flip_h: bool) -> void:
+	if body_visual == null or body_visual.sprite_frames == null:
+		return
+	if not body_visual.sprite_frames.has_animation(animation_key):
+		return
+	if body_visual.animation != animation_key:
+		body_visual.play(animation_key)
+		body_visual.stop()
+	body_visual.flip_h = flip_h
+	body_visual.frame = clampi(frame_index, 0, body_visual.sprite_frames.get_frame_count(animation_key) - 1)
+
+
+func _update_body_animation(direction: Vector2) -> void:
+	if _branch_weapon_type == "melee" and _attack_phase != AttackPhase.IDLE:
+		var attack_direction: Vector2 = direction
+		if attack_direction == Vector2.ZERO:
+			attack_direction = _last_move_direction
+		var attack_frame := 0
+		if _attack_phase == AttackPhase.WINDUP:
+			attack_frame = clampi(int(floor(_attack_phase_progress(_branch_windup_time) * 3.0)), 0, 2)
+		else:
+			attack_frame = clampi(3 + int(floor(_attack_phase_progress(_branch_recovery_time) * 3.0)), 3, 5)
+		_set_body_animation(BODY_SWORD_ATTACK_ANIMATION, attack_frame, attack_direction.x < -0.08)
+		return
+	_update_body_direction_sprite(direction)
+
+
+func _attack_point_local_position(direction: Vector2) -> Vector2:
+	var resolved_direction: Vector2 = direction.normalized()
+	if resolved_direction == Vector2.ZERO:
+		resolved_direction = _last_move_direction
+	if resolved_direction == Vector2.ZERO:
+		resolved_direction = Vector2.RIGHT
+	return ATTACHMENT_PIVOT_OFFSET + resolved_direction * _branch_muzzle_distance
+
+
+func _attack_point_world_position(direction: Vector2) -> Vector2:
+	return global_position + _attack_point_local_position(direction)
+
+
+func _update_slash_hitbox_transform(direction: Vector2) -> void:
+	var resolved_direction: Vector2 = direction.normalized()
+	if resolved_direction == Vector2.ZERO:
+		resolved_direction = _last_move_direction
+	if resolved_direction == Vector2.ZERO:
+		resolved_direction = Vector2.RIGHT
+	var slash_circle := slash_hitbox_shape.shape as CircleShape2D
+	if slash_circle != null:
+		slash_circle.radius = maxf(_current_melee_reach() * 0.58, 24.0)
+	slash_hitbox.position = ATTACHMENT_PIVOT_OFFSET + resolved_direction * maxf(_current_melee_reach() * 0.46, 16.0)
+	slash_hitbox.rotation = resolved_direction.angle()
+
+
+func _set_slash_hitbox_active(active: bool) -> void:
+	if slash_hitbox == null or slash_hitbox_shape == null:
+		return
+	slash_hitbox.monitoring = active
+	slash_hitbox.monitorable = active
+	slash_hitbox_shape.set_deferred("disabled", not active)
 
 
 func _branch_weapon_frame(frame_key: String) -> Texture2D:
@@ -788,6 +989,57 @@ func _branch_flash_frame(frame_key: String) -> Texture2D:
 	if texture != null:
 		return texture
 	return WEAPON_FLASH_TEXTURE
+
+
+func _normalize_sequence_dictionary(raw_sequences: Variant, fallback_frames: Dictionary) -> Dictionary:
+	var sequences: Dictionary = {}
+	if typeof(raw_sequences) == TYPE_DICTIONARY:
+		for key in raw_sequences.keys():
+			var textures := Array(raw_sequences[key])
+			var filtered: Array[Texture2D] = []
+			for raw_texture in textures:
+				var texture: Texture2D = raw_texture as Texture2D
+				if texture != null:
+					filtered.append(texture)
+			if not filtered.is_empty():
+				sequences[String(key)] = filtered
+	for fallback_key in fallback_frames.keys():
+		var key: String = String(fallback_key)
+		if sequences.has(key):
+			continue
+		var fallback_texture: Texture2D = fallback_frames[key] as Texture2D
+		if fallback_texture != null:
+			sequences[key] = [fallback_texture]
+	if not sequences.has("release"):
+		var fallback_flash: Texture2D = _branch_flash_frame("a")
+		if fallback_flash != null:
+			sequences["release"] = [fallback_flash]
+	return sequences
+
+
+func _sequence_frame(sequence_map: Dictionary, phase_key: String, progress: float, fallback: Texture2D) -> Texture2D:
+	var raw_frames := Array(sequence_map.get(phase_key, []))
+	if raw_frames.is_empty():
+		return fallback
+	var clamped_progress: float = clampf(progress, 0.0, 1.0)
+	var frame_index := int(floor(clamped_progress * float(raw_frames.size())))
+	frame_index = clampi(frame_index, 0, raw_frames.size() - 1)
+	var texture: Texture2D = raw_frames[frame_index] as Texture2D
+	if texture != null:
+		return texture
+	return fallback
+
+
+func _trail_alpha_for_phase(phase_key: String, progress: float) -> float:
+	match phase_key:
+		"windup":
+			return lerpf(0.18, 0.52, progress)
+		"release":
+			return lerpf(0.88, 0.56, progress)
+		"recover":
+			return lerpf(0.42, 0.0, progress)
+		_:
+			return 0.0
 
 
 func _attack_phase_progress(total_time: float) -> float:
@@ -834,7 +1086,7 @@ func _spawn_scorch_orb(direction: Vector2) -> void:
 	if direction == Vector2.ZERO:
 		direction = _last_move_direction
 	var orb := SCORCH_ORB_SCENE.instantiate()
-	orb.global_position = global_position
+	orb.global_position = _attack_point_world_position(direction)
 	orb.setup(
 		direction,
 		_branch_scorch_orb_speed,
@@ -860,7 +1112,7 @@ func _spawn_branch_sentry() -> void:
 	var direction: Vector2 = _aim_direction.normalized()
 	if direction == Vector2.ZERO:
 		direction = _last_move_direction
-	sentry.global_position = global_position + direction * 26.0
+	sentry.global_position = _attack_point_world_position(direction) + direction * 2.0
 	sentry.setup(
 		_branch_sentry_lifetime,
 		_branch_sentry_fire_interval,
@@ -948,9 +1200,7 @@ func _direction_to_sprite_key(direction: Vector2) -> String:
 
 func _update_body_direction_sprite(direction: Vector2, force: bool = false) -> void:
 	var key: String = _direction_to_sprite_key(direction)
-	if not force and key == _body_direction_key:
+	if not force and key == _body_direction_key and body_visual.animation == key:
 		return
 	_body_direction_key = key
-	var texture: Texture2D = PLAYER_DIRECTION_TEXTURES.get(key, null) as Texture2D
-	if texture != null:
-		body_visual.texture = texture
+	_set_body_animation(key, 0, false)

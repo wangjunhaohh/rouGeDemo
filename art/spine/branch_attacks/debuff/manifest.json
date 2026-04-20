@@ -1,0 +1,50 @@
+{
+  "meta": {
+    "animation_source": "spine",
+    "spine_asset_key": "debuff_staff",
+    "spine_animation": "primary_attack",
+    "spine_event_track": "primary_release",
+    "vfx_spine_key": "debuff_cast",
+    "hit_frame_progress": 0.68
+  },
+  "weapon": {
+    "idle": [
+      "res://art/spine/branch_attacks/debuff/weapon/idle/00.png",
+      "res://art/spine/branch_attacks/debuff/weapon/idle/01.png"
+    ],
+    "windup": [
+      "res://art/spine/branch_attacks/debuff/weapon/windup/00.png",
+      "res://art/spine/branch_attacks/debuff/weapon/windup/01.png",
+      "res://art/spine/branch_attacks/debuff/weapon/windup/02.png"
+    ],
+    "release": [
+      "res://art/spine/branch_attacks/debuff/weapon/release/00.png",
+      "res://art/spine/branch_attacks/debuff/weapon/release/01.png",
+      "res://art/spine/branch_attacks/debuff/weapon/release/02.png"
+    ],
+    "recover": [
+      "res://art/spine/branch_attacks/debuff/weapon/recover/00.png",
+      "res://art/spine/branch_attacks/debuff/weapon/recover/01.png",
+      "res://art/spine/branch_attacks/debuff/weapon/recover/02.png"
+    ]
+  },
+  "trail": {
+    "windup": [
+      "res://art/spine/branch_attacks/debuff/trail/windup/00.png",
+      "res://art/spine/branch_attacks/debuff/trail/windup/01.png"
+    ],
+    "release": [
+      "res://art/spine/branch_attacks/debuff/trail/release/00.png",
+      "res://art/spine/branch_attacks/debuff/trail/release/01.png"
+    ],
+    "recover": [
+      "res://art/spine/branch_attacks/debuff/trail/recover/00.png"
+    ]
+  },
+  "impact": {
+    "release": [
+      "res://art/spine/branch_attacks/debuff/impact/release/00.png",
+      "res://art/spine/branch_attacks/debuff/impact/release/01.png"
+    ]
+  }
+}

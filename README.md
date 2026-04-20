@@ -2,7 +2,7 @@
 
 基于项目内多 Agent 约束生成并持续迭代的 Godot 4 俯视角 2D 肉鸽原型。
 
-当前状态已经从 `v0.1` 闭环原型推进到 `v0.7`：
+当前状态已经从 `v0.1` 闭环原型推进到 `v0.9`：
 
 - 暗黑像素风背景与像素角色/敌人/投射物素材已接入
 - 命中、受击、击杀、升级、精英与 Boss 均有反馈与音效
@@ -28,6 +28,11 @@
 - 异常流现在使用专属法杖帧与法球贴图，主攻击改为施法后抛出旋转火种
 - 召唤流现在使用专属中继器帧与信号弹贴图，主攻击改为充能后释放指令弹
 - 分支武器像素帧已由独立脚本生成，并接入运行时纹理加载链路
+- 三条主分支的主攻击已接入 `art/spine/` 目录下的 Spine 导出帧清单
+- 玩家主武器表现已拆成 `Weapon / WeaponTrail / WeaponImpact` 三层播放
+- 分支攻击命中时机已支持按 `Spine` 清单中的 `hit_frame_progress` 对齐
+- `Player` 场景已切到 `AnimatedSprite2D + Hurtbox + AttackPoint + WeaponPivot + SlashHitbox + AnimationPlayer` 标准结构
+- 近战主体动画已接入 6 帧剑攻击顺序图，并按 `idle -> ready -> slash -> followthrough -> recover -> idle_end` 顺序切换
 
 ## 当前内容
 
@@ -54,11 +59,14 @@
 
 本项目中的暗黑像素风背景、角色贴图与音效均为本地脚本生成，不依赖外部手工导入素材。
 
+武器特效攻击动画正式资源目录已切到 `art/spine`，当前工程通过读取 `Spine` 导出帧清单来驱动主攻击演出。
+
 - 背景与像素贴图生成脚本：`scripts/tools/generate_pixel_assets.gd`
 - 分支武器帧生成脚本：`scripts/tools/generate_branch_weapon_frames.gd`
 - 音效生成脚本：`scripts/tools/generate_audio_assets.py`
 - 背景资源目录：`art/backgrounds`
 - 贴图资源目录：`art/sprites`
+- Spine 攻击资源目录：`art/spine`
 - 音效资源目录：`audio/sfx`
 
 ## 核心循环
@@ -90,4 +98,4 @@ res://
 - Boss 演出已经进入目标战版本，但仍可继续补更强的场景变化和胜利结算表现
 - 特殊技能卡已经接入首版，但仍可继续扩卡池、图标和更极端的风险收益设计
 - 主分支系统已经进入差异化版本，但仍可继续补更多专属技能方向和更强的中后期成型节点
-- 近战挥砍、法球抛射和指令弹发射已经分流，但命中前摇、判定宽度和动作残影仍可继续细调
+- 近战挥砍、法球抛射和指令弹发射已经切到 Spine 导出帧链路，但真实美术资源替换后仍需继续细调命中前摇、判定宽度和动作残影

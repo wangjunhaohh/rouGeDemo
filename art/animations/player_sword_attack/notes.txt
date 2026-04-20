@@ -1,0 +1,2 @@
+These frames have had only the white background connected to each frame border removed.
+Internal bright pixels such as hair highlights and blade highlights are preserved as much as possible.

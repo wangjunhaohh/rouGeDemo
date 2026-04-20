@@ -1,6 +1,9 @@
 extends RefCounted
 class_name BranchCatalog
 
+const TANK_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/tank/manifest.json"
+const DEBUFF_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/debuff/manifest.json"
+const BUILDING_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/building/manifest.json"
 const TANK_WEAPON_FRAME_PATHS := {
 	"idle": "res://art/sprites/branch_weapons/tank_blade_idle.png",
 	"windup": "res://art/sprites/branch_weapons/tank_blade_windup.png",
@@ -34,6 +37,9 @@ const BUILDING_FLASH_FRAME_PATHS := {
 const DEBUFF_PROJECTILE_TEXTURE_PATH := "res://art/sprites/branch_weapons/debuff_orb.png"
 const BUILDING_PROJECTILE_TEXTURE_PATH := "res://art/sprites/branch_weapons/building_bolt.png"
 
+static var _spine_package_cache: Dictionary = {}
+static var _texture_cache: Dictionary = {}
+
 static func get_branch_definitions() -> Array[Dictionary]:
 	var items: Array[Dictionary] = []
 	for definition in _build_branch_definitions():
@@ -50,6 +56,9 @@ static func get_branch_definition(branch_id: String) -> Dictionary:
 
 
 static func _build_branch_definitions() -> Array[Dictionary]:
+	var tank_spine: Dictionary = _load_spine_package(TANK_SPINE_MANIFEST_PATH)
+	var debuff_spine: Dictionary = _load_spine_package(DEBUFF_SPINE_MANIFEST_PATH)
+	var building_spine: Dictionary = _load_spine_package(BUILDING_SPINE_MANIFEST_PATH)
 	return [
 		{
 			"id": "tank",
@@ -66,6 +75,12 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"windup_time": 0.18,
 			"recovery_time": 0.15,
 			"animation_key": "tank_blade",
+			"animation_source": String(tank_spine.get("animation_source", "spine")),
+			"spine_asset_key": String(tank_spine.get("spine_asset_key", "tank_blade")),
+			"spine_animation": String(tank_spine.get("spine_animation", "primary_attack")),
+			"spine_event_track": String(tank_spine.get("spine_event_track", "primary_hit")),
+			"vfx_spine_key": String(tank_spine.get("vfx_spine_key", "tank_slash")),
+			"hit_frame_progress": float(tank_spine.get("hit_frame_progress", 0.72)),
 			"weapon_length": 20.0,
 			"muzzle_distance": 30.0,
 			"flash_distance": 32.0,
@@ -77,6 +92,9 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"projectile_range_multiplier": 1.0,
 			"weapon_frames": _load_frame_dictionary(TANK_WEAPON_FRAME_PATHS),
 			"flash_frames": _load_frame_dictionary(TANK_FLASH_FRAME_PATHS),
+			"weapon_sequences": Dictionary(tank_spine.get("weapon_sequences", {})).duplicate(true),
+			"trail_sequences": Dictionary(tank_spine.get("trail_sequences", {})).duplicate(true),
+			"impact_sequences": Dictionary(tank_spine.get("impact_sequences", {})).duplicate(true),
 			"damage_taken_multiplier": 0.82,
 			"guard_shot_interval": 5,
 			"guard_damage": 14.0,
@@ -104,6 +122,12 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"windup_time": 0.2,
 			"recovery_time": 0.12,
 			"animation_key": "debuff_staff",
+			"animation_source": String(debuff_spine.get("animation_source", "spine")),
+			"spine_asset_key": String(debuff_spine.get("spine_asset_key", "debuff_staff")),
+			"spine_animation": String(debuff_spine.get("spine_animation", "primary_attack")),
+			"spine_event_track": String(debuff_spine.get("spine_event_track", "primary_release")),
+			"vfx_spine_key": String(debuff_spine.get("vfx_spine_key", "debuff_cast")),
+			"hit_frame_progress": float(debuff_spine.get("hit_frame_progress", 0.68)),
 			"weapon_length": 17.0,
 			"muzzle_distance": 24.0,
 			"flash_distance": 24.0,
@@ -115,6 +139,9 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"projectile_range_multiplier": 0.92,
 			"weapon_frames": _load_frame_dictionary(DEBUFF_WEAPON_FRAME_PATHS),
 			"flash_frames": _load_frame_dictionary(DEBUFF_FLASH_FRAME_PATHS),
+			"weapon_sequences": Dictionary(debuff_spine.get("weapon_sequences", {})).duplicate(true),
+			"trail_sequences": Dictionary(debuff_spine.get("trail_sequences", {})).duplicate(true),
+			"impact_sequences": Dictionary(debuff_spine.get("impact_sequences", {})).duplicate(true),
 			"projectile_texture": _load_texture(DEBUFF_PROJECTILE_TEXTURE_PATH),
 			"burn_damage": 4.0,
 			"burn_duration": 2.4,
@@ -147,6 +174,12 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"windup_time": 0.14,
 			"recovery_time": 0.1,
 			"animation_key": "building_relay",
+			"animation_source": String(building_spine.get("animation_source", "spine")),
+			"spine_asset_key": String(building_spine.get("spine_asset_key", "building_relay")),
+			"spine_animation": String(building_spine.get("spine_animation", "primary_attack")),
+			"spine_event_track": String(building_spine.get("spine_event_track", "signal_release")),
+			"vfx_spine_key": String(building_spine.get("vfx_spine_key", "building_signal")),
+			"hit_frame_progress": float(building_spine.get("hit_frame_progress", 0.6)),
 			"weapon_length": 16.0,
 			"muzzle_distance": 25.0,
 			"flash_distance": 26.0,
@@ -158,6 +191,9 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"projectile_range_multiplier": 1.0,
 			"weapon_frames": _load_frame_dictionary(BUILDING_WEAPON_FRAME_PATHS),
 			"flash_frames": _load_frame_dictionary(BUILDING_FLASH_FRAME_PATHS),
+			"weapon_sequences": Dictionary(building_spine.get("weapon_sequences", {})).duplicate(true),
+			"trail_sequences": Dictionary(building_spine.get("trail_sequences", {})).duplicate(true),
+			"impact_sequences": Dictionary(building_spine.get("impact_sequences", {})).duplicate(true),
 			"projectile_texture": _load_texture(BUILDING_PROJECTILE_TEXTURE_PATH),
 			"sentry_shot_interval": 6,
 			"sentry_lifetime": 8.0,
@@ -181,13 +217,75 @@ static func _load_frame_dictionary(paths: Dictionary) -> Dictionary:
 	return frames
 
 
+static func _load_spine_package(manifest_path: String) -> Dictionary:
+	if _spine_package_cache.has(manifest_path):
+		return Dictionary(_spine_package_cache[manifest_path]).duplicate(true)
+
+	var package := {
+		"animation_source": "spine",
+		"spine_asset_key": "",
+		"spine_animation": "primary_attack",
+		"spine_event_track": "primary_hit",
+		"vfx_spine_key": "",
+		"hit_frame_progress": 1.0,
+		"weapon_sequences": {},
+		"trail_sequences": {},
+		"impact_sequences": {}
+	}
+	if not FileAccess.file_exists(manifest_path):
+		push_warning("Missing spine manifest: %s" % manifest_path)
+		_spine_package_cache[manifest_path] = package.duplicate(true)
+		return package.duplicate(true)
+
+	var raw_text: String = FileAccess.get_file_as_string(manifest_path)
+	var parsed = JSON.parse_string(raw_text)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		push_warning("Invalid spine manifest: %s" % manifest_path)
+		_spine_package_cache[manifest_path] = package.duplicate(true)
+		return package.duplicate(true)
+
+	var data: Dictionary = parsed
+	var meta: Dictionary = data.get("meta", {})
+	package["animation_source"] = String(meta.get("animation_source", "spine"))
+	package["spine_asset_key"] = String(meta.get("spine_asset_key", ""))
+	package["spine_animation"] = String(meta.get("spine_animation", "primary_attack"))
+	package["spine_event_track"] = String(meta.get("spine_event_track", "primary_hit"))
+	package["vfx_spine_key"] = String(meta.get("vfx_spine_key", ""))
+	package["hit_frame_progress"] = float(meta.get("hit_frame_progress", 1.0))
+	package["weapon_sequences"] = _load_sequence_dictionary(data.get("weapon", {}))
+	package["trail_sequences"] = _load_sequence_dictionary(data.get("trail", {}))
+	package["impact_sequences"] = _load_sequence_dictionary(data.get("impact", {}))
+	_spine_package_cache[manifest_path] = package.duplicate(true)
+	return package.duplicate(true)
+
+
+static func _load_sequence_dictionary(raw_sequences: Variant) -> Dictionary:
+	var sequences: Dictionary = {}
+	if typeof(raw_sequences) != TYPE_DICTIONARY:
+		return sequences
+	for key in raw_sequences.keys():
+		var frame_paths: Array = Array(raw_sequences[key])
+		var textures: Array[Texture2D] = []
+		for raw_path in frame_paths:
+			var texture: Texture2D = _load_texture(String(raw_path))
+			if texture != null:
+				textures.append(texture)
+		if not textures.is_empty():
+			sequences[String(key)] = textures
+	return sequences
+
+
 static func _load_texture(path: String) -> Texture2D:
+	if _texture_cache.has(path):
+		return _texture_cache[path] as Texture2D
 	var image := Image.new()
 	var error := image.load(ProjectSettings.globalize_path(path))
 	if error != OK:
 		push_warning("Failed to load branch weapon texture: %s" % path)
 		return null
-	return ImageTexture.create_from_image(image)
+	var texture: Texture2D = ImageTexture.create_from_image(image)
+	_texture_cache[path] = texture
+	return texture
 
 
 static func get_branch_name(branch_id: String) -> String:
