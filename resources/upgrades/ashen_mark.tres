@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "ashen_mark"
+display_name = "灰烬烙印"
+description = "燃烧命中附带易伤，对异常目标伤害 +12%"
+rarity_weight = 0.7
+max_level = 3
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("burn", "vulnerable", "status")
+effect_type = "branch_burn_applies_vulnerable"
+amount = 1.0
+secondary_effect_type = "branch_status_damage_multiplier"
+secondary_amount = 0.12

@@ -1,9 +1,37 @@
-extends CharacterBody2D
+﻿extends CharacterBody2D
 class_name Enemy
 
-signal defeated(world_position: Vector2, experience_reward: int, enemy_id: String, was_elite: bool, was_boss: bool)
+signal defeated(world_position: Vector2, experience_reward: int, enemy_id: String, was_elite: bool, was_boss: bool, status_snapshot: Dictionary)
 signal projectile_spawned(projectile: Node2D)
 signal boss_skill_triggered(skill_name: String, world_position: Vector2, phase: int)
+
+const STATUS_CONFIGS := {
+	"burn": {
+		"tick_interval": 0.42,
+		"initial_tick": 0.18,
+		"default_stacks": 1,
+		"default_max_stacks": 4
+	},
+	"poison": {
+		"tick_interval": 0.5,
+		"initial_tick": 0.22,
+		"default_stacks": 1,
+		"default_max_stacks": 4,
+		"detonate_threshold": 4
+	},
+	"slow": {
+		"tick_interval": 0.0,
+		"initial_tick": 0.0,
+		"default_stacks": 1,
+		"default_max_stacks": 1
+	},
+	"vulnerable": {
+		"tick_interval": 0.0,
+		"initial_tick": 0.0,
+		"default_stacks": 1,
+		"default_max_stacks": 1
+	}
+}
 
 @export var projectile_scene: PackedScene
 
@@ -32,10 +60,7 @@ var _boss_skill_cooldown_left := 0.0
 var _boss_pattern_index := 0
 var _boss_charge_time_left := 0.0
 var _boss_charge_direction := Vector2.ZERO
-var _burn_time_left := 0.0
-var _burn_tick_left := 0.0
-var _burn_damage := 0.0
-var _slow_time_left := 0.0
+var _statuses: Dictionary = {}
 var _slow_multiplier := 1.0
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
@@ -60,6 +85,8 @@ func setup(config: EnemyData, target_player: Player, elite: bool = false) -> voi
 	_boss_pattern_index = 0
 	_boss_charge_time_left = 0.0
 	_boss_charge_direction = Vector2.ZERO
+	_statuses.clear()
+	_slow_multiplier = 1.0
 	_setup_runtime_stats()
 	_apply_data()
 
@@ -116,29 +143,84 @@ func take_damage(amount: float, source_position: Vector2, knockback_force: float
 	_apply_damage(amount, source_position, knockback_force, true)
 
 
-func apply_status_effect(status_type: String, duration: float, value: float) -> void:
-	match status_type:
-		"burn":
-			_burn_time_left = maxf(_burn_time_left, duration)
-			_burn_tick_left = minf(_burn_tick_left, 0.18) if _burn_tick_left > 0.0 else 0.18
-			_burn_damage = maxf(_burn_damage, value)
-			_flash_left = maxf(_flash_left, 0.05)
-		"slow":
-			_slow_time_left = maxf(_slow_time_left, duration)
-			_slow_multiplier = minf(_slow_multiplier, value)
-			_flash_left = maxf(_flash_left, 0.05)
+func apply_status_effect(status_type: String, duration: float, value: float, stacks: int = 1, max_stacks: int = -1) -> void:
+	if not STATUS_CONFIGS.has(status_type):
+		return
+	var config = STATUS_CONFIGS[status_type]
+	var status: Dictionary = _get_status_entry(status_type)
+	status["time_left"] = maxf(float(status.get("time_left", 0.0)), duration)
+	status["value"] = _merged_status_value(status_type, float(status.get("value", 0.0)), value)
+	status["tick_interval"] = float(config.get("tick_interval", 0.0))
+	if float(status.get("tick_interval", 0.0)) > 0.0:
+		var current_tick_left: float = float(status.get("tick_left", 0.0))
+		var initial_tick: float = float(config.get("initial_tick", 0.0))
+		status["tick_left"] = minf(current_tick_left, initial_tick) if current_tick_left > 0.0 else initial_tick
+	var resolved_max_stacks: int = max_stacks
+	if resolved_max_stacks <= 0:
+		resolved_max_stacks = int(status.get("max_stacks", int(config.get("default_max_stacks", 1))))
+	status["max_stacks"] = maxi(resolved_max_stacks, 1)
+	var stack_delta: int = maxi(stacks, int(config.get("default_stacks", 1)))
+	var current_stacks: int = int(status.get("stacks", 0))
+	current_stacks = clampi(current_stacks + stack_delta, 1, int(status.get("max_stacks", 1)))
+	status["stacks"] = current_stacks
+	_statuses[status_type] = status
+	_flash_left = maxf(_flash_left, 0.05)
+	_debug_status_event("apply", "%s stacks=%d duration=%.2f value=%.2f" % [status_type, current_stacks, duration, value])
+
+
+func has_status(status_type: String) -> bool:
+	return _is_status_active(status_type)
+
+
+func has_any_status_effect() -> bool:
+	for status_type in _statuses.keys():
+		if _is_status_active(String(status_type)):
+			return true
+	return false
+
+
+func get_status_stack_count(status_type: String) -> int:
+	if not _is_status_active(status_type):
+		return 0
+	var status: Dictionary = Dictionary(_statuses.get(status_type, {}))
+	return int(status.get("stacks", 0))
+
+
+func get_status_snapshot() -> Dictionary:
+	var snapshot: Dictionary = {}
+	for raw_status_type in _statuses.keys():
+		var status_type: String = String(raw_status_type)
+		if not _is_status_active(status_type):
+			continue
+		snapshot[status_type] = Dictionary(_statuses.get(status_type, {})).duplicate(true)
+	return snapshot
+
+
+func get_total_status_layers() -> int:
+	var total_layers := 0
+	for raw_status_type in _statuses.keys():
+		var status_type: String = String(raw_status_type)
+		if not _is_status_active(status_type):
+			continue
+		var status: Dictionary = Dictionary(_statuses.get(status_type, {}))
+		total_layers += maxi(int(status.get("stacks", 1)), 1)
+	return total_layers
 
 
 func _apply_damage(amount: float, source_position: Vector2, knockback_force: float, notify_feedback: bool) -> void:
 	if current_health <= 0.0:
 		return
-	current_health -= amount
+	var resolved_damage: float = amount
+	if _is_status_active("vulnerable"):
+		var vulnerable: Dictionary = Dictionary(_statuses.get("vulnerable", {}))
+		resolved_damage *= 1.0 + maxf(float(vulnerable.get("value", 0.0)), 0.0)
+	current_health -= resolved_damage
 	_flash_left = 0.08
 	velocity += (global_position - source_position).normalized() * knockback_force
 	if notify_feedback:
 		_notify_hit_feedback(current_health <= 0.0)
 	if current_health <= 0.0:
-		defeated.emit(global_position, experience_reward_runtime, enemy_id, is_elite, is_boss)
+		defeated.emit(global_position, experience_reward_runtime, enemy_id, is_elite, is_boss, get_status_snapshot())
 		queue_free()
 
 
@@ -241,18 +323,54 @@ func _handle_contact_damage(distance: float, delta: float) -> void:
 
 
 func _handle_status_effects(delta: float) -> void:
-	if _slow_time_left > 0.0:
-		_slow_time_left = maxf(_slow_time_left - delta, 0.0)
-		if _slow_time_left <= 0.0:
-			_slow_multiplier = 1.0
-	if _burn_time_left <= 0.0:
-		return
-	_burn_time_left = maxf(_burn_time_left - delta, 0.0)
-	_burn_tick_left = maxf(_burn_tick_left - delta, 0.0)
-	if _burn_tick_left > 0.0:
-		return
-	_burn_tick_left = 0.42
-	_apply_damage(_burn_damage, global_position, 0.0, false)
+	_slow_multiplier = 1.0
+	for raw_status_type in _statuses.keys():
+		var status_type: String = String(raw_status_type)
+		var status: Dictionary = Dictionary(_statuses.get(status_type, {}))
+		var time_left: float = float(status.get("time_left", 0.0))
+		if time_left <= 0.0:
+			continue
+		time_left = maxf(time_left - delta, 0.0)
+		status["time_left"] = time_left
+		if status_type == "slow":
+			if time_left > 0.0:
+				_slow_multiplier = minf(_slow_multiplier, clampf(float(status.get("value", 1.0)), 0.25, 1.0))
+			else:
+				status["stacks"] = 0
+				status["value"] = 1.0
+			_statuses[status_type] = status
+			continue
+		var tick_interval: float = float(status.get("tick_interval", 0.0))
+		if tick_interval > 0.0 and time_left > 0.0:
+			var tick_left: float = maxf(float(status.get("tick_left", tick_interval)) - delta, 0.0)
+			status["tick_left"] = tick_left
+			if tick_left <= 0.0:
+				status["tick_left"] = tick_interval
+				status = _apply_status_tick(status_type, status)
+		if time_left <= 0.0:
+			status["stacks"] = 0
+		_statuses[status_type] = status
+
+
+func _apply_status_tick(status_type: String, status: Dictionary) -> Dictionary:
+	match status_type:
+		"burn":
+			var burn_stacks: int = maxi(int(status.get("stacks", 1)), 1)
+			var burn_damage: float = float(status.get("value", 0.0)) * (1.0 + float(burn_stacks - 1) * 0.18)
+			_apply_damage(burn_damage, global_position, 0.0, false)
+			_debug_status_event("tick", "burn damage=%.2f stacks=%d" % [burn_damage, burn_stacks])
+		"poison":
+			var poison_stacks: int = maxi(int(status.get("stacks", 1)), 1)
+			var poison_damage: float = float(status.get("value", 0.0)) * (1.0 + float(poison_stacks - 1) * 0.45)
+			_apply_damage(poison_damage, global_position, 0.0, false)
+			_debug_status_event("tick", "poison damage=%.2f stacks=%d" % [poison_damage, poison_stacks])
+			var detonate_threshold: int = int(status.get("detonate_threshold", STATUS_CONFIGS["poison"]["detonate_threshold"]))
+			if poison_stacks >= detonate_threshold:
+				var detonation_damage: float = float(status.get("value", 0.0)) * (0.85 + float(poison_stacks) * 0.25)
+				_apply_damage(detonation_damage, global_position, 0.0, false)
+				status["stacks"] = maxi(poison_stacks - 2, 1)
+				_debug_status_event("detonate", "poison bonus=%.2f remaining_stacks=%d" % [detonation_damage, int(status.get("stacks", 1))])
+	return status
 
 
 func _handle_flash(delta: float) -> void:
@@ -349,9 +467,13 @@ func _resolve_texture() -> Texture2D:
 
 
 func _get_display_color() -> Color:
-	if _burn_time_left > 0.0:
+	if _is_status_active("poison"):
+		return Color(0.58, 0.96, 0.52, 1.0)
+	if _is_status_active("burn"):
 		return Color(1.0, 0.7, 0.52, 1.0)
-	if _slow_time_left > 0.0:
+	if _is_status_active("vulnerable"):
+		return Color(1.0, 0.82, 0.48, 1.0)
+	if _is_status_active("slow"):
 		return Color(0.72, 0.88, 1.0, 1.0)
 	if is_boss:
 		return Color(1.0, 1.0, 1.0, 1.0)
@@ -366,3 +488,39 @@ func _notify_hit_feedback(died_now: bool) -> void:
 		return
 	if game.has_method("on_enemy_hit"):
 		game.on_enemy_hit(global_position, enemy_id, is_elite, is_boss, died_now)
+
+
+func _get_status_entry(status_type: String) -> Dictionary:
+	var status: Dictionary = Dictionary(_statuses.get(status_type, {}))
+	if status.is_empty():
+		var config = STATUS_CONFIGS[status_type]
+		status = {
+			"time_left": 0.0,
+			"tick_left": float(config.get("initial_tick", 0.0)),
+			"tick_interval": float(config.get("tick_interval", 0.0)),
+			"value": 0.0,
+			"stacks": 0,
+			"max_stacks": int(config.get("default_max_stacks", 1))
+		}
+		if status_type == "poison":
+			status["detonate_threshold"] = int(config.get("detonate_threshold", 4))
+	return status
+
+
+func _is_status_active(status_type: String) -> bool:
+	if not _statuses.has(status_type):
+		return false
+	var status: Dictionary = Dictionary(_statuses.get(status_type, {}))
+	return float(status.get("time_left", 0.0)) > 0.0 and int(status.get("stacks", 0)) > 0
+
+
+func _merged_status_value(status_type: String, current_value: float, next_value: float) -> float:
+	match status_type:
+		"slow":
+			return minf(current_value, next_value) if current_value > 0.0 else next_value
+		_:
+			return maxf(current_value, next_value)
+
+
+func _debug_status_event(event_name: String, detail: String) -> void:
+	print_verbose("[status][%s][%s] %s" % [enemy_id, event_name, detail])

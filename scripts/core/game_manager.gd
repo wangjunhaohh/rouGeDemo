@@ -429,9 +429,10 @@ func _on_player_died() -> void:
 	_finish_run(false)
 
 
-func _on_enemy_defeated(world_position: Vector2, experience_reward: int, enemy_id: String, was_elite: bool, was_boss: bool) -> void:
+func _on_enemy_defeated(world_position: Vector2, experience_reward: int, enemy_id: String, was_elite: bool, was_boss: bool, status_snapshot: Dictionary) -> void:
 	kills += 1
 	hud.set_kills(kills)
+	player.on_enemy_defeated(world_position, status_snapshot, was_elite, was_boss)
 
 	if was_boss:
 		active_boss = null

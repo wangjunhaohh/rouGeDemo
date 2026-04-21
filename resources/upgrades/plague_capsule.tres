@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "plague_capsule"
+display_name = "疫毒囊体"
+description = "异常附加概率 +16%，中毒伤害 +0.9"
+rarity_weight = 0.72
+max_level = 3
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("poison", "status")
+effect_type = "branch_status_apply_chance"
+amount = 0.16
+secondary_effect_type = "branch_poison_damage"
+secondary_amount = 0.9

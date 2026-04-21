@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "vanguard_edge"
+display_name = "前压刃线"
+description = "贴脸增伤 +7%，挥砍范围 +12"
+rarity_weight = 0.7
+max_level = 3
+tags = PackedStringArray("tank")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("melee", "pressure")
+effect_type = "branch_close_damage_bonus"
+amount = 0.07
+secondary_effect_type = "branch_melee_range"
+secondary_amount = 12.0

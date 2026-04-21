@@ -91,12 +91,33 @@ var _dead := false
 var _selected_branch_id := ""
 var _selected_branch_name := ""
 var _branch_damage_taken_multiplier := 1.0
+var _branch_armor := 0.0
 var _branch_burn_damage := 0.0
 var _branch_burn_duration := 0.0
+var _branch_poison_damage := 0.0
+var _branch_poison_duration := 0.0
+var _branch_poison_stacks_per_apply := 1
+var _branch_poison_max_stacks := 4
+var _branch_status_apply_chance := 1.0
+var _branch_status_damage_multiplier := 1.0
+var _branch_status_spread_radius := 0.0
+var _branch_status_spread_poison_stacks := 0
+var _branch_status_burst_damage := 0.0
+var _branch_status_burst_radius := 0.0
+var _branch_vulnerable_duration := 0.0
+var _branch_vulnerable_amount := 0.0
+var _branch_burn_applies_vulnerable := false
 var _branch_guard_shot_interval := 0
 var _branch_guard_damage := 0.0
 var _branch_guard_radius := 0.0
 var _branch_guard_knockback := 0.0
+var _branch_close_damage_bonus := 0.0
+var _branch_close_damage_radius := 104.0
+var _branch_reflect_damage := 0.0
+var _branch_reflect_radius := 74.0
+var _branch_kill_heal := 0.0
+var _branch_low_health_damage_multiplier := 1.0
+var _branch_low_health_threshold := 0.35
 var _branch_scorch_orb_shot_interval := 0
 var _branch_scorch_orb_damage := 0.0
 var _branch_scorch_orb_speed := 0.0
@@ -199,12 +220,17 @@ func _physics_process(delta: float) -> void:
 func apply_contact_damage(amount: float, source_position: Vector2) -> void:
 	if current_health <= 0.0 or _invulnerability_left > 0.0 or _dead:
 		return
-	current_health = maxf(current_health - amount * _branch_damage_taken_multiplier, 0.0)
+	var resolved_damage: float = maxf(amount * _branch_damage_taken_multiplier - _branch_armor, 1.0)
+	if max_health > 0.0 and current_health <= max_health * _branch_low_health_threshold:
+		resolved_damage *= _branch_low_health_damage_multiplier
+	current_health = maxf(current_health - resolved_damage, 0.0)
 	_invulnerability_left = invulnerability_time
 	velocity += (global_position - source_position).normalized() * 160.0
 	health_changed.emit(current_health, max_health)
 	_trigger_feedback("hurt")
 	trigger_camera_shake(8.0, 0.16)
+	if _branch_reflect_damage > 0.0 and _branch_reflect_radius > 0.0:
+		_reflect_damage_nearby(_branch_reflect_damage, _branch_reflect_radius, source_position)
 	if _branch_guard_damage > 0.0 and _branch_guard_radius > 0.0:
 		_spawn_guard_burst(0.72, 0.86)
 	if current_health <= 0.0:
@@ -234,12 +260,33 @@ func set_branch_definition(definition: Dictionary) -> void:
 	_selected_branch_id = String(definition.get("id", ""))
 	_selected_branch_name = String(definition.get("name", ""))
 	_branch_damage_taken_multiplier = float(definition.get("damage_taken_multiplier", 1.0))
+	_branch_armor = float(definition.get("armor", 0.0))
 	_branch_burn_damage = float(definition.get("burn_damage", 0.0))
 	_branch_burn_duration = float(definition.get("burn_duration", 0.0))
+	_branch_poison_damage = float(definition.get("poison_damage", 0.0))
+	_branch_poison_duration = float(definition.get("poison_duration", 0.0))
+	_branch_poison_stacks_per_apply = int(definition.get("poison_stacks_per_apply", 1))
+	_branch_poison_max_stacks = int(definition.get("poison_max_stacks", 4))
+	_branch_status_apply_chance = clampf(float(definition.get("status_apply_chance", 1.0)), 0.0, 1.0)
+	_branch_status_damage_multiplier = maxf(float(definition.get("status_damage_multiplier", 1.0)), 1.0)
+	_branch_status_spread_radius = float(definition.get("status_spread_radius", 0.0))
+	_branch_status_spread_poison_stacks = int(definition.get("status_spread_poison_stacks", 0))
+	_branch_status_burst_damage = float(definition.get("status_burst_damage", 0.0))
+	_branch_status_burst_radius = float(definition.get("status_burst_radius", 0.0))
+	_branch_vulnerable_duration = float(definition.get("vulnerable_duration", 0.0))
+	_branch_vulnerable_amount = float(definition.get("vulnerable_amount", 0.0))
+	_branch_burn_applies_vulnerable = bool(definition.get("burn_applies_vulnerable", false))
 	_branch_guard_shot_interval = int(definition.get("guard_shot_interval", 0))
 	_branch_guard_damage = float(definition.get("guard_damage", 0.0))
 	_branch_guard_radius = float(definition.get("guard_radius", 0.0))
 	_branch_guard_knockback = float(definition.get("guard_knockback", 0.0))
+	_branch_close_damage_bonus = float(definition.get("close_damage_bonus", 0.0))
+	_branch_close_damage_radius = float(definition.get("close_damage_radius", 104.0))
+	_branch_reflect_damage = float(definition.get("reflect_damage", 0.0))
+	_branch_reflect_radius = float(definition.get("reflect_radius", 74.0))
+	_branch_kill_heal = float(definition.get("kill_heal", 0.0))
+	_branch_low_health_damage_multiplier = clampf(float(definition.get("low_health_damage_multiplier", 1.0)), 0.35, 1.0)
+	_branch_low_health_threshold = clampf(float(definition.get("low_health_threshold", 0.35)), 0.08, 0.75)
 	_branch_scorch_orb_shot_interval = int(definition.get("scorch_orb_shot_interval", 0))
 	_branch_scorch_orb_damage = float(definition.get("scorch_orb_damage", 0.0))
 	_branch_scorch_orb_speed = float(definition.get("scorch_orb_speed", 0.0))
@@ -316,6 +363,53 @@ func refresh_health_ui() -> void:
 	health_changed.emit(current_health, max_health)
 
 
+func on_enemy_defeated(world_position: Vector2, status_snapshot: Dictionary, was_elite: bool, was_boss: bool) -> void:
+	if _dead:
+		return
+	if _branch_kill_heal > 0.0:
+		var heal_amount: float = _branch_kill_heal
+		if was_elite:
+			heal_amount *= 1.5
+		elif was_boss:
+			heal_amount *= 2.5
+		current_health = clampf(current_health + heal_amount, 0.0, max_health)
+		health_changed.emit(current_health, max_health)
+	if _selected_branch_id != "debuff" or status_snapshot.is_empty():
+		return
+	var total_layers: int = _status_snapshot_layer_count(status_snapshot)
+	if total_layers <= 0:
+		return
+	if _branch_status_burst_damage > 0.0 and _branch_status_burst_radius > 0.0:
+		var burst_damage: float = _branch_status_burst_damage * (1.0 + float(total_layers - 1) * 0.18)
+		var burst: GuardBurst = GUARD_BURST_SCENE.instantiate() as GuardBurst
+		burst.global_position = world_position
+		burst.setup(
+			burst_damage,
+			_branch_status_burst_radius,
+			0.18,
+			knockback_force * 0.42,
+			_branch_weapon_tint.lerp(Color(0.56, 0.94, 0.46, 1.0), 0.45)
+		)
+		effect_spawned.emit(burst)
+		_debug_branch_status_event("detonate", "radius=%.1f layers=%d" % [_branch_status_burst_radius, total_layers])
+	if _branch_status_spread_radius <= 0.0 or _branch_status_spread_poison_stacks <= 0:
+		return
+	for enemy_node in get_tree().get_nodes_in_group("enemies"):
+		var enemy: Enemy = enemy_node as Enemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		if enemy.global_position.distance_to(world_position) > _branch_status_spread_radius:
+			continue
+		enemy.apply_status_effect(
+			"poison",
+			maxf(_branch_poison_duration, 1.0),
+			maxf(_branch_poison_damage, 1.0),
+			_branch_status_spread_poison_stacks,
+			_branch_poison_max_stacks
+		)
+		_debug_branch_status_event("spread", "radius=%.1f stacks=%d" % [_branch_status_spread_radius, _branch_status_spread_poison_stacks])
+
+
 func get_build_summary() -> String:
 	var pulse_text := "未解锁"
 	if pulse_enabled:
@@ -332,6 +426,8 @@ func get_build_summary() -> String:
 	var branch_mechanic_text := _branch_mechanic_summary()
 	if not branch_mechanic_text.is_empty():
 		summary += " | 机制 %s" % branch_mechanic_text
+	if _branch_armor > 0.0:
+		summary += " | 护甲 %.0f" % _branch_armor
 	var synergy_names: Array[String] = _get_active_synergy_names()
 	if not synergy_names.is_empty():
 		summary += " | 联动 %s" % " / ".join(synergy_names)
@@ -468,6 +564,7 @@ func _perform_melee_attack(shot_count: int, overcharge_active: bool) -> void:
 	var melee_reach: float = _current_melee_reach()
 	var melee_arc_radians: float = deg_to_rad(_current_melee_arc())
 	var damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
+	damage_value *= _close_quarters_damage_multiplier()
 	var knockback_value: float = knockback_force * (1.32 if overcharge_active else 1.08)
 	var hit_any := false
 	for enemy_node in get_tree().get_nodes_in_group("enemies"):
@@ -483,9 +580,8 @@ func _perform_melee_attack(shot_count: int, overcharge_active: bool) -> void:
 			var slash_offset: float = (float(slash_index) - center_index) * 0.16
 			var slash_direction: Vector2 = direction.rotated(slash_offset)
 			if absf(slash_direction.angle_to(enemy_direction)) <= melee_arc_radians * 0.5:
-				enemy.take_damage(damage_value, global_position, knockback_value)
-				if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
-					enemy.apply_status_effect("burn", _branch_burn_duration, _branch_burn_damage)
+				enemy.take_damage(damage_value * _damage_multiplier_against_enemy(enemy), global_position, knockback_value)
+				_apply_branch_hit_statuses(enemy)
 				enemy_hit = true
 				hit_any = true
 				break
@@ -525,8 +621,8 @@ func _spawn_primary_projectile(direction: Vector2, overcharge_active: bool, bonu
 		_branch_projectile_scale,
 		_branch_projectile_spin
 	)
-	if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
-		projectile.set_status_effect("burn", _branch_burn_duration, _branch_burn_damage)
+	_configure_status_payload(projectile)
+	projectile.set_damage_vs_status_multiplier(_branch_status_damage_multiplier)
 	projectile_spawned.emit(projectile)
 
 
@@ -550,8 +646,8 @@ func _handle_pulse(delta: float) -> void:
 	pulse.global_position = global_position
 	var pulse_damage_value: float = pulse_damage * (1.18 if _has_pulse_feedback_synergy() else 1.0)
 	pulse.setup(pulse_damage_value, pulse_radius, 0.35, pulse_knockback)
-	if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
-		pulse.set_status_effect("burn", _branch_burn_duration * 0.85, maxf(_branch_burn_damage - 1.0, 1.0))
+	_configure_status_payload(pulse)
+	pulse.set_damage_vs_status_multiplier(_branch_status_damage_multiplier)
 	effect_spawned.emit(pulse)
 	_trigger_pulse_fire()
 	if _has_pulse_feedback_synergy():
@@ -625,10 +721,38 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			pulse_cooldown = maxf(0.8, pulse_cooldown + amount)
 		"branch_damage_taken_multiplier":
 			_branch_damage_taken_multiplier = clampf(_branch_damage_taken_multiplier * amount, 0.4, 1.35)
+		"branch_armor":
+			_branch_armor = clampf(_branch_armor + amount, 0.0, 24.0)
 		"branch_burn_damage":
 			_branch_burn_damage = maxf(_branch_burn_damage + amount, 0.0)
 		"branch_burn_duration":
 			_branch_burn_duration = clampf(_branch_burn_duration + amount, 0.0, 12.0)
+		"branch_poison_damage":
+			_branch_poison_damage = maxf(_branch_poison_damage + amount, 0.0)
+		"branch_poison_duration":
+			_branch_poison_duration = clampf(_branch_poison_duration + amount, 0.0, 12.0)
+		"branch_poison_apply_stacks":
+			_branch_poison_stacks_per_apply = clampi(_branch_poison_stacks_per_apply + int(amount), 1, 6)
+		"branch_poison_max_stacks":
+			_branch_poison_max_stacks = clampi(_branch_poison_max_stacks + int(amount), 1, 12)
+		"branch_status_apply_chance":
+			_branch_status_apply_chance = clampf(_branch_status_apply_chance + amount, 0.05, 1.0)
+		"branch_status_damage_multiplier":
+			_branch_status_damage_multiplier = clampf(_branch_status_damage_multiplier + amount, 1.0, 3.0)
+		"branch_status_spread_radius":
+			_branch_status_spread_radius = clampf(_branch_status_spread_radius + amount, 0.0, 240.0)
+		"branch_status_spread_poison_stacks":
+			_branch_status_spread_poison_stacks = clampi(_branch_status_spread_poison_stacks + int(amount), 0, 5)
+		"branch_status_burst_damage":
+			_branch_status_burst_damage = maxf(_branch_status_burst_damage + amount, 0.0)
+		"branch_status_burst_radius":
+			_branch_status_burst_radius = clampf(_branch_status_burst_radius + amount, 0.0, 220.0)
+		"branch_vulnerable_duration":
+			_branch_vulnerable_duration = clampf(_branch_vulnerable_duration + amount, 0.0, 10.0)
+		"branch_vulnerable_amount":
+			_branch_vulnerable_amount = clampf(_branch_vulnerable_amount + amount, 0.0, 1.2)
+		"branch_burn_applies_vulnerable":
+			_branch_burn_applies_vulnerable = amount > 0.0 or _branch_burn_applies_vulnerable
 		"guard_burst_damage":
 			_branch_guard_damage = maxf(_branch_guard_damage + amount, 0.0)
 		"guard_burst_radius":
@@ -665,8 +789,124 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			_branch_sentry_pulse_radius = clampf(_branch_sentry_pulse_radius + amount, 18.0, 220.0)
 		"sentry_pulse_interval":
 			_branch_sentry_pulse_interval = clampf(_branch_sentry_pulse_interval + amount, 0.25, 3.0)
+		"branch_melee_range":
+			_branch_attack_range = clampf(_branch_attack_range + amount, 32.0, 220.0)
+		"branch_attack_arc":
+			_branch_attack_arc = clampf(_branch_attack_arc + amount, 45.0, 180.0)
+		"branch_close_damage_bonus":
+			_branch_close_damage_bonus = clampf(_branch_close_damage_bonus + amount, 0.0, 0.45)
+		"branch_close_damage_radius":
+			_branch_close_damage_radius = clampf(_branch_close_damage_radius + amount, 48.0, 220.0)
+		"branch_reflect_damage":
+			_branch_reflect_damage = maxf(_branch_reflect_damage + amount, 0.0)
+		"branch_reflect_radius":
+			_branch_reflect_radius = clampf(_branch_reflect_radius + amount, 24.0, 180.0)
+		"branch_kill_heal":
+			_branch_kill_heal = clampf(_branch_kill_heal + amount, 0.0, 25.0)
+		"branch_low_health_damage_multiplier":
+			_branch_low_health_damage_multiplier = clampf(_branch_low_health_damage_multiplier * amount, 0.28, 1.0)
+		"branch_low_health_threshold":
+			_branch_low_health_threshold = clampf(_branch_low_health_threshold + amount, 0.08, 0.75)
 		_:
 			push_warning("Unknown upgrade effect: %s" % effect_type)
+
+
+func _configure_status_payload(target: Object) -> void:
+	if target == null:
+		return
+	if target.has_method("clear_status_effects"):
+		target.call("clear_status_effects")
+	if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0 and target.has_method("add_status_effect"):
+		target.call("add_status_effect", "burn", _branch_burn_duration, _branch_burn_damage, 1, 4, 1.0)
+	if _branch_burn_applies_vulnerable and _branch_vulnerable_duration > 0.0 and _branch_vulnerable_amount > 0.0 and target.has_method("add_status_effect"):
+		target.call("add_status_effect", "vulnerable", _branch_vulnerable_duration, _branch_vulnerable_amount, 1, 1, 1.0)
+	elif _branch_vulnerable_duration > 0.0 and _branch_vulnerable_amount > 0.0 and target.has_method("add_status_effect"):
+		target.call("add_status_effect", "vulnerable", _branch_vulnerable_duration, _branch_vulnerable_amount, 1, 1, _branch_status_apply_chance)
+	if _branch_poison_damage > 0.0 and _branch_poison_duration > 0.0 and target.has_method("add_status_effect"):
+		target.call(
+			"add_status_effect",
+			"poison",
+			_branch_poison_duration,
+			_branch_poison_damage,
+			_branch_poison_stacks_per_apply,
+			_branch_poison_max_stacks,
+			_branch_status_apply_chance
+		)
+
+
+func _apply_branch_hit_statuses(enemy: Enemy) -> void:
+	if enemy == null:
+		return
+	if _branch_burn_damage > 0.0 and _branch_burn_duration > 0.0:
+		enemy.apply_status_effect("burn", _branch_burn_duration, _branch_burn_damage, 1, 4)
+	if _branch_burn_applies_vulnerable and _branch_vulnerable_duration > 0.0 and _branch_vulnerable_amount > 0.0:
+		enemy.apply_status_effect("vulnerable", _branch_vulnerable_duration, _branch_vulnerable_amount)
+	elif _branch_vulnerable_duration > 0.0 and _branch_vulnerable_amount > 0.0 and randf() <= _branch_status_apply_chance:
+		enemy.apply_status_effect("vulnerable", _branch_vulnerable_duration, _branch_vulnerable_amount)
+	if _branch_poison_damage > 0.0 and _branch_poison_duration > 0.0 and randf() <= _branch_status_apply_chance:
+		enemy.apply_status_effect(
+			"poison",
+			_branch_poison_duration,
+			_branch_poison_damage,
+			_branch_poison_stacks_per_apply,
+			_branch_poison_max_stacks
+		)
+	_debug_branch_status_event("apply", "burn=%.1f poison=%.1f vulnerable=%.2f" % [_branch_burn_damage, _branch_poison_damage, _branch_vulnerable_amount])
+
+
+func _damage_multiplier_against_enemy(enemy: Enemy) -> float:
+	if enemy == null:
+		return 1.0
+	if _branch_status_damage_multiplier > 1.0 and enemy.has_any_status_effect():
+		return _branch_status_damage_multiplier
+	return 1.0
+
+
+func _close_quarters_damage_multiplier() -> float:
+	if _branch_close_damage_bonus <= 0.0:
+		return 1.0
+	var nearby_enemy_count: int = _count_nearby_enemies(_branch_close_damage_radius)
+	return 1.0 + float(mini(nearby_enemy_count, 4)) * _branch_close_damage_bonus
+
+
+func _count_nearby_enemies(radius: float) -> int:
+	var count := 0
+	for enemy_node in get_tree().get_nodes_in_group("enemies"):
+		var enemy: Enemy = enemy_node as Enemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		if enemy.global_position.distance_to(global_position) <= radius:
+			count += 1
+	return count
+
+
+func _reflect_damage_nearby(damage: float, radius: float, source_position: Vector2) -> void:
+	var reflected_any := false
+	for enemy_node in get_tree().get_nodes_in_group("enemies"):
+		var enemy: Enemy = enemy_node as Enemy
+		if enemy == null or not is_instance_valid(enemy) or enemy.is_queued_for_deletion():
+			continue
+		if enemy.global_position.distance_to(global_position) > radius:
+			continue
+		var reflected_damage: float = damage
+		if enemy.global_position.distance_to(source_position) <= 24.0:
+			reflected_damage *= 1.35
+		enemy.take_damage(reflected_damage, global_position, knockback_force * 0.4)
+		reflected_any = true
+	if reflected_any:
+		_debug_branch_status_event("counter", "reflect=%.1f radius=%.1f" % [damage, radius])
+
+
+func _status_snapshot_layer_count(status_snapshot: Dictionary) -> int:
+	var total_layers := 0
+	for raw_status in status_snapshot.keys():
+		var status: Dictionary = Dictionary(status_snapshot.get(raw_status, {}))
+		total_layers += maxi(int(status.get("stacks", 1)), 1)
+	return total_layers
+
+
+func _debug_branch_status_event(event_name: String, detail: String) -> void:
+	print_verbose("[branch][%s][%s] %s" % [_selected_branch_id, event_name, detail])
 
 
 func _apply_shape() -> void:
@@ -1056,9 +1296,9 @@ func _current_projectile_tint(overcharge_active: bool) -> Color:
 
 func _branch_mechanic_summary() -> String:
 	if _branch_guard_shot_interval > 0:
-		return "震荡护环/%d射" % _branch_guard_shot_interval
+		return "震荡护环/%d射 + 反伤%.0f" % [_branch_guard_shot_interval, _branch_reflect_damage]
 	if _branch_scorch_orb_shot_interval > 0:
-		return "蚀火法球/%d射" % _branch_scorch_orb_shot_interval
+		return "蚀火法球/%d射 + 毒蚀传播" % _branch_scorch_orb_shot_interval
 	if _branch_sentry_shot_interval > 0:
 		return "哨戒节点/%d射" % _branch_sentry_shot_interval
 	return ""

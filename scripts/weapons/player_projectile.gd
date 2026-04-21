@@ -1,4 +1,4 @@
-extends Area2D
+﻿extends Area2D
 class_name PlayerProjectile
 
 const DEFAULT_PROJECTILE_TEXTURE := preload("res://art/sprites/projectile_player.png")
@@ -11,9 +11,8 @@ var damage := 16.0
 var hits_left := 1
 var knockback_force := 240.0
 var tint := Color(1.0, 1.0, 1.0, 1.0)
-var status_type := ""
-var status_duration := 0.0
-var status_value := 0.0
+var status_effects: Array[Dictionary] = []
+var damage_vs_status_multiplier := 1.0
 var projectile_texture: Texture2D = DEFAULT_PROJECTILE_TEXTURE
 var projectile_visual_scale := PROJECTILE_VISUAL_SCALE
 var projectile_spin_speed := 0.0
@@ -62,10 +61,28 @@ func setup(
 		visual.modulate = tint
 
 
+func clear_status_effects() -> void:
+	status_effects.clear()
+
+
+func add_status_effect(next_status_type: String, next_duration: float, next_value: float, stacks: int = 1, max_stacks: int = -1, chance: float = 1.0) -> void:
+	status_effects.append({
+		"type": next_status_type,
+		"duration": next_duration,
+		"value": next_value,
+		"stacks": stacks,
+		"max_stacks": max_stacks,
+		"chance": chance
+	})
+
+
 func set_status_effect(next_status_type: String, next_duration: float, next_value: float) -> void:
-	status_type = next_status_type
-	status_duration = next_duration
-	status_value = next_value
+	clear_status_effects()
+	add_status_effect(next_status_type, next_duration, next_value)
+
+
+func set_damage_vs_status_multiplier(multiplier: float) -> void:
+	damage_vs_status_multiplier = maxf(multiplier, 1.0)
 
 
 func _physics_process(delta: float) -> void:
@@ -88,9 +105,21 @@ func _on_body_entered(body: Node) -> void:
 	if _hit_targets.has(target_id):
 		return
 	_hit_targets[target_id] = true
-	target.take_damage(damage, global_position, knockback_force)
-	if not status_type.is_empty():
-		target.apply_status_effect(status_type, status_duration, status_value)
+	var resolved_damage: float = damage
+	if damage_vs_status_multiplier > 1.0 and target.has_any_status_effect():
+		resolved_damage *= damage_vs_status_multiplier
+	target.take_damage(resolved_damage, global_position, knockback_force)
+	for payload in status_effects:
+		var chance: float = clampf(float(payload.get("chance", 1.0)), 0.0, 1.0)
+		if chance < 1.0 and randf() > chance:
+			continue
+		target.apply_status_effect(
+			String(payload.get("type", "")),
+			float(payload.get("duration", 0.0)),
+			float(payload.get("value", 0.0)),
+			int(payload.get("stacks", 1)),
+			int(payload.get("max_stacks", -1))
+		)
 	hits_left -= 1
 	if hits_left <= 0:
 		queue_free()

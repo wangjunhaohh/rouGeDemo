@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "infection_wake"
+display_name = "感染尾迹"
+description = "异常目标死亡传播半径 +22，并额外扩散 1 层中毒"
+rarity_weight = 0.66
+max_level = 3
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("spread", "poison")
+effect_type = "branch_status_spread_radius"
+amount = 22.0
+secondary_effect_type = "branch_status_spread_poison_stacks"
+secondary_amount = 1.0

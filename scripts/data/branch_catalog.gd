@@ -4,38 +4,41 @@ class_name BranchCatalog
 const TANK_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/tank/manifest.json"
 const DEBUFF_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/debuff/manifest.json"
 const BUILDING_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/building/manifest.json"
-const TANK_WEAPON_FRAME_PATHS := {
-	"idle": "res://art/sprites/branch_weapons/tank_blade_idle.png",
-	"windup": "res://art/sprites/branch_weapons/tank_blade_windup.png",
-	"release": "res://art/sprites/branch_weapons/tank_blade_swing.png",
-	"recover": "res://art/sprites/branch_weapons/tank_blade_recover.png"
+const FALLBACK_WEAPON_TEXTURE := preload("res://art/sprites/weapon_blaster.png")
+const FALLBACK_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
+const FALLBACK_PROJECTILE_TEXTURE: Texture2D = preload("res://art/sprites/projectile_player.png")
+const TANK_WEAPON_FRAMES := {
+	"idle": FALLBACK_WEAPON_TEXTURE,
+	"windup": FALLBACK_WEAPON_TEXTURE,
+	"release": FALLBACK_WEAPON_TEXTURE,
+	"recover": FALLBACK_WEAPON_TEXTURE
 }
-const TANK_FLASH_FRAME_PATHS := {
-	"a": "res://art/sprites/branch_weapons/tank_slash_a.png",
-	"b": "res://art/sprites/branch_weapons/tank_slash_b.png"
+const TANK_FLASH_FRAMES := {
+	"a": FALLBACK_FLASH_TEXTURE,
+	"b": FALLBACK_FLASH_TEXTURE
 }
-const DEBUFF_WEAPON_FRAME_PATHS := {
-	"idle": "res://art/sprites/branch_weapons/debuff_staff_idle.png",
-	"windup": "res://art/sprites/branch_weapons/debuff_staff_cast.png",
-	"release": "res://art/sprites/branch_weapons/debuff_staff_release.png",
-	"recover": "res://art/sprites/branch_weapons/debuff_staff_idle.png"
+const DEBUFF_WEAPON_FRAMES := {
+	"idle": FALLBACK_WEAPON_TEXTURE,
+	"windup": FALLBACK_WEAPON_TEXTURE,
+	"release": FALLBACK_WEAPON_TEXTURE,
+	"recover": FALLBACK_WEAPON_TEXTURE
 }
-const DEBUFF_FLASH_FRAME_PATHS := {
-	"a": "res://art/sprites/branch_weapons/debuff_cast_a.png",
-	"b": "res://art/sprites/branch_weapons/debuff_cast_b.png"
+const DEBUFF_FLASH_FRAMES := {
+	"a": FALLBACK_FLASH_TEXTURE,
+	"b": FALLBACK_FLASH_TEXTURE
 }
-const BUILDING_WEAPON_FRAME_PATHS := {
-	"idle": "res://art/sprites/branch_weapons/building_relay_idle.png",
-	"windup": "res://art/sprites/branch_weapons/building_relay_charge.png",
-	"release": "res://art/sprites/branch_weapons/building_relay_release.png",
-	"recover": "res://art/sprites/branch_weapons/building_relay_idle.png"
+const BUILDING_WEAPON_FRAMES := {
+	"idle": FALLBACK_WEAPON_TEXTURE,
+	"windup": FALLBACK_WEAPON_TEXTURE,
+	"release": FALLBACK_WEAPON_TEXTURE,
+	"recover": FALLBACK_WEAPON_TEXTURE
 }
-const BUILDING_FLASH_FRAME_PATHS := {
-	"a": "res://art/sprites/branch_weapons/building_signal_a.png",
-	"b": "res://art/sprites/branch_weapons/building_signal_b.png"
+const BUILDING_FLASH_FRAMES := {
+	"a": FALLBACK_FLASH_TEXTURE,
+	"b": FALLBACK_FLASH_TEXTURE
 }
-const DEBUFF_PROJECTILE_TEXTURE_PATH := "res://art/sprites/branch_weapons/debuff_orb.png"
-const BUILDING_PROJECTILE_TEXTURE_PATH := "res://art/sprites/branch_weapons/building_bolt.png"
+const DEBUFF_PROJECTILE_TEXTURE: Texture2D = FALLBACK_PROJECTILE_TEXTURE
+const BUILDING_PROJECTILE_TEXTURE: Texture2D = FALLBACK_PROJECTILE_TEXTURE
 
 static var _spine_package_cache: Dictionary = {}
 static var _texture_cache: Dictionary = {}
@@ -63,8 +66,8 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 		{
 			"id": "tank",
 			"name": "肉盾流",
-			"summary": "贴脸站场，靠震荡护环清开近身压力",
-			"description": "开局最大生命 +18，受到接触伤害 -18%。每 5 次主武器射击会触发一次近身震荡护环，受击时也会触发一次弱化反震。",
+			"summary": "贴脸站场，靠护甲、反震和斩击范围稳步推线",
+			"description": "开局最大生命 +18，护甲 +2，低血时额外减伤。每 5 次主武器攻击会触发一次近身震荡护环，受击时会反震并把承伤转成近战站场收益。",
 			"accent_color": Color(0.9, 0.74, 0.42, 1.0),
 			"weapon_tint": Color(0.96, 0.84, 0.58, 1.0),
 			"flash_color": Color(1.0, 0.9, 0.58, 1.0),
@@ -90,28 +93,36 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"projectile_spin": 0.0,
 			"projectile_speed_multiplier": 1.0,
 			"projectile_range_multiplier": 1.0,
-			"weapon_frames": _load_frame_dictionary(TANK_WEAPON_FRAME_PATHS),
-			"flash_frames": _load_frame_dictionary(TANK_FLASH_FRAME_PATHS),
+			"weapon_frames": TANK_WEAPON_FRAMES.duplicate(true),
+			"flash_frames": TANK_FLASH_FRAMES.duplicate(true),
 			"weapon_sequences": Dictionary(tank_spine.get("weapon_sequences", {})).duplicate(true),
 			"trail_sequences": Dictionary(tank_spine.get("trail_sequences", {})).duplicate(true),
 			"impact_sequences": Dictionary(tank_spine.get("impact_sequences", {})).duplicate(true),
 			"damage_taken_multiplier": 0.82,
+			"armor": 2.0,
 			"guard_shot_interval": 5,
 			"guard_damage": 14.0,
 			"guard_radius": 96.0,
 			"guard_knockback": 360.0,
+			"close_damage_bonus": 0.08,
+			"close_damage_radius": 104.0,
+			"reflect_damage": 8.0,
+			"reflect_radius": 76.0,
+			"kill_heal": 2.0,
+			"low_health_damage_multiplier": 0.8,
+			"low_health_threshold": 0.35,
 			"starting_effects": [
 				{"type": "max_health", "amount": 18.0}
 			],
 			"preferred_tags": PackedStringArray(["tank"]),
 			"secondary_tags": PackedStringArray(["neutral", "building"]),
-			"priority_synergy_tags": PackedStringArray(["survival", "guard", "pulse", "mobility"])
+			"priority_synergy_tags": PackedStringArray(["survival", "guard", "melee", "armor", "counter"])
 		},
 		{
 			"id": "debuff",
 			"name": "异常流",
-			"summary": "燃烧直伤配合法球灼地，持续压血控场",
-			"description": "主武器和脉冲附带燃烧。每 5 次主武器射击会额外抛出一枚蚀火法球，落地后生成减速灼地区域。",
+			"summary": "用燃烧、中毒和易伤叠层，再靠传播和崩解清场",
+			"description": "主武器和脉冲会附带燃烧，并有概率追加中毒或易伤。每 5 次主武器射击会额外抛出一枚蚀火法球，状态目标死亡时会传播并触发一次异常崩解。",
 			"accent_color": Color(0.95, 0.38, 0.26, 1.0),
 			"weapon_tint": Color(0.96, 0.62, 0.42, 1.0),
 			"flash_color": Color(1.0, 0.58, 0.34, 1.0),
@@ -137,14 +148,27 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"projectile_spin": 7.4,
 			"projectile_speed_multiplier": 0.9,
 			"projectile_range_multiplier": 0.92,
-			"weapon_frames": _load_frame_dictionary(DEBUFF_WEAPON_FRAME_PATHS),
-			"flash_frames": _load_frame_dictionary(DEBUFF_FLASH_FRAME_PATHS),
+			"weapon_frames": DEBUFF_WEAPON_FRAMES.duplicate(true),
+			"flash_frames": DEBUFF_FLASH_FRAMES.duplicate(true),
 			"weapon_sequences": Dictionary(debuff_spine.get("weapon_sequences", {})).duplicate(true),
 			"trail_sequences": Dictionary(debuff_spine.get("trail_sequences", {})).duplicate(true),
 			"impact_sequences": Dictionary(debuff_spine.get("impact_sequences", {})).duplicate(true),
-			"projectile_texture": _load_texture(DEBUFF_PROJECTILE_TEXTURE_PATH),
+			"projectile_texture": DEBUFF_PROJECTILE_TEXTURE,
 			"burn_damage": 4.0,
 			"burn_duration": 2.4,
+			"poison_damage": 1.8,
+			"poison_duration": 3.4,
+			"poison_stacks_per_apply": 1,
+			"poison_max_stacks": 4,
+			"status_apply_chance": 0.6,
+			"status_damage_multiplier": 1.08,
+			"status_spread_radius": 84.0,
+			"status_spread_poison_stacks": 1,
+			"status_burst_damage": 9.0,
+			"status_burst_radius": 76.0,
+			"vulnerable_duration": 1.6,
+			"vulnerable_amount": 0.12,
+			"burn_applies_vulnerable": false,
 			"scorch_orb_shot_interval": 5,
 			"scorch_orb_damage": 11.0,
 			"scorch_orb_speed": 245.0,
@@ -157,7 +181,7 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"scorch_slow_amount": 0.8,
 			"preferred_tags": PackedStringArray(["debuff"]),
 			"secondary_tags": PackedStringArray(["neutral", "building"]),
-			"priority_synergy_tags": PackedStringArray(["burn", "tempo", "damage", "pressure"])
+			"priority_synergy_tags": PackedStringArray(["burn", "poison", "status", "spread", "vulnerable"])
 		},
 		{
 			"id": "building",
@@ -189,12 +213,12 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"projectile_spin": 0.0,
 			"projectile_speed_multiplier": 1.08,
 			"projectile_range_multiplier": 1.0,
-			"weapon_frames": _load_frame_dictionary(BUILDING_WEAPON_FRAME_PATHS),
-			"flash_frames": _load_frame_dictionary(BUILDING_FLASH_FRAME_PATHS),
+			"weapon_frames": BUILDING_WEAPON_FRAMES.duplicate(true),
+			"flash_frames": BUILDING_FLASH_FRAMES.duplicate(true),
 			"weapon_sequences": Dictionary(building_spine.get("weapon_sequences", {})).duplicate(true),
 			"trail_sequences": Dictionary(building_spine.get("trail_sequences", {})).duplicate(true),
 			"impact_sequences": Dictionary(building_spine.get("impact_sequences", {})).duplicate(true),
-			"projectile_texture": _load_texture(BUILDING_PROJECTILE_TEXTURE_PATH),
+			"projectile_texture": BUILDING_PROJECTILE_TEXTURE,
 			"sentry_shot_interval": 6,
 			"sentry_lifetime": 8.0,
 			"sentry_fire_interval": 0.78,
@@ -208,13 +232,6 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"priority_synergy_tags": PackedStringArray(["summon", "range", "formation", "pulse"])
 		}
 	]
-
-
-static func _load_frame_dictionary(paths: Dictionary) -> Dictionary:
-	var frames: Dictionary = {}
-	for key in paths.keys():
-		frames[key] = _load_texture(String(paths[key]))
-	return frames
 
 
 static func _load_spine_package(manifest_path: String) -> Dictionary:
@@ -278,6 +295,10 @@ static func _load_sequence_dictionary(raw_sequences: Variant) -> Dictionary:
 static func _load_texture(path: String) -> Texture2D:
 	if _texture_cache.has(path):
 		return _texture_cache[path] as Texture2D
+	var resource_texture: Texture2D = load(path) as Texture2D
+	if resource_texture != null:
+		_texture_cache[path] = resource_texture
+		return resource_texture
 	var image := Image.new()
 	var error := image.load(ProjectSettings.globalize_path(path))
 	if error != OK:
