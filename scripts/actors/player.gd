@@ -20,25 +20,10 @@ const DEFAULT_FLASH_FRAMES := {
 	"b": WEAPON_FLASH_TEXTURE
 }
 const BODY_SWORD_ATTACK_ANIMATION := "sword_attack"
+const BODY_ATTACK_BASE_COOLDOWN := 0.75
+const BODY_ATTACK_MIN_SPEED_SCALE := 0.55
+const BODY_ATTACK_MAX_SPEED_SCALE := 2.4
 const ATTACHMENT_PIVOT_OFFSET := Vector2(0.0, -2.0)
-const PLAYER_DIRECTION_TEXTURES: Dictionary[String, Texture2D] = {
-	"down": preload("res://art/sprites/player_dirs/player_down.png"),
-	"down_right": preload("res://art/sprites/player_dirs/player_down_right.png"),
-	"right": preload("res://art/sprites/player_dirs/player_right.png"),
-	"up_right": preload("res://art/sprites/player_dirs/player_up_right.png"),
-	"up": preload("res://art/sprites/player_dirs/player_up.png"),
-	"up_left": preload("res://art/sprites/player_dirs/player_up_left.png"),
-	"left": preload("res://art/sprites/player_dirs/player_left.png"),
-	"down_left": preload("res://art/sprites/player_dirs/player_down_left.png")
-}
-const PLAYER_SWORD_ATTACK_TEXTURES: Array[Texture2D] = [
-	preload("res://art/animations/player_sword_attack/frame_01_idle.png"),
-	preload("res://art/animations/player_sword_attack/frame_02_ready.png"),
-	preload("res://art/animations/player_sword_attack/frame_03_slash.png"),
-	preload("res://art/animations/player_sword_attack/frame_04_followthrough.png"),
-	preload("res://art/animations/player_sword_attack/frame_05_recover.png"),
-	preload("res://art/animations/player_sword_attack/frame_06_idle_end.png")
-]
 
 enum AttackPhase { IDLE, WINDUP, RECOVERY }
 
@@ -529,7 +514,8 @@ func _handle_movement(delta: float) -> void:
 		clampf(global_position.x, -arena_half_size.x, arena_half_size.x),
 		clampf(global_position.y, -arena_half_size.y, arena_half_size.y)
 	)
-	_update_body_direction_sprite(_last_move_direction)
+	if _attack_phase == AttackPhase.IDLE:
+		_update_body_direction_sprite(_last_move_direction)
 
 
 func _handle_attack(delta: float) -> void:
@@ -580,6 +566,8 @@ func _start_primary_attack(target_position: Vector2) -> void:
 	_attack_hit_resolved = false
 	_aim_direction = direction
 	_set_slash_hitbox_active(false)
+	if _branch_weapon_type == "melee":
+		_start_body_attack_animation(direction)
 	body_visual.scale = Vector2(1.03, 0.98)
 
 
@@ -1303,20 +1291,11 @@ func _apply_branch_visual_style() -> void:
 func _build_body_sprite_frames() -> SpriteFrames:
 	if _body_sprite_frames != null:
 		return _body_sprite_frames
-	var frames := SpriteFrames.new()
-	for key in PLAYER_DIRECTION_TEXTURES.keys():
-		frames.add_animation(String(key))
-		frames.set_animation_loop(String(key), false)
-		frames.set_animation_speed(String(key), 1.0)
-		var texture: Texture2D = PLAYER_DIRECTION_TEXTURES[key] as Texture2D
-		if texture != null:
-			frames.add_frame(String(key), texture)
-	frames.add_animation(BODY_SWORD_ATTACK_ANIMATION)
-	frames.set_animation_loop(BODY_SWORD_ATTACK_ANIMATION, false)
-	frames.set_animation_speed(BODY_SWORD_ATTACK_ANIMATION, 18.0)
-	for texture in PLAYER_SWORD_ATTACK_TEXTURES:
-		frames.add_frame(BODY_SWORD_ATTACK_ANIMATION, texture)
-	_body_sprite_frames = frames
+	if body_visual != null and body_visual.sprite_frames != null:
+		_body_sprite_frames = body_visual.sprite_frames
+		return _body_sprite_frames
+	push_warning("Player AnimatedSprite2D is missing SpriteFrames resource.")
+	_body_sprite_frames = SpriteFrames.new()
 	return _body_sprite_frames
 
 
@@ -1328,6 +1307,7 @@ func _set_body_animation(animation_key: String, frame_index: int, flip_h: bool) 
 	if body_visual.animation != animation_key:
 		body_visual.play(animation_key)
 		body_visual.stop()
+	body_visual.speed_scale = 1.0
 	body_visual.flip_h = flip_h
 	body_visual.frame = clampi(frame_index, 0, body_visual.sprite_frames.get_frame_count(animation_key) - 1)
 
@@ -1337,14 +1317,53 @@ func _update_body_animation(direction: Vector2) -> void:
 		var attack_direction: Vector2 = direction
 		if attack_direction == Vector2.ZERO:
 			attack_direction = _last_move_direction
-		var attack_frame := 0
-		if _attack_phase == AttackPhase.WINDUP:
-			attack_frame = clampi(int(floor(_attack_phase_progress(_branch_windup_time) * 3.0)), 0, 2)
-		else:
-			attack_frame = clampi(3 + int(floor(_attack_phase_progress(_branch_recovery_time) * 3.0)), 3, 5)
-		_set_body_animation(BODY_SWORD_ATTACK_ANIMATION, attack_frame, attack_direction.x < -0.08)
+		_sync_body_attack_animation(attack_direction)
 		return
 	_update_body_direction_sprite(direction)
+
+
+func _start_body_attack_animation(direction: Vector2) -> void:
+	if not _can_play_body_attack_animation():
+		return
+	# 攻击动画交给 Player 下的 AnimatedSprite2D 播放，脚本只同步朝向和攻速倍率。
+	body_visual.flip_h = direction.x < -0.08
+	body_visual.speed_scale = _body_attack_playback_scale()
+	body_visual.frame = 0
+	body_visual.frame_progress = 0.0
+	body_visual.play(BODY_SWORD_ATTACK_ANIMATION)
+
+
+func _sync_body_attack_animation(direction: Vector2) -> void:
+	if not _can_play_body_attack_animation():
+		return
+	body_visual.flip_h = direction.x < -0.08
+	body_visual.speed_scale = _body_attack_playback_scale()
+	if body_visual.animation != BODY_SWORD_ATTACK_ANIMATION:
+		_start_body_attack_animation(direction)
+
+
+func _can_play_body_attack_animation() -> bool:
+	if body_visual == null or body_visual.sprite_frames == null:
+		return false
+	if not body_visual.sprite_frames.has_animation(BODY_SWORD_ATTACK_ANIMATION):
+		return false
+	return body_visual.sprite_frames.get_frame_count(BODY_SWORD_ATTACK_ANIMATION) > 0
+
+
+func _body_attack_playback_scale() -> float:
+	var attack_speed_scale: float = BODY_ATTACK_BASE_COOLDOWN / maxf(projectile_cooldown, 0.05)
+	var phase_duration: float = maxf(_branch_windup_time + _branch_recovery_time, 0.05)
+	var clip_duration: float = _body_attack_clip_duration()
+	var phase_fit_scale: float = clip_duration / phase_duration
+	return clampf(phase_fit_scale * attack_speed_scale, BODY_ATTACK_MIN_SPEED_SCALE, BODY_ATTACK_MAX_SPEED_SCALE)
+
+
+func _body_attack_clip_duration() -> float:
+	if not _can_play_body_attack_animation():
+		return maxf(_branch_windup_time + _branch_recovery_time, 0.05)
+	var frame_count: int = body_visual.sprite_frames.get_frame_count(BODY_SWORD_ATTACK_ANIMATION)
+	var animation_speed: float = maxf(body_visual.sprite_frames.get_animation_speed(BODY_SWORD_ATTACK_ANIMATION), 1.0)
+	return float(frame_count) / animation_speed
 
 
 func _attack_point_local_position(direction: Vector2) -> Vector2:
@@ -1603,6 +1622,9 @@ func _direction_to_sprite_key(direction: Vector2) -> String:
 
 
 func _update_body_direction_sprite(direction: Vector2, force: bool = false) -> void:
+	if not force and _attack_phase != AttackPhase.IDLE:
+		# 攻击期间 AnimatedSprite2D 由 sword_attack 播放控制，避免移动方向帧每帧打断动画。
+		return
 	var key: String = _direction_to_sprite_key(direction)
 	if not force and key == _body_direction_key and body_visual.animation == key:
 		return

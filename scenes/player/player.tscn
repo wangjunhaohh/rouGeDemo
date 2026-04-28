@@ -1,8 +1,9 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/actors/player.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/player_projectile.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/pulse_wave.tscn" id="3"]
+[ext_resource type="SpriteFrames" path="res://resources/animations/player_body_sprite_frames.tres" id="4"]
 
 [sub_resource type="CircleShape2D" id="1"]
 radius = 14.0
@@ -23,6 +24,8 @@ shape = SubResource("1")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 texture_filter = 0
+sprite_frames = ExtResource("4")
+animation = &"right"
 
 [node name="Hurtbox" type="Area2D" parent="."]
 collision_layer = 4
