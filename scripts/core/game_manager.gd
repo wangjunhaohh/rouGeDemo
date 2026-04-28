@@ -380,6 +380,28 @@ func _spawn_boss() -> void:
 	if arena.has_method("set_boss_mode"):
 		arena.set_boss_mode(true, 1)
 	_spawn_burst(active_boss.global_position, Color(0.8, 0.24, 0.32, 1.0), 7.0, 26, 0.65, 150.0)
+	_spawn_branch_pressure_wave()
+
+
+func _spawn_branch_pressure_wave() -> void:
+	if selected_branch_id.is_empty():
+		return
+	# 首领开场根据本局分支补一组针对性压力，避免 Boss 战只吃通用刷怪节奏。
+	match selected_branch_id:
+		"tank":
+			hud.show_event("首领派出远程压制队，肉盾流需要推进处理火线", 2.4)
+			_spawn_enemy_by_id("goblin", false, _pick_spawn_position_from_angle(randf() * TAU, 580.0))
+			_spawn_enemy_by_id("ghost", false, _pick_spawn_position_from_angle(randf() * TAU + 1.8, 560.0))
+		"debuff":
+			hud.show_event("首领释放高速杂兵，异常流需要靠传播稳住节奏", 2.4)
+			for offset in [-0.24, 0.0, 0.24]:
+				_spawn_enemy_by_id("bat", false, _pick_spawn_position_from_angle(randf() * TAU + offset, 520.0))
+			_spawn_enemy_by_id("imp", false, _pick_spawn_position_from_angle(randf() * TAU + PI, 560.0))
+		"building":
+			hud.show_event("首领拆解阵地，召唤流需要重新布置火力线", 2.4)
+			for offset in [-0.2, 0.2]:
+				_spawn_enemy_by_id("bat", false, _pick_spawn_position_from_angle(randf() * TAU + offset, 520.0))
+			_spawn_enemy_by_id("demon", false, _pick_spawn_position_from_angle(randf() * TAU + PI, 600.0))
 
 
 func _pick_spawn_position() -> Vector2:

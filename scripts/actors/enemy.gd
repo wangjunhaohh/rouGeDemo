@@ -30,7 +30,35 @@ const STATUS_CONFIGS := {
 		"initial_tick": 0.0,
 		"default_stacks": 1,
 		"default_max_stacks": 1
+	},
+	"curse": {
+		"tick_interval": 0.72,
+		"initial_tick": 0.26,
+		"default_stacks": 1,
+		"default_max_stacks": 4
+	},
+	"corrosion": {
+		"tick_interval": 0.0,
+		"initial_tick": 0.0,
+		"default_stacks": 1,
+		"default_max_stacks": 5
+	},
+	"control": {
+		"tick_interval": 0.0,
+		"initial_tick": 0.0,
+		"default_stacks": 1,
+		"default_max_stacks": 1
 	}
+}
+
+const STATUS_VISUALS := {
+	"burn": {"label": "燃", "color": Color(1.0, 0.52, 0.22, 1.0)},
+	"poison": {"label": "毒", "color": Color(0.45, 0.95, 0.36, 1.0)},
+	"slow": {"label": "缓", "color": Color(0.56, 0.82, 1.0, 1.0)},
+	"vulnerable": {"label": "脆", "color": Color(1.0, 0.78, 0.34, 1.0)},
+	"curse": {"label": "咒", "color": Color(0.72, 0.4, 1.0, 1.0)},
+	"corrosion": {"label": "蚀", "color": Color(0.36, 1.0, 0.66, 1.0)},
+	"control": {"label": "控", "color": Color(0.68, 0.92, 1.0, 1.0)}
 }
 
 @export var projectile_scene: PackedScene
@@ -62,6 +90,9 @@ var _boss_charge_time_left := 0.0
 var _boss_charge_direction := Vector2.ZERO
 var _statuses: Dictionary = {}
 var _slow_multiplier := 1.0
+var _status_label: Label
+var _status_marker_root: Node2D
+var _last_status_visual_signature := ""
 
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var body_visual: Sprite2D = $Body
@@ -96,14 +127,18 @@ func _physics_process(delta: float) -> void:
 		return
 
 	_handle_status_effects(delta)
+	_update_status_visuals()
 	if current_health <= 0.0:
 		return
 
 	var to_player := player.global_position - global_position
 	var distance := to_player.length()
 	var direction := Vector2.ZERO
+	var controlled := _is_status_active("control")
 
-	if is_boss:
+	if controlled:
+		direction = Vector2.ZERO
+	elif is_boss:
 		_update_boss_phase()
 		_handle_boss_skills(to_player, distance, delta)
 		if _boss_charge_time_left > 0.0:
@@ -133,6 +168,8 @@ func _physics_process(delta: float) -> void:
 	if is_boss and _boss_charge_time_left > 0.0:
 		speed_multiplier = 4.6 if _boss_phase >= 2 else 4.0
 	speed_multiplier *= _slow_multiplier
+	if controlled:
+		speed_multiplier = 0.0
 	velocity = velocity.move_toward(direction * move_speed_runtime * speed_multiplier, move_speed_runtime * 8.0 * speed_multiplier * delta)
 	move_and_slide()
 	_handle_contact_damage(distance, delta)
@@ -146,6 +183,9 @@ func take_damage(amount: float, source_position: Vector2, knockback_force: float
 func apply_status_effect(status_type: String, duration: float, value: float, stacks: int = 1, max_stacks: int = -1) -> void:
 	if not STATUS_CONFIGS.has(status_type):
 		return
+	# Boss 对硬控保留短抗性，避免异常流完全跳过首领技能循环。
+	if status_type == "control" and is_boss:
+		duration *= 0.35
 	var config = STATUS_CONFIGS[status_type]
 	var status: Dictionary = _get_status_entry(status_type)
 	status["time_left"] = maxf(float(status.get("time_left", 0.0)), duration)
@@ -214,6 +254,15 @@ func _apply_damage(amount: float, source_position: Vector2, knockback_force: flo
 	if _is_status_active("vulnerable"):
 		var vulnerable: Dictionary = Dictionary(_statuses.get("vulnerable", {}))
 		resolved_damage *= 1.0 + maxf(float(vulnerable.get("value", 0.0)), 0.0)
+	if _is_status_active("corrosion"):
+		var corrosion: Dictionary = Dictionary(_statuses.get("corrosion", {}))
+		var corrosion_layers: int = maxi(int(corrosion.get("stacks", 1)), 1)
+		resolved_damage *= 1.0 + maxf(float(corrosion.get("value", 0.0)), 0.0) * float(corrosion_layers)
+	if notify_feedback and _is_status_active("curse"):
+		var curse: Dictionary = Dictionary(_statuses.get("curse", {}))
+		var curse_layers: int = maxi(int(curse.get("stacks", 1)), 1)
+		# 诅咒是“标记兑现”：直接命中时追加暗蚀伤害，DOT 自身不会递归触发。
+		resolved_damage += maxf(float(curse.get("value", 0.0)), 0.0) * float(curse_layers) * 0.45
 	current_health -= resolved_damage
 	_flash_left = 0.08
 	velocity += (global_position - source_position).normalized() * knockback_force
@@ -316,7 +365,7 @@ func _spawn_custom_projectile(direction: Vector2, speed: float, damage: float, t
 
 func _handle_contact_damage(distance: float, delta: float) -> void:
 	_contact_cooldown_left = maxf(_contact_cooldown_left - delta, 0.0)
-	if distance > size_runtime + 18.0 or _contact_cooldown_left > 0.0:
+	if _is_status_active("control") or distance > size_runtime + 18.0 or _contact_cooldown_left > 0.0:
 		return
 	_contact_cooldown_left = 0.9
 	player.apply_contact_damage(touch_damage_runtime, global_position)
@@ -370,6 +419,13 @@ func _apply_status_tick(status_type: String, status: Dictionary) -> Dictionary:
 				_apply_damage(detonation_damage, global_position, 0.0, false)
 				status["stacks"] = maxi(poison_stacks - 2, 1)
 				_debug_status_event("detonate", "poison bonus=%.2f remaining_stacks=%d" % [detonation_damage, int(status.get("stacks", 1))])
+		"curse":
+			var curse_stacks: int = maxi(int(status.get("stacks", 1)), 1)
+			var curse_damage: float = float(status.get("value", 0.0)) * (0.85 + float(curse_stacks - 1) * 0.32)
+			if _is_status_active("control") or _is_status_active("corrosion"):
+				curse_damage *= 1.28
+			_apply_damage(curse_damage, global_position, 0.0, false)
+			_debug_status_event("tick", "curse damage=%.2f stacks=%d" % [curse_damage, curse_stacks])
 	return status
 
 
@@ -392,6 +448,8 @@ func _apply_data() -> void:
 	body_visual.texture = _resolve_texture()
 	body_visual.scale = Vector2.ONE * maxf(size_runtime / 32.0, 0.8)
 	body_visual.modulate = _get_display_color()
+	_ensure_status_visual_nodes()
+	_update_status_visuals()
 
 
 func _setup_runtime_stats() -> void:
@@ -467,6 +525,12 @@ func _resolve_texture() -> Texture2D:
 
 
 func _get_display_color() -> Color:
+	if _is_status_active("control"):
+		return Color(0.68, 0.92, 1.0, 1.0)
+	if _is_status_active("curse"):
+		return Color(0.76, 0.52, 1.0, 1.0)
+	if _is_status_active("corrosion"):
+		return Color(0.44, 1.0, 0.72, 1.0)
 	if _is_status_active("poison"):
 		return Color(0.58, 0.96, 0.52, 1.0)
 	if _is_status_active("burn"):
@@ -505,6 +569,70 @@ func _get_status_entry(status_type: String) -> Dictionary:
 		if status_type == "poison":
 			status["detonate_threshold"] = int(config.get("detonate_threshold", 4))
 	return status
+
+
+func _ensure_status_visual_nodes() -> void:
+	if _status_label == null:
+		_status_label = Label.new()
+		_status_label.name = "StatusLabel"
+		_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_status_label.add_theme_font_size_override("font_size", 10)
+		_status_label.position = Vector2(-36.0, -size_runtime - 30.0)
+		_status_label.size = Vector2(72.0, 14.0)
+		_status_label.z_index = 20
+		add_child(_status_label)
+	if _status_marker_root == null:
+		_status_marker_root = Node2D.new()
+		_status_marker_root.name = "StatusMarkers"
+		_status_marker_root.position = Vector2.ZERO
+		_status_marker_root.z_index = 19
+		add_child(_status_marker_root)
+
+
+func _update_status_visuals() -> void:
+	_ensure_status_visual_nodes()
+	var active_parts: Array[String] = []
+	for raw_status_type in STATUS_VISUALS.keys():
+		var status_type: String = String(raw_status_type)
+		if not _is_status_active(status_type):
+			continue
+		var status: Dictionary = Dictionary(_statuses.get(status_type, {}))
+		var visual: Dictionary = Dictionary(STATUS_VISUALS[status_type])
+		var stacks: int = maxi(int(status.get("stacks", 1)), 1)
+		var label: String = String(visual.get("label", status_type))
+		active_parts.append("%s%d" % [label, stacks] if stacks > 1 else label)
+	_status_label.text = " ".join(active_parts)
+	_status_label.visible = not active_parts.is_empty()
+	_status_label.position = Vector2(-36.0, -size_runtime - 30.0)
+	var next_signature := "|".join(active_parts)
+	if next_signature == _last_status_visual_signature:
+		return
+	_last_status_visual_signature = next_signature
+	_redraw_status_markers(active_parts.size())
+
+
+func _redraw_status_markers(active_count: int) -> void:
+	for child in _status_marker_root.get_children():
+		child.queue_free()
+	if active_count <= 0:
+		return
+	var marker_index := 0
+	for raw_status_type in STATUS_VISUALS.keys():
+		var status_type: String = String(raw_status_type)
+		if not _is_status_active(status_type):
+			continue
+		var visual: Dictionary = Dictionary(STATUS_VISUALS[status_type])
+		var marker := ColorRect.new()
+		var marker_color := Color.WHITE
+		var raw_marker_color: Variant = visual.get("color", Color.WHITE)
+		if raw_marker_color is Color:
+			marker_color = raw_marker_color
+		marker.color = marker_color
+		marker.size = Vector2(6.0, 3.0)
+		marker.position = Vector2(float(marker_index) * 8.0 - float(active_count - 1) * 4.0 - 3.0, -size_runtime - 12.0)
+		_status_marker_root.add_child(marker)
+		marker_index += 1
 
 
 func _is_status_active(status_type: String) -> bool:

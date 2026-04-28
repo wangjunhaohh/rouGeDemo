@@ -11,7 +11,9 @@ const BUFF_POOL := [
 	{"type": "move_speed", "amount": 18.0, "text": "移动速度 +18", "tag": "mobility"},
 	{"type": "pickup_radius", "amount": 20.0, "text": "拾取范围 +20", "tag": "pickup"},
 	{"type": "pulse_damage", "amount": 8.0, "text": "脉冲伤害 +8", "tag": "pulse"},
-	{"type": "pulse_cooldown", "amount": -0.18, "text": "脉冲冷却 -0.18 秒", "tag": "pulse"}
+	{"type": "pulse_cooldown", "amount": -0.18, "text": "脉冲冷却 -0.18 秒", "tag": "pulse"},
+	{"type": "branch_curse_damage", "amount": 1.2, "text": "诅咒伤害 +1.2", "tag": "debuff"},
+	{"type": "branch_shield_max", "amount": 14.0, "text": "护盾上限 +14", "tag": "tank"}
 ]
 
 const DEBUFF_POOL := [
@@ -75,6 +77,38 @@ static func _build_card_definitions() -> Array[Dictionary]:
 				{"type": "unlock_pulse", "amount": 1.0, "text": "解锁脉冲"},
 				{"type": "pulse_damage", "amount": 6.0, "text": "脉冲伤害 +6"},
 				{"type": "pulse_cooldown", "amount": -0.2, "text": "脉冲冷却 -0.2 秒"}
+			]
+		},
+		{
+			"id": "plague_sample",
+			"name": "灾厄标本",
+			"type": "风险",
+			"rarity": "史诗",
+			"weight": 0.62,
+			"effect_pool_tags": PackedStringArray(["debuff", "risk"]),
+			"allow_debuff": true,
+			"display_text": "诅咒伤害 +2、腐蚀削防 +4%，但最大生命 -10",
+			"icon": CARD_RISK_ICON,
+			"effects": [
+				{"type": "branch_curse_damage", "amount": 2.0, "text": "诅咒伤害 +2"},
+				{"type": "branch_corrosion_amount", "amount": 0.04, "text": "腐蚀削防 +4%"},
+				{"type": "max_health", "amount": -10.0, "text": "最大生命 -10"}
+			]
+		},
+		{
+			"id": "bulwark_trial",
+			"name": "壁垒试验",
+			"type": "风险",
+			"rarity": "史诗",
+			"weight": 0.62,
+			"effect_pool_tags": PackedStringArray(["tank", "shield", "risk"]),
+			"allow_debuff": true,
+			"display_text": "护盾上限 +28、格挡概率 +12%，但移动速度 -10",
+			"icon": CARD_RISK_ICON,
+			"effects": [
+				{"type": "branch_shield_max", "amount": 28.0, "text": "护盾上限 +28"},
+				{"type": "branch_block_chance", "amount": 0.12, "text": "格挡概率 +12%"},
+				{"type": "move_speed", "amount": -10.0, "text": "移动速度 -10"}
 			]
 		},
 		{
@@ -150,6 +184,7 @@ static func _pick_effect(pool: Array, rng: RandomNumberGenerator, pulse_enabled:
 	var filtered: Array[Dictionary] = []
 	for effect in pool:
 		var item: Dictionary = Dictionary(effect)
+		# 未解锁脉冲时，把脉冲池结果转为解锁项，避免随机卡给出不可用收益。
 		if not pulse_enabled and String(item.get("tag", "")) == "pulse":
 			filtered.append({
 				"type": "unlock_pulse",

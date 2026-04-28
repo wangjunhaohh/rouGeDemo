@@ -10,7 +10,9 @@ const UPGRADE_ORDER := [
 	"cadence",
 	"piercer",
 	"furnace",
-	"salvage"
+	"salvage",
+	"field_medic",
+	"arsenal_cache"
 ]
 const DEFINITIONS := {
 	"endurance": {
@@ -90,6 +92,30 @@ const DEFINITIONS := {
 		"effect_type": "shard_bonus_rate",
 		"amount": 0.12,
 		"requires": {"magnet": 1}
+	},
+	"field_medic": {
+		"name": "战地注剂",
+		"description": "开局最大生命 +8、移动速度 +4",
+		"cost": 30,
+		"cost_step": 16,
+		"max_level": 4,
+		"effect_type": "max_health",
+		"amount": 8.0,
+		"secondary_effect_type": "move_speed",
+		"secondary_amount": 4.0,
+		"requires": {"endurance": 2}
+	},
+	"arsenal_cache": {
+		"name": "军械暗仓",
+		"description": "开局主武器伤害 +2、拾取范围 +8",
+		"cost": 32,
+		"cost_step": 18,
+		"max_level": 4,
+		"effect_type": "projectile_damage",
+		"amount": 2.0,
+		"secondary_effect_type": "pickup_radius",
+		"secondary_amount": 8.0,
+		"requires": {"drill": 2, "magnet": 1}
 	}
 }
 
@@ -158,6 +184,7 @@ func apply_to_player(player: Player) -> void:
 		var definition: Dictionary = DEFINITIONS.get(upgrade_id, {})
 		var level := get_level(upgrade_id)
 		for _i in range(level):
+			# 局外成长只下发本局开局属性，不直接改分支结构，避免和开局分支选择互相覆盖。
 			_apply_run_effect(player, String(definition.get("effect_type", "")), float(definition.get("amount", 0.0)))
 			_apply_run_effect(player, String(definition.get("secondary_effect_type", "")), float(definition.get("secondary_amount", 0.0)))
 	player.refresh_health_ui()

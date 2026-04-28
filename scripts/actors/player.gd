@@ -107,6 +107,16 @@ var _branch_status_burst_radius := 0.0
 var _branch_vulnerable_duration := 0.0
 var _branch_vulnerable_amount := 0.0
 var _branch_burn_applies_vulnerable := false
+var _branch_curse_damage := 0.0
+var _branch_curse_duration := 0.0
+var _branch_curse_stacks_per_apply := 1
+var _branch_curse_max_stacks := 4
+var _branch_corrosion_amount := 0.0
+var _branch_corrosion_duration := 0.0
+var _branch_corrosion_stacks_per_apply := 1
+var _branch_corrosion_max_stacks := 5
+var _branch_control_duration := 0.0
+var _branch_control_chance := 0.0
 var _branch_guard_shot_interval := 0
 var _branch_guard_damage := 0.0
 var _branch_guard_radius := 0.0
@@ -118,6 +128,16 @@ var _branch_reflect_radius := 74.0
 var _branch_kill_heal := 0.0
 var _branch_low_health_damage_multiplier := 1.0
 var _branch_low_health_threshold := 0.35
+var _branch_shield_max := 0.0
+var _branch_shield := 0.0
+var _branch_block_chance := 0.0
+var _branch_block_damage_multiplier := 1.0
+var _branch_unstoppable_duration := 0.0
+var _branch_shield_break_damage := 0.0
+var _branch_shield_break_radius := 0.0
+var _branch_hammer_slam_interval := 0
+var _branch_hammer_slam_damage_multiplier := 0.0
+var _branch_hammer_slam_radius_multiplier := 1.0
 var _branch_scorch_orb_shot_interval := 0
 var _branch_scorch_orb_damage := 0.0
 var _branch_scorch_orb_speed := 0.0
@@ -173,6 +193,7 @@ var _attack_phase_time_left := 0.0
 var _attack_direction := Vector2.RIGHT
 var _attack_target_position := Vector2.ZERO
 var _attack_hit_resolved := false
+var _unstoppable_time_left := 0.0
 
 @onready var body_visual: AnimatedSprite2D = $AnimatedSprite2D
 @onready var hurtbox: Area2D = $Hurtbox
@@ -213,6 +234,7 @@ func _physics_process(delta: float) -> void:
 	_handle_attack(delta)
 	_handle_pulse(delta)
 	_handle_invulnerability(delta)
+	_unstoppable_time_left = maxf(_unstoppable_time_left - delta, 0.0)
 	_update_weapon_animation(delta)
 	_update_camera_shake(delta)
 
@@ -221,11 +243,27 @@ func apply_contact_damage(amount: float, source_position: Vector2) -> void:
 	if current_health <= 0.0 or _invulnerability_left > 0.0 or _dead:
 		return
 	var resolved_damage: float = maxf(amount * _branch_damage_taken_multiplier - _branch_armor, 1.0)
+	var blocked := false
+	if _branch_block_chance > 0.0 and randf() <= _branch_block_chance:
+		blocked = true
+		resolved_damage *= _branch_block_damage_multiplier
+		_unstoppable_time_left = maxf(_unstoppable_time_left, _branch_unstoppable_duration)
+		if _branch_guard_damage > 0.0 and _branch_guard_radius > 0.0:
+			_spawn_guard_burst(0.45, 0.72)
 	if max_health > 0.0 and current_health <= max_health * _branch_low_health_threshold:
 		resolved_damage *= _branch_low_health_damage_multiplier
+	var shield_before: float = _branch_shield
+	if _branch_shield > 0.0:
+		# 护盾先承伤，破盾时触发反击波，形成“承伤转收益”的肉盾核心。
+		var absorbed_damage: float = minf(_branch_shield, resolved_damage)
+		_branch_shield = maxf(_branch_shield - absorbed_damage, 0.0)
+		resolved_damage -= absorbed_damage
+		if shield_before > 0.0 and _branch_shield <= 0.0:
+			_trigger_shield_break_counter(source_position)
 	current_health = maxf(current_health - resolved_damage, 0.0)
 	_invulnerability_left = invulnerability_time
-	velocity += (global_position - source_position).normalized() * 160.0
+	var knockback_multiplier := 0.18 if blocked or _unstoppable_time_left > 0.0 else 1.0
+	velocity += (global_position - source_position).normalized() * 160.0 * knockback_multiplier
 	health_changed.emit(current_health, max_health)
 	_trigger_feedback("hurt")
 	trigger_camera_shake(8.0, 0.16)
@@ -276,6 +314,16 @@ func set_branch_definition(definition: Dictionary) -> void:
 	_branch_vulnerable_duration = float(definition.get("vulnerable_duration", 0.0))
 	_branch_vulnerable_amount = float(definition.get("vulnerable_amount", 0.0))
 	_branch_burn_applies_vulnerable = bool(definition.get("burn_applies_vulnerable", false))
+	_branch_curse_damage = float(definition.get("curse_damage", 0.0))
+	_branch_curse_duration = float(definition.get("curse_duration", 0.0))
+	_branch_curse_stacks_per_apply = int(definition.get("curse_stacks_per_apply", 1))
+	_branch_curse_max_stacks = int(definition.get("curse_max_stacks", 4))
+	_branch_corrosion_amount = float(definition.get("corrosion_amount", 0.0))
+	_branch_corrosion_duration = float(definition.get("corrosion_duration", 0.0))
+	_branch_corrosion_stacks_per_apply = int(definition.get("corrosion_stacks_per_apply", 1))
+	_branch_corrosion_max_stacks = int(definition.get("corrosion_max_stacks", 5))
+	_branch_control_duration = float(definition.get("control_duration", 0.0))
+	_branch_control_chance = clampf(float(definition.get("control_chance", 0.0)), 0.0, 1.0)
 	_branch_guard_shot_interval = int(definition.get("guard_shot_interval", 0))
 	_branch_guard_damage = float(definition.get("guard_damage", 0.0))
 	_branch_guard_radius = float(definition.get("guard_radius", 0.0))
@@ -287,6 +335,16 @@ func set_branch_definition(definition: Dictionary) -> void:
 	_branch_kill_heal = float(definition.get("kill_heal", 0.0))
 	_branch_low_health_damage_multiplier = clampf(float(definition.get("low_health_damage_multiplier", 1.0)), 0.35, 1.0)
 	_branch_low_health_threshold = clampf(float(definition.get("low_health_threshold", 0.35)), 0.08, 0.75)
+	_branch_shield_max = maxf(float(definition.get("shield_max", 0.0)), 0.0)
+	_branch_shield = _branch_shield_max
+	_branch_block_chance = clampf(float(definition.get("block_chance", 0.0)), 0.0, 0.85)
+	_branch_block_damage_multiplier = clampf(float(definition.get("block_damage_multiplier", 1.0)), 0.12, 1.0)
+	_branch_unstoppable_duration = maxf(float(definition.get("unstoppable_duration", 0.0)), 0.0)
+	_branch_shield_break_damage = maxf(float(definition.get("shield_break_damage", 0.0)), 0.0)
+	_branch_shield_break_radius = maxf(float(definition.get("shield_break_radius", 0.0)), 0.0)
+	_branch_hammer_slam_interval = int(definition.get("hammer_slam_interval", 0))
+	_branch_hammer_slam_damage_multiplier = maxf(float(definition.get("hammer_slam_damage_multiplier", 0.0)), 0.0)
+	_branch_hammer_slam_radius_multiplier = maxf(float(definition.get("hammer_slam_radius_multiplier", 1.0)), 1.0)
 	_branch_scorch_orb_shot_interval = int(definition.get("scorch_orb_shot_interval", 0))
 	_branch_scorch_orb_damage = float(definition.get("scorch_orb_damage", 0.0))
 	_branch_scorch_orb_speed = float(definition.get("scorch_orb_speed", 0.0))
@@ -392,7 +450,7 @@ func on_enemy_defeated(world_position: Vector2, status_snapshot: Dictionary, was
 		)
 		effect_spawned.emit(burst)
 		_debug_branch_status_event("detonate", "radius=%.1f layers=%d" % [_branch_status_burst_radius, total_layers])
-	if _branch_status_spread_radius <= 0.0 or _branch_status_spread_poison_stacks <= 0:
+	if _branch_status_spread_radius <= 0.0:
 		return
 	for enemy_node in get_tree().get_nodes_in_group("enemies"):
 		var enemy: Enemy = enemy_node as Enemy
@@ -400,6 +458,13 @@ func on_enemy_defeated(world_position: Vector2, status_snapshot: Dictionary, was
 			continue
 		if enemy.global_position.distance_to(world_position) > _branch_status_spread_radius:
 			continue
+		_spread_death_statuses(enemy, status_snapshot)
+		_debug_branch_status_event("spread", "radius=%.1f stacks=%d" % [_branch_status_spread_radius, _branch_status_spread_poison_stacks])
+
+
+func _spread_death_statuses(enemy: Enemy, status_snapshot: Dictionary) -> void:
+	# 死亡传播保留原异常语义：DOT 传播伤害层，功能异常传播较短持续时间。
+	if status_snapshot.has("poison") and _branch_status_spread_poison_stacks > 0:
 		enemy.apply_status_effect(
 			"poison",
 			maxf(_branch_poison_duration, 1.0),
@@ -407,7 +472,14 @@ func on_enemy_defeated(world_position: Vector2, status_snapshot: Dictionary, was
 			_branch_status_spread_poison_stacks,
 			_branch_poison_max_stacks
 		)
-		_debug_branch_status_event("spread", "radius=%.1f stacks=%d" % [_branch_status_spread_radius, _branch_status_spread_poison_stacks])
+	if status_snapshot.has("burn") and _branch_burn_damage > 0.0:
+		enemy.apply_status_effect("burn", maxf(_branch_burn_duration * 0.75, 0.8), _branch_burn_damage, 1, 4)
+	if status_snapshot.has("curse") and _branch_curse_damage > 0.0:
+		enemy.apply_status_effect("curse", maxf(_branch_curse_duration * 0.72, 0.8), _branch_curse_damage, 1, _branch_curse_max_stacks)
+	if status_snapshot.has("corrosion") and _branch_corrosion_amount > 0.0:
+		enemy.apply_status_effect("corrosion", maxf(_branch_corrosion_duration * 0.72, 0.8), _branch_corrosion_amount, 1, _branch_corrosion_max_stacks)
+	if status_snapshot.has("control") and _branch_control_duration > 0.0:
+		enemy.apply_status_effect("control", minf(_branch_control_duration, 0.32), 0.0)
 
 
 func get_build_summary() -> String:
@@ -428,6 +500,14 @@ func get_build_summary() -> String:
 		summary += " | 机制 %s" % branch_mechanic_text
 	if _branch_armor > 0.0:
 		summary += " | 护甲 %.0f" % _branch_armor
+	if _branch_shield_max > 0.0:
+		summary += " | 护盾 %.0f/%.0f" % [_branch_shield, _branch_shield_max]
+	if _branch_curse_damage > 0.0 or _branch_corrosion_amount > 0.0 or _branch_control_chance > 0.0:
+		summary += " | 异常 咒%.1f/蚀%.0f%%/控%.0f%%" % [
+			_branch_curse_damage,
+			_branch_corrosion_amount * 100.0,
+			_branch_control_chance * 100.0
+		]
 	var synergy_names: Array[String] = _get_active_synergy_names()
 	if not synergy_names.is_empty():
 		summary += " | 联动 %s" % " / ".join(synergy_names)
@@ -564,8 +644,16 @@ func _perform_melee_attack(shot_count: int, overcharge_active: bool) -> void:
 	var melee_reach: float = _current_melee_reach()
 	var melee_arc_radians: float = deg_to_rad(_current_melee_arc())
 	var damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
+	var hammer_slam_active := _branch_hammer_slam_interval > 0 and _attack_sequence % _branch_hammer_slam_interval == 0
+	if hammer_slam_active:
+		# 重锤段不改攻击范式，只在真实近战命中帧强化一次范围压制。
+		damage_value *= 1.0 + _branch_hammer_slam_damage_multiplier
+		melee_reach *= _branch_hammer_slam_radius_multiplier
+		melee_arc_radians = minf(melee_arc_radians * _branch_hammer_slam_radius_multiplier, PI)
 	damage_value *= _close_quarters_damage_multiplier()
 	var knockback_value: float = knockback_force * (1.32 if overcharge_active else 1.08)
+	if hammer_slam_active:
+		knockback_value *= 1.38
 	var hit_any := false
 	for enemy_node in get_tree().get_nodes_in_group("enemies"):
 		var enemy: Enemy = enemy_node as Enemy
@@ -589,6 +677,8 @@ func _perform_melee_attack(shot_count: int, overcharge_active: bool) -> void:
 			enemy.velocity += direction * 26.0
 	if hit_any:
 		trigger_camera_shake(2.0 if not overcharge_active else 2.8, 0.05)
+		if hammer_slam_active and _branch_guard_damage > 0.0 and _branch_guard_radius > 0.0:
+			_spawn_guard_burst(0.85 + _branch_hammer_slam_damage_multiplier, _branch_hammer_slam_radius_multiplier)
 
 
 func _fire_primary_projectiles(shot_count: int, overcharge_active: bool, spread_scale: float) -> void:
@@ -753,6 +843,26 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			_branch_vulnerable_amount = clampf(_branch_vulnerable_amount + amount, 0.0, 1.2)
 		"branch_burn_applies_vulnerable":
 			_branch_burn_applies_vulnerable = amount > 0.0 or _branch_burn_applies_vulnerable
+		"branch_curse_damage":
+			_branch_curse_damage = maxf(_branch_curse_damage + amount, 0.0)
+		"branch_curse_duration":
+			_branch_curse_duration = clampf(_branch_curse_duration + amount, 0.0, 12.0)
+		"branch_curse_apply_stacks":
+			_branch_curse_stacks_per_apply = clampi(_branch_curse_stacks_per_apply + int(amount), 1, 6)
+		"branch_curse_max_stacks":
+			_branch_curse_max_stacks = clampi(_branch_curse_max_stacks + int(amount), 1, 10)
+		"branch_corrosion_amount":
+			_branch_corrosion_amount = clampf(_branch_corrosion_amount + amount, 0.0, 0.35)
+		"branch_corrosion_duration":
+			_branch_corrosion_duration = clampf(_branch_corrosion_duration + amount, 0.0, 12.0)
+		"branch_corrosion_apply_stacks":
+			_branch_corrosion_stacks_per_apply = clampi(_branch_corrosion_stacks_per_apply + int(amount), 1, 6)
+		"branch_corrosion_max_stacks":
+			_branch_corrosion_max_stacks = clampi(_branch_corrosion_max_stacks + int(amount), 1, 12)
+		"branch_control_chance":
+			_branch_control_chance = clampf(_branch_control_chance + amount, 0.0, 0.75)
+		"branch_control_duration":
+			_branch_control_duration = clampf(_branch_control_duration + amount, 0.0, 2.0)
 		"guard_burst_damage":
 			_branch_guard_damage = maxf(_branch_guard_damage + amount, 0.0)
 		"guard_burst_radius":
@@ -807,6 +917,27 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			_branch_low_health_damage_multiplier = clampf(_branch_low_health_damage_multiplier * amount, 0.28, 1.0)
 		"branch_low_health_threshold":
 			_branch_low_health_threshold = clampf(_branch_low_health_threshold + amount, 0.08, 0.75)
+		"branch_shield_max":
+			_branch_shield_max = clampf(_branch_shield_max + amount, 0.0, 160.0)
+			_branch_shield = clampf(_branch_shield + amount, 0.0, _branch_shield_max)
+		"branch_block_chance":
+			_branch_block_chance = clampf(_branch_block_chance + amount, 0.0, 0.85)
+		"branch_block_damage_multiplier":
+			_branch_block_damage_multiplier = clampf(_branch_block_damage_multiplier * amount, 0.12, 1.0)
+		"branch_unstoppable_duration":
+			_branch_unstoppable_duration = clampf(_branch_unstoppable_duration + amount, 0.0, 1.5)
+		"branch_shield_break_damage":
+			_branch_shield_break_damage = maxf(_branch_shield_break_damage + amount, 0.0)
+		"branch_shield_break_radius":
+			_branch_shield_break_radius = clampf(_branch_shield_break_radius + amount, 0.0, 220.0)
+		"branch_hammer_slam_interval_delta":
+			if _branch_hammer_slam_interval <= 0:
+				_branch_hammer_slam_interval = 4
+			_branch_hammer_slam_interval = clampi(_branch_hammer_slam_interval + int(amount), 2, 10)
+		"branch_hammer_slam_damage_multiplier":
+			_branch_hammer_slam_damage_multiplier = clampf(_branch_hammer_slam_damage_multiplier + amount, 0.0, 1.4)
+		"branch_hammer_slam_radius_multiplier":
+			_branch_hammer_slam_radius_multiplier = clampf(_branch_hammer_slam_radius_multiplier + amount, 1.0, 2.1)
 		_:
 			push_warning("Unknown upgrade effect: %s" % effect_type)
 
@@ -832,6 +963,13 @@ func _configure_status_payload(target: Object) -> void:
 			_branch_poison_max_stacks,
 			_branch_status_apply_chance
 		)
+	if _branch_curse_damage > 0.0 and _branch_curse_duration > 0.0 and target.has_method("add_status_effect"):
+		target.call("add_status_effect", "curse", _branch_curse_duration, _branch_curse_damage, _branch_curse_stacks_per_apply, _branch_curse_max_stacks, _branch_status_apply_chance)
+	if _branch_corrosion_amount > 0.0 and _branch_corrosion_duration > 0.0 and target.has_method("add_status_effect"):
+		target.call("add_status_effect", "corrosion", _branch_corrosion_duration, _branch_corrosion_amount, _branch_corrosion_stacks_per_apply, _branch_corrosion_max_stacks, _branch_status_apply_chance)
+	if _branch_control_duration > 0.0 and _branch_control_chance > 0.0 and target.has_method("add_status_effect"):
+		# 控制只作为短窗口压制，概率独立，避免和 DOT 施加率绑定后过强。
+		target.call("add_status_effect", "control", _branch_control_duration, 0.0, 1, 1, _branch_control_chance)
 
 
 func _apply_branch_hit_statuses(enemy: Enemy) -> void:
@@ -851,7 +989,13 @@ func _apply_branch_hit_statuses(enemy: Enemy) -> void:
 			_branch_poison_stacks_per_apply,
 			_branch_poison_max_stacks
 		)
-	_debug_branch_status_event("apply", "burn=%.1f poison=%.1f vulnerable=%.2f" % [_branch_burn_damage, _branch_poison_damage, _branch_vulnerable_amount])
+	if _branch_curse_damage > 0.0 and _branch_curse_duration > 0.0 and randf() <= _branch_status_apply_chance:
+		enemy.apply_status_effect("curse", _branch_curse_duration, _branch_curse_damage, _branch_curse_stacks_per_apply, _branch_curse_max_stacks)
+	if _branch_corrosion_amount > 0.0 and _branch_corrosion_duration > 0.0 and randf() <= _branch_status_apply_chance:
+		enemy.apply_status_effect("corrosion", _branch_corrosion_duration, _branch_corrosion_amount, _branch_corrosion_stacks_per_apply, _branch_corrosion_max_stacks)
+	if _branch_control_duration > 0.0 and _branch_control_chance > 0.0 and randf() <= _branch_control_chance:
+		enemy.apply_status_effect("control", _branch_control_duration, 0.0)
+	_debug_branch_status_event("apply", "burn=%.1f poison=%.1f curse=%.1f corrosion=%.2f control=%.2f" % [_branch_burn_damage, _branch_poison_damage, _branch_curse_damage, _branch_corrosion_amount, _branch_control_chance])
 
 
 func _damage_multiplier_against_enemy(enemy: Enemy) -> float:
@@ -895,6 +1039,26 @@ func _reflect_damage_nearby(damage: float, radius: float, source_position: Vecto
 		reflected_any = true
 	if reflected_any:
 		_debug_branch_status_event("counter", "reflect=%.1f radius=%.1f" % [damage, radius])
+
+
+func _trigger_shield_break_counter(source_position: Vector2) -> void:
+	if _branch_shield_break_damage <= 0.0 or _branch_shield_break_radius <= 0.0:
+		return
+	# 破盾反击使用现有 GuardBurst 特效，保证导出资源链路稳定，不额外引入场景依赖。
+	var burst := GUARD_BURST_SCENE.instantiate()
+	burst.global_position = global_position
+	burst.setup(
+		_branch_shield_break_damage,
+		_branch_shield_break_radius,
+		0.22,
+		maxf(_branch_guard_knockback, 220.0),
+		_branch_weapon_tint.lightened(0.18)
+	)
+	effect_spawned.emit(burst)
+	_reflect_damage_nearby(_branch_shield_break_damage * 0.35, _branch_shield_break_radius, source_position)
+	_unstoppable_time_left = maxf(_unstoppable_time_left, _branch_unstoppable_duration)
+	trigger_camera_shake(4.2, 0.1)
+	_debug_branch_status_event("shield_break", "damage=%.1f radius=%.1f" % [_branch_shield_break_damage, _branch_shield_break_radius])
 
 
 func _status_snapshot_layer_count(status_snapshot: Dictionary) -> int:
@@ -1296,9 +1460,9 @@ func _current_projectile_tint(overcharge_active: bool) -> Color:
 
 func _branch_mechanic_summary() -> String:
 	if _branch_guard_shot_interval > 0:
-		return "震荡护环/%d射 + 反伤%.0f" % [_branch_guard_shot_interval, _branch_reflect_damage]
+		return "震荡护环/%d射 + 反伤%.0f + 护盾%.0f" % [_branch_guard_shot_interval, _branch_reflect_damage, _branch_shield_max]
 	if _branch_scorch_orb_shot_interval > 0:
-		return "蚀火法球/%d射 + 毒蚀传播" % _branch_scorch_orb_shot_interval
+		return "蚀火法球/%d射 + 咒蚀传播" % _branch_scorch_orb_shot_interval
 	if _branch_sentry_shot_interval > 0:
 		return "哨戒节点/%d射" % _branch_sentry_shot_interval
 	return ""

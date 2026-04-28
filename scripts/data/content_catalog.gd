@@ -15,11 +15,15 @@ const ENEMY_DEFINITIONS := [
 
 const UPGRADE_DEFINITIONS := [
 	preload("res://resources/upgrades/ashen_mark.tres"),
+	preload("res://resources/upgrades/acid_etching.tres"),
 	preload("res://resources/upgrades/battle_boots.tres"),
 	preload("res://resources/upgrades/bulwark_stride.tres"),
+	preload("res://resources/upgrades/binding_hex.tres"),
+	preload("res://resources/upgrades/calamity_vector.tres"),
 	preload("res://resources/upgrades/cinder_field.tres"),
 	preload("res://resources/upgrades/ember_chain.tres"),
 	preload("res://resources/upgrades/fortress_plating.tres"),
+	preload("res://resources/upgrades/hammer_slam.tres"),
 	preload("res://resources/upgrades/infection_wake.tres"),
 	preload("res://resources/upgrades/iron_reverb.tres"),
 	preload("res://resources/upgrades/last_stand.tres"),
@@ -35,8 +39,12 @@ const UPGRADE_DEFINITIONS := [
 	preload("res://resources/upgrades/scorching_payload.tres"),
 	preload("res://resources/upgrades/sentry_array.tres"),
 	preload("res://resources/upgrades/sentry_overclock.tres"),
+	preload("res://resources/upgrades/shadow_brand.tres"),
+	preload("res://resources/upgrades/shield_breaker.tres"),
 	preload("res://resources/upgrades/spiked_armor.tres"),
 	preload("res://resources/upgrades/split_round.tres"),
+	preload("res://resources/upgrades/tower_guard.tres"),
+	preload("res://resources/upgrades/unyielding_core.tres"),
 	preload("res://resources/upgrades/vanguard_edge.tres"),
 	preload("res://resources/upgrades/venom_reservoir.tres"),
 	preload("res://resources/upgrades/vitality.tres")

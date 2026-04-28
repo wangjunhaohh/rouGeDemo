@@ -59,6 +59,7 @@ static func get_branch_definition(branch_id: String) -> Dictionary:
 
 
 static func _build_branch_definitions() -> Array[Dictionary]:
+	# 分支武器表现强制从 Spine 导出清单读取，缺失时只回退到导出安全的占位贴图。
 	var tank_spine: Dictionary = _load_spine_package(TANK_SPINE_MANIFEST_PATH)
 	var debuff_spine: Dictionary = _load_spine_package(DEBUFF_SPINE_MANIFEST_PATH)
 	var building_spine: Dictionary = _load_spine_package(BUILDING_SPINE_MANIFEST_PATH)
@@ -66,8 +67,8 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 		{
 			"id": "tank",
 			"name": "肉盾流",
-			"summary": "贴脸站场，靠护甲、反震和斩击范围稳步推线",
-			"description": "开局最大生命 +18，护甲 +2，低血时额外减伤。每 5 次主武器攻击会触发一次近身震荡护环，受击时会反震并把承伤转成近战站场收益。",
+			"summary": "贴脸站场，靠护甲、格挡、护盾破裂和重击稳步推线",
+			"description": "开局最大生命 +18，护甲 +2，低血时额外减伤。每 5 次主武器攻击会触发一次近身震荡护环，受击时可格挡、反震并在护盾破裂时释放反击波。",
 			"accent_color": Color(0.9, 0.74, 0.42, 1.0),
 			"weapon_tint": Color(0.96, 0.84, 0.58, 1.0),
 			"flash_color": Color(1.0, 0.9, 0.58, 1.0),
@@ -111,18 +112,27 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"kill_heal": 2.0,
 			"low_health_damage_multiplier": 0.8,
 			"low_health_threshold": 0.35,
+			"shield_max": 16.0,
+			"block_chance": 0.18,
+			"block_damage_multiplier": 0.45,
+			"unstoppable_duration": 0.22,
+			"shield_break_damage": 18.0,
+			"shield_break_radius": 82.0,
+			"hammer_slam_interval": 4,
+			"hammer_slam_damage_multiplier": 0.22,
+			"hammer_slam_radius_multiplier": 1.12,
 			"starting_effects": [
 				{"type": "max_health", "amount": 18.0}
 			],
 			"preferred_tags": PackedStringArray(["tank"]),
 			"secondary_tags": PackedStringArray(["neutral", "building"]),
-			"priority_synergy_tags": PackedStringArray(["survival", "guard", "melee", "armor", "counter"])
+			"priority_synergy_tags": PackedStringArray(["survival", "guard", "melee", "armor", "counter", "shield", "block", "hammer"])
 		},
 		{
 			"id": "debuff",
 			"name": "异常流",
-			"summary": "用燃烧、中毒和易伤叠层，再靠传播和崩解清场",
-			"description": "主武器和脉冲会附带燃烧，并有概率追加中毒或易伤。每 5 次主武器射击会额外抛出一枚蚀火法球，状态目标死亡时会传播并触发一次异常崩解。",
+			"summary": "用燃烧、中毒、诅咒、腐蚀和控制叠层，再靠传播和崩解清场",
+			"description": "主武器和脉冲会附带燃烧，并有概率追加中毒、易伤、诅咒、腐蚀或短控。每 5 次主武器射击会额外抛出蚀火法球，状态目标死亡时会传播并触发异常崩解。",
 			"accent_color": Color(0.95, 0.38, 0.26, 1.0),
 			"weapon_tint": Color(0.96, 0.62, 0.42, 1.0),
 			"flash_color": Color(1.0, 0.58, 0.34, 1.0),
@@ -169,6 +179,16 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"vulnerable_duration": 1.6,
 			"vulnerable_amount": 0.12,
 			"burn_applies_vulnerable": false,
+			"curse_damage": 1.8,
+			"curse_duration": 3.2,
+			"curse_stacks_per_apply": 1,
+			"curse_max_stacks": 4,
+			"corrosion_amount": 0.045,
+			"corrosion_duration": 3.0,
+			"corrosion_stacks_per_apply": 1,
+			"corrosion_max_stacks": 5,
+			"control_duration": 0.28,
+			"control_chance": 0.08,
 			"scorch_orb_shot_interval": 5,
 			"scorch_orb_damage": 11.0,
 			"scorch_orb_speed": 245.0,
@@ -181,7 +201,7 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"scorch_slow_amount": 0.8,
 			"preferred_tags": PackedStringArray(["debuff"]),
 			"secondary_tags": PackedStringArray(["neutral", "building"]),
-			"priority_synergy_tags": PackedStringArray(["burn", "poison", "status", "spread", "vulnerable"])
+			"priority_synergy_tags": PackedStringArray(["burn", "poison", "curse", "corrosion", "control", "status", "spread", "vulnerable"])
 		},
 		{
 			"id": "building",
@@ -238,6 +258,7 @@ static func _load_spine_package(manifest_path: String) -> Dictionary:
 	if _spine_package_cache.has(manifest_path):
 		return Dictionary(_spine_package_cache[manifest_path]).duplicate(true)
 
+	# 这里返回的是完整默认包，保证导出版缺少某张帧时不会阻断主流程。
 	var package := {
 		"animation_source": "spine",
 		"spine_asset_key": "",
