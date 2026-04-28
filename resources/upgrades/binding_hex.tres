@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "binding_hex"
+display_name = "束缚咒环"
+description = "命中有更高概率短控敌人，控制概率 +8%、持续 +0.12 秒"
+rarity_weight = 0.58
+max_level = 3
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("control", "curse", "status")
+effect_type = "branch_control_chance"
+amount = 0.08
+secondary_effect_type = "branch_control_duration"
+secondary_amount = 0.12

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "unyielding_core"
+display_name = "霸体躯壳"
+description = "格挡承伤倍率降低，格挡后霸体时间 +0.16 秒"
+rarity_weight = 0.5
+max_level = 3
+tags = PackedStringArray("tank")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("block", "unstoppable", "survival")
+effect_type = "branch_block_damage_multiplier"
+amount = 0.82
+secondary_effect_type = "branch_unstoppable_duration"
+secondary_amount = 0.16

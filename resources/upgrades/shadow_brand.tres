@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "shadow_brand"
+display_name = "阴影标记"
+description = "命中时更容易叠诅咒，诅咒伤害 +1.4、持续 +0.6 秒"
+rarity_weight = 0.76
+max_level = 4
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("curse", "status", "mark")
+effect_type = "branch_curse_damage"
+amount = 1.4
+secondary_effect_type = "branch_curse_duration"
+secondary_amount = 0.6

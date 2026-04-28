@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "tower_guard"
+display_name = "塔盾守势"
+description = "护盾上限 +18，格挡概率 +8%"
+rarity_weight = 0.72
+max_level = 4
+tags = PackedStringArray("tank")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("shield", "block", "survival")
+effect_type = "branch_shield_max"
+amount = 18.0
+secondary_effect_type = "branch_block_chance"
+secondary_amount = 0.08

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "calamity_vector"
+display_name = "灾厄扩散体"
+description = "异常死亡传播范围 +24，异常崩解伤害 +5"
+rarity_weight = 0.52
+max_level = 3
+tags = PackedStringArray("debuff")
+exclusive_branch = "debuff"
+synergy_tags = PackedStringArray("spread", "status", "detonate")
+effect_type = "branch_status_spread_radius"
+amount = 24.0
+secondary_effect_type = "branch_status_burst_damage"
+secondary_amount = 5.0

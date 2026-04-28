@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+upgrade_id = "hammer_slam"
+display_name = "震地重击"
+description = "重击触发间隔 -1 次，重击伤害 +16%"
+rarity_weight = 0.58
+max_level = 3
+tags = PackedStringArray("tank")
+exclusive_branch = "tank"
+synergy_tags = PackedStringArray("hammer", "melee", "guard")
+effect_type = "branch_hammer_slam_interval_delta"
+amount = -1.0
+secondary_effect_type = "branch_hammer_slam_damage_multiplier"
+secondary_amount = 0.16
