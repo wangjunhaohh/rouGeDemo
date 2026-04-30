@@ -125,7 +125,7 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 				{"type": "max_health", "amount": 18.0}
 			],
 			"preferred_tags": PackedStringArray(["tank"]),
-			"secondary_tags": PackedStringArray(["neutral", "building"]),
+			"secondary_tags": PackedStringArray(["neutral"]),
 			"priority_synergy_tags": PackedStringArray(["survival", "guard", "melee", "armor", "counter", "shield", "block", "hammer"])
 		},
 		{
@@ -200,7 +200,7 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"scorch_slow_duration": 0.95,
 			"scorch_slow_amount": 0.8,
 			"preferred_tags": PackedStringArray(["debuff"]),
-			"secondary_tags": PackedStringArray(["neutral", "building"]),
+			"secondary_tags": PackedStringArray(["neutral"]),
 			"priority_synergy_tags": PackedStringArray(["burn", "poison", "curse", "corrosion", "control", "status", "spread", "vulnerable"])
 		},
 		{
@@ -248,7 +248,7 @@ static func _build_branch_definitions() -> Array[Dictionary]:
 			"sentry_pulse_radius": 68.0,
 			"sentry_pulse_interval": 1.75,
 			"preferred_tags": PackedStringArray(["building"]),
-			"secondary_tags": PackedStringArray(["neutral", "tank"]),
+			"secondary_tags": PackedStringArray(["neutral"]),
 			"priority_synergy_tags": PackedStringArray(["summon", "range", "formation", "pulse"])
 		}
 	]
@@ -369,7 +369,7 @@ static func get_branch_weight_multiplier(upgrade: UpgradeData, branch_id: String
 		return 1.0
 	if not upgrade.exclusive_branch.is_empty():
 		if String(upgrade.exclusive_branch) == branch_id:
-			return 2.45 if primary_pick else 1.22
+			return 3.6 if primary_pick else 0.8
 		return 0.0
 
 	var definition: Dictionary = get_branch_definition(branch_id)
@@ -389,20 +389,20 @@ static func get_branch_weight_multiplier(upgrade: UpgradeData, branch_id: String
 
 	if primary_pick:
 		if matched_preferred:
-			return 2.35
+			return 3.0
 		if matched_secondary:
-			return 1.22
+			return 1.0
 		if matched_neutral:
-			return 1.12
-		return 0.68
+			return 0.72
+		return 0.35
 
 	if matched_neutral:
-		return 1.35
+		return 1.55
 	if matched_secondary:
-		return 1.18
+		return 0.92
 	if matched_preferred:
-		return 1.0
-	return 0.82
+		return 0.62
+	return 0.4
 
 
 static func get_branch_synergy_multiplier(upgrade: UpgradeData, branch_id: String) -> float:

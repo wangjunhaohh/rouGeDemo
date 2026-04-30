@@ -511,49 +511,35 @@ func _present_level_up() -> void:
 
 func _pick_upgrade_options(count: int) -> Array[UpgradeData]:
 	var candidates: Array[UpgradeData] = []
-	var forced_upgrade: UpgradeData
 	for definition in upgrade_definitions:
 		if not definition.exclusive_branch.is_empty() and String(definition.exclusive_branch) != selected_branch_id:
-			continue
-		if definition.upgrade_id.begins_with("pulse_") and definition.upgrade_id != "pulse_emitter" and not player.pulse_enabled:
 			continue
 		var current_level: int = int(upgrade_levels.get(definition.upgrade_id, 0))
 		if current_level >= definition.max_level:
 			continue
-		if not player.pulse_enabled and level >= 4 and definition.upgrade_id == "pulse_emitter" and current_level == 0:
-			forced_upgrade = definition
-			continue
 		candidates.append(definition)
 
 	var selected: Array[UpgradeData] = []
-	var forced_slot_count := 0
-	if forced_upgrade != null:
-		selected.append(forced_upgrade)
-		forced_slot_count = 1
-
 	# 根据当前已成型内容累计联动标签，让后续可选项更连贯
 	var owned_synergy_tags: PackedStringArray = _collect_owned_synergy_tags()
-	if forced_upgrade != null:
-		_append_synergy_tags(owned_synergy_tags, forced_upgrade.synergy_tags)
 
 	while selected.size() < count and not candidates.is_empty():
 		var primary_pick: bool = selected.size() < count - 1
 		var roll_candidates: Array[UpgradeData] = candidates
-		if selected.size() == forced_slot_count and not selected_branch_id.is_empty():
+		if primary_pick and not selected_branch_id.is_empty():
 			var primary_branch_candidates: Array[UpgradeData] = []
 			for candidate in candidates:
 				if BRANCH_CATALOG.is_primary_branch_match(candidate, selected_branch_id):
 					primary_branch_candidates.append(candidate)
 			if not primary_branch_candidates.is_empty():
 				roll_candidates = primary_branch_candidates
-		elif selected.size() == count - 1 and not selected_branch_id.is_empty():
-			var off_branch_candidates: Array[UpgradeData] = []
+		elif not primary_pick:
+			var neutral_candidates: Array[UpgradeData] = []
 			for candidate in candidates:
-				if BRANCH_CATALOG.is_primary_branch_match(candidate, selected_branch_id):
-					continue
-				off_branch_candidates.append(candidate)
-			if not off_branch_candidates.is_empty():
-				roll_candidates = off_branch_candidates
+				if BRANCH_CATALOG.is_neutral(candidate):
+					neutral_candidates.append(candidate)
+			if not neutral_candidates.is_empty():
+				roll_candidates = neutral_candidates
 
 		var picked: UpgradeData = _pick_weighted_upgrade(roll_candidates, primary_pick, owned_synergy_tags)
 		selected.append(picked)
@@ -726,31 +712,12 @@ func _format_time(seconds: float) -> String:
 func _upgrade_candidate_weight(candidate: UpgradeData, primary_pick: bool = true, owned_synergy_tags: PackedStringArray = PackedStringArray()) -> float:
 	var weight: float = candidate.rarity_weight
 	match candidate.upgrade_id:
-		"rapid_fire":
-			if int(upgrade_levels.get("power_shot", 0)) > 0:
-				weight *= 1.35
 		"power_shot":
-			if int(upgrade_levels.get("rapid_fire", 0)) > 0:
-				weight *= 1.35
-		"split_round":
-			if int(upgrade_levels.get("piercing_round", 0)) > 0:
-				weight *= 1.4
-		"piercing_round":
-			if int(upgrade_levels.get("split_round", 0)) > 0:
-				weight *= 1.45
-		"pulse_emitter":
-			if level >= 4:
-				weight *= 1.2
-		"pulse_core":
-			if player.pulse_enabled or int(upgrade_levels.get("pulse_emitter", 0)) > 0:
-				weight *= 1.28
-			if int(upgrade_levels.get("pulse_drive", 0)) > 0:
+			if int(upgrade_levels.get("critical_focus", 0)) > 0:
 				weight *= 1.18
-		"pulse_drive":
-			if player.pulse_enabled or int(upgrade_levels.get("pulse_emitter", 0)) > 0:
-				weight *= 1.24
-			if int(upgrade_levels.get("pulse_core", 0)) > 0:
-				weight *= 1.22
+		"critical_focus":
+			if int(upgrade_levels.get("power_shot", 0)) > 0:
+				weight *= 1.18
 	weight *= BRANCH_CATALOG.get_branch_weight_multiplier(candidate, selected_branch_id, primary_pick)
 	weight *= BRANCH_CATALOG.get_branch_synergy_multiplier(candidate, selected_branch_id)
 
@@ -794,6 +761,12 @@ func on_enemy_hit(world_position: Vector2, enemy_id: String, was_elite: bool, wa
 	else:
 		audio_manager.play_sfx("hit", randf_range(0.96, 1.08), -7.0)
 		_spawn_burst(world_position, color, 3.0, 8, 0.18, 84.0)
+
+
+func on_enemy_damage(world_position: Vector2, amount: float, enemy_id: String, was_elite: bool, was_boss: bool, died_now: bool, is_status_damage: bool) -> void:
+	if amount <= 0.0:
+		return
+	_spawn_damage_number(world_position, amount, was_elite, was_boss, died_now, is_status_damage)
 
 
 func on_player_feedback(feedback_name: String, world_position: Vector2) -> void:
@@ -981,3 +954,43 @@ func _spawn_burst(world_position: Vector2, color: Color, size: float, count: int
 	burst.global_position = world_position
 	burst.setup(color, size, count, duration, spread)
 	effects_layer.add_child(burst)
+
+
+func _spawn_damage_number(world_position: Vector2, amount: float, was_elite: bool, was_boss: bool, died_now: bool, is_status_damage: bool) -> void:
+	var holder := Node2D.new()
+	var vertical_offset := -38.0
+	if was_elite:
+		vertical_offset = -48.0
+	if was_boss:
+		vertical_offset = -72.0
+	holder.global_position = world_position + Vector2(randf_range(-10.0, 10.0), vertical_offset)
+	holder.z_index = 120
+	effects_layer.add_child(holder)
+
+	var label := Label.new()
+	label.size = Vector2(90.0, 26.0)
+	label.position = Vector2(-45.0, -13.0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.text = str(int(round(amount)))
+	label.add_theme_font_size_override("font_size", 18 if was_boss or died_now else 15)
+	label.add_theme_color_override("font_color", _damage_number_color(died_now, is_status_damage))
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.8))
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+	holder.add_child(label)
+
+	var drift := Vector2(randf_range(-8.0, 8.0), -30.0 if not was_boss else -40.0)
+	var tween := holder.create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(holder, "position", holder.position + drift, 0.62).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(label, "modulate:a", 0.0, 0.42).set_delay(0.2)
+	tween.finished.connect(holder.queue_free)
+
+
+func _damage_number_color(died_now: bool, is_status_damage: bool) -> Color:
+	if died_now:
+		return Color(1.0, 0.86, 0.36, 1.0)
+	if is_status_damage:
+		return Color(0.76, 0.92, 1.0, 1.0)
+	return Color(1.0, 0.96, 0.82, 1.0)

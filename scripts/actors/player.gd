@@ -51,6 +51,8 @@ var projectile_count := 1
 var projectile_pierce := 0
 var projectile_range := 420.0
 var knockback_force := 260.0
+var critical_chance := 0.0
+var critical_damage_multiplier := 1.5
 
 var pulse_enabled := false
 var pulse_damage := 20.0
@@ -656,7 +658,7 @@ func _perform_melee_attack(shot_count: int, overcharge_active: bool) -> void:
 			var slash_offset: float = (float(slash_index) - center_index) * 0.16
 			var slash_direction: Vector2 = direction.rotated(slash_offset)
 			if absf(slash_direction.angle_to(enemy_direction)) <= melee_arc_radians * 0.5:
-				enemy.take_damage(damage_value * _damage_multiplier_against_enemy(enemy), global_position, knockback_value)
+				enemy.take_damage(_roll_primary_damage(damage_value) * _damage_multiplier_against_enemy(enemy), global_position, knockback_value)
 				_apply_branch_hit_statuses(enemy)
 				enemy_hit = true
 				hit_any = true
@@ -682,7 +684,7 @@ func _spawn_primary_projectile(direction: Vector2, overcharge_active: bool, bonu
 	var projectile: PlayerProjectile = projectile_scene.instantiate() as PlayerProjectile
 	if projectile == null:
 		return
-	var projectile_damage_value: float = projectile_damage * (1.45 if overcharge_active else 1.0)
+	var projectile_damage_value: float = _roll_primary_damage(projectile_damage * (1.45 if overcharge_active else 1.0))
 	var projectile_speed_value: float = projectile_speed * _branch_projectile_speed_multiplier * (1.12 if overcharge_active else 1.0)
 	var projectile_range_value: float = projectile_range * _branch_projectile_range_multiplier + (32.0 if _has_linebreak_synergy() else 0.0)
 	var projectile_pierce_value: int = projectile_pierce + (1 if bonus_pierce else 0)
@@ -786,6 +788,10 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 		"max_health":
 			max_health += amount
 			current_health = clampf(current_health + amount, 1.0, max_health)
+		"critical_chance":
+			critical_chance = clampf(critical_chance + amount, 0.0, 0.65)
+		"critical_damage":
+			critical_damage_multiplier = clampf(critical_damage_multiplier + amount, 1.1, 3.0)
 		"pickup_radius":
 			pickup_radius += amount
 		"unlock_pulse":
@@ -992,6 +998,14 @@ func _damage_multiplier_against_enemy(enemy: Enemy) -> float:
 	if _branch_status_damage_multiplier > 1.0 and enemy.has_any_status_effect():
 		return _branch_status_damage_multiplier
 	return 1.0
+
+
+func _roll_primary_damage(base_damage: float) -> float:
+	if critical_chance <= 0.0:
+		return base_damage
+	if randf() > critical_chance:
+		return base_damage
+	return base_damage * critical_damage_multiplier
 
 
 func _close_quarters_damage_multiplier() -> float:

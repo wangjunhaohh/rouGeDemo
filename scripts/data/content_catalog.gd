@@ -14,9 +14,12 @@ const ENEMY_DEFINITIONS := [
 ]
 
 const UPGRADE_DEFINITIONS := [
+	preload("res://resources/upgrades/power_shot.tres"),
+	preload("res://resources/upgrades/vitality.tres"),
+	preload("res://resources/upgrades/battle_boots.tres"),
+	preload("res://resources/upgrades/critical_focus.tres"),
 	preload("res://resources/upgrades/ashen_mark.tres"),
 	preload("res://resources/upgrades/acid_etching.tres"),
-	preload("res://resources/upgrades/battle_boots.tres"),
 	preload("res://resources/upgrades/bulwark_stride.tres"),
 	preload("res://resources/upgrades/binding_hex.tres"),
 	preload("res://resources/upgrades/calamity_vector.tres"),
@@ -27,14 +30,7 @@ const UPGRADE_DEFINITIONS := [
 	preload("res://resources/upgrades/infection_wake.tres"),
 	preload("res://resources/upgrades/iron_reverb.tres"),
 	preload("res://resources/upgrades/last_stand.tres"),
-	preload("res://resources/upgrades/long_range.tres"),
-	preload("res://resources/upgrades/piercing_round.tres"),
 	preload("res://resources/upgrades/plague_capsule.tres"),
-	preload("res://resources/upgrades/power_shot.tres"),
-	preload("res://resources/upgrades/pulse_core.tres"),
-	preload("res://resources/upgrades/pulse_drive.tres"),
-	preload("res://resources/upgrades/pulse_emitter.tres"),
-	preload("res://resources/upgrades/rapid_fire.tres"),
 	preload("res://resources/upgrades/relay_beacon.tres"),
 	preload("res://resources/upgrades/scorching_payload.tres"),
 	preload("res://resources/upgrades/sentry_array.tres"),
@@ -42,12 +38,10 @@ const UPGRADE_DEFINITIONS := [
 	preload("res://resources/upgrades/shadow_brand.tres"),
 	preload("res://resources/upgrades/shield_breaker.tres"),
 	preload("res://resources/upgrades/spiked_armor.tres"),
-	preload("res://resources/upgrades/split_round.tres"),
 	preload("res://resources/upgrades/tower_guard.tres"),
 	preload("res://resources/upgrades/unyielding_core.tres"),
 	preload("res://resources/upgrades/vanguard_edge.tres"),
-	preload("res://resources/upgrades/venom_reservoir.tres"),
-	preload("res://resources/upgrades/vitality.tres")
+	preload("res://resources/upgrades/venom_reservoir.tres")
 ]
 
 

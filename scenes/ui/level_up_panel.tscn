@@ -33,7 +33,7 @@ grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(980, 320)
+custom_minimum_size = Vector2(1080, 410)
 
 [node name="PanelTexture" type="TextureRect" parent="CenterContainer/Panel"]
 layout_mode = 1
@@ -50,43 +50,51 @@ stretch_mode = 6
 
 [node name="MarginContainer" type="MarginContainer" parent="CenterContainer/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/MarginContainer"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 18
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 28
 horizontal_alignment = 1
 text = "等级提升"
 
 [node name="SubtitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
+theme_override_font_sizes/font_size = 15
 horizontal_alignment = 1
 text = "选择一个即时生效的成长项"
 
 [node name="Options" type="HBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 18
 
 [node name="OptionA" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/Options"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 180)
+custom_minimum_size = Vector2(0, 240)
+theme_override_font_sizes/font_size = 17
+autowrap_mode = 3
 text = "升级 A"
 
 [node name="OptionB" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/Options"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 180)
+custom_minimum_size = Vector2(0, 240)
+theme_override_font_sizes/font_size = 17
+autowrap_mode = 3
 text = "升级 B"
 
 [node name="OptionC" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/Options"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 180)
+custom_minimum_size = Vector2(0, 240)
+theme_override_font_sizes/font_size = 17
+autowrap_mode = 3
 text = "升级 C"

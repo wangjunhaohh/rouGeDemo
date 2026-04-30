@@ -266,8 +266,10 @@ func _apply_damage(amount: float, source_position: Vector2, knockback_force: flo
 	current_health -= resolved_damage
 	_flash_left = 0.08
 	velocity += (global_position - source_position).normalized() * knockback_force
+	var died_now := current_health <= 0.0
+	_notify_damage_number(resolved_damage, died_now, not notify_feedback)
 	if notify_feedback:
-		_notify_hit_feedback(current_health <= 0.0)
+		_notify_hit_feedback(died_now)
 	if current_health <= 0.0:
 		defeated.emit(global_position, experience_reward_runtime, enemy_id, is_elite, is_boss, get_status_snapshot())
 		queue_free()
@@ -552,6 +554,14 @@ func _notify_hit_feedback(died_now: bool) -> void:
 		return
 	if game.has_method("on_enemy_hit"):
 		game.on_enemy_hit(global_position, enemy_id, is_elite, is_boss, died_now)
+
+
+func _notify_damage_number(amount: float, died_now: bool, is_status_damage: bool) -> void:
+	var game: Node = get_tree().get_first_node_in_group("game")
+	if game == null:
+		return
+	if game.has_method("on_enemy_damage"):
+		game.on_enemy_damage(global_position, amount, enemy_id, is_elite, is_boss, died_now, is_status_damage)
 
 
 func _get_status_entry(status_type: String) -> Dictionary:

@@ -5,11 +5,11 @@
 [resource]
 script = ExtResource("1")
 upgrade_id = "power_shot"
-display_name = "重击弹头"
+display_name = "普攻强化"
 description = "主武器伤害 +6"
-rarity_weight = 1.15
+rarity_weight = 1.05
 max_level = 5
-tags = PackedStringArray("debuff")
-synergy_tags = PackedStringArray("damage", "pressure")
+tags = PackedStringArray("neutral")
+synergy_tags = PackedStringArray("damage")
 effect_type = "projectile_damage"
 amount = 6.0
