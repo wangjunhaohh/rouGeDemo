@@ -1,0 +1,187 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/home_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/arena_tile.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/panel_tile.png" id="3"]
+[ext_resource type="Script" path="res://scripts/ui/skill_tree_lines.gd" id="4"]
+
+[node name="HomePanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2")
+texture_filter = 0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.025, 0.03, 0.72)
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 34
+
+[node name="Root" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="TopRow" type="HBoxContainer" parent="MarginContainer/Root"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="TitleBox" type="VBoxContainer" parent="MarginContainer/Root/TopRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/Root/TopRow/TitleBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 44
+text = "暗核余烬"
+
+[node name="SubTitleLabel" type="Label" parent="MarginContainer/Root/TopRow/TitleBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "暗街、余烬、碎片与未完成的轮回"
+
+[node name="ActionBox" type="VBoxContainer" parent="MarginContainer/Root/TopRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(220, 0)
+theme_override_constants/separation = 10
+
+[node name="ShardLabel" type="Label" parent="MarginContainer/Root/TopRow/ActionBox"]
+layout_mode = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+text = "暗核碎片 0"
+
+[node name="StartButton" type="Button" parent="MarginContainer/Root/TopRow/ActionBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 56)
+theme_override_font_sizes/font_size = 22
+text = "开始游戏"
+
+[node name="Content" type="HBoxContainer" parent="MarginContainer/Root"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 20
+
+[node name="CharacterPanel" type="PanelContainer" parent="MarginContainer/Root/Content"]
+layout_mode = 2
+custom_minimum_size = Vector2(330, 0)
+
+[node name="CharacterTexture" type="TextureRect" parent="MarginContainer/Root/Content/CharacterPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3")
+texture_filter = 0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Root/Content/CharacterPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Root/Content/CharacterPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="CharacterTitle" type="Label" parent="MarginContainer/Root/Content/CharacterPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "人物成长"
+
+[node name="CharacterList" type="VBoxContainer" parent="MarginContainer/Root/Content/CharacterPanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TreePanel" type="PanelContainer" parent="MarginContainer/Root/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TreeTexture" type="TextureRect" parent="MarginContainer/Root/Content/TreePanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3")
+texture_filter = 0
+expand_mode = 1
+stretch_mode = 6
+
+[node name="MarginContainer" type="MarginContainer" parent="MarginContainer/Root/Content/TreePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer/Root/Content/TreePanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TreeTitleLabel" type="Label" parent="MarginContainer/Root/Content/TreePanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "技能树"
+
+[node name="TreeDetailLabel" type="Label" parent="MarginContainer/Root/Content/TreePanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "人物定位"
+
+[node name="SkillTreeCanvas" type="Control" parent="MarginContainer/Root/Content/TreePanel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+custom_minimum_size = Vector2(640, 390)
+clip_contents = true
+
+[node name="TreeLines" type="Control" parent="MarginContainer/Root/Content/TreePanel/MarginContainer/VBoxContainer/SkillTreeCanvas"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("4")

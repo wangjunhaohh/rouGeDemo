@@ -89,6 +89,7 @@ var _exclusive_skill_cooldown_total := 0.0
 var _exclusive_skill_display_seconds := -1
 var _exclusive_skill_cooldown_multiplier := 1.0
 var _exclusive_skill_radius_multiplier := 1.0
+var _exclusive_skill_damage_multiplier := 1.0
 var _exclusive_skill_damage_taken_multiplier := 1.0
 var _exclusive_skill_defense_time_left := 0.0
 var _selected_branch_id := ""
@@ -319,6 +320,7 @@ func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
 	_exclusive_skill_cooldown_total = _exclusive_skill_total_cooldown()
 	_exclusive_skill_display_seconds = -1
 	_exclusive_skill_defense_time_left = 0.0
+	_exclusive_skill_damage_multiplier = 1.0
 	_exclusive_skill_damage_taken_multiplier = 1.0
 	_projectile_timer = minf(_projectile_timer, projectile_cooldown * 0.3)
 	refresh_health_ui()
@@ -508,7 +510,7 @@ func _emit_exclusive_skill_cooldown(force_emit: bool) -> void:
 func _cast_shadow_sword_array() -> bool:
 	var effect: SlashSequenceEffect = SLASH_SEQUENCE_EFFECT.new()
 	var duration: float = float(_exclusive_skill_definition.get("duration", 1.2))
-	var slash_damage: float = projectile_damage * float(_exclusive_skill_definition.get("damage_scale", 0.7))
+	var slash_damage: float = projectile_damage * float(_exclusive_skill_definition.get("damage_scale", 0.7)) * _exclusive_skill_damage_multiplier
 	effect.global_position = global_position
 	effect.setup(
 		self,
@@ -533,7 +535,7 @@ func _cast_arcane_bombardment() -> bool:
 	effect.global_position = global_position
 	effect.setup(
 		self,
-		spell_power * float(_exclusive_skill_definition.get("damage_scale", 0.9)),
+		spell_power * float(_exclusive_skill_definition.get("damage_scale", 0.9)) * _exclusive_skill_damage_multiplier,
 		float(_exclusive_skill_definition.get("radius", 180.0)) * radius_multiplier,
 		float(_exclusive_skill_definition.get("explosion_radius", 45.0)) * radius_multiplier,
 		float(_exclusive_skill_definition.get("duration", 4.0)),
@@ -938,6 +940,18 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			critical_chance = clampf(critical_chance + amount, 0.0, 0.65)
 		"critical_damage":
 			critical_damage_multiplier = clampf(critical_damage_multiplier + amount, 1.1, 3.0)
+		"spell_power":
+			spell_power = maxf(spell_power + amount, 0.0)
+		"character_armor":
+			_character_armor = clampf(_character_armor + amount, 0.0, 18.0)
+		"exclusive_skill_damage_multiplier":
+			_exclusive_skill_damage_multiplier = clampf(_exclusive_skill_damage_multiplier + amount, 0.4, 2.6)
+		"exclusive_skill_cooldown_multiplier":
+			_exclusive_skill_cooldown_multiplier = clampf(_exclusive_skill_cooldown_multiplier + amount, 0.45, 1.5)
+			_exclusive_skill_cooldown_total = _exclusive_skill_total_cooldown()
+			_emit_exclusive_skill_cooldown(true)
+		"exclusive_skill_radius_multiplier":
+			_exclusive_skill_radius_multiplier = clampf(_exclusive_skill_radius_multiplier + amount, 0.35, 2.4)
 		"pickup_radius":
 			pickup_radius += amount
 		"unlock_pulse":

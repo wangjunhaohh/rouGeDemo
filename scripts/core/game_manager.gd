@@ -1,6 +1,7 @@
 extends Node2D
 class_name GameManager
 
+const GAME_TITLE := "暗核余烬"
 const BOSS_SPAWN_TIME := 390.0
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const EXPERIENCE_SCENE := preload("res://scenes/props/experience_orb.tscn")
@@ -84,6 +85,7 @@ var shard_gain_this_run := 0
 var next_card_event_index := 0
 var run_seed := 0
 
+var home_active := false
 var manual_pause := false
 var character_selection_active := false
 var branch_selection_active := false
@@ -107,6 +109,7 @@ var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 @onready var cards_layer: Node2D = $Cards
 @onready var effects_layer: Node2D = $Effects
 @onready var audio_manager: AudioManager = $AudioManager
+@onready var home_panel: HomePanel = $UI/HomePanel
 @onready var hud: HUD = $UI/HUD
 @onready var character_select_panel: CharacterSelectPanel = $UI/CharacterSelectPanel
 @onready var branch_select_panel: BranchSelectPanel = $UI/BranchSelectPanel
@@ -131,11 +134,11 @@ func _ready() -> void:
 	_refresh_hud()
 	hud.set_build_text(_compose_build_summary())
 	hud.set_pause_state(false)
-	_present_character_selection()
+	_present_home()
 
 
 func _process(delta: float) -> void:
-	if manual_pause or character_selection_active or branch_selection_active or level_up_active or special_card_active or run_finished:
+	if home_active or manual_pause or character_selection_active or branch_selection_active or level_up_active or special_card_active or run_finished:
 		return
 
 	elapsed_time += delta
@@ -168,10 +171,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("use_skill") and not run_finished and not manual_pause and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
+	if event.is_action_pressed("use_skill") and not run_finished and not home_active and not manual_pause and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
 		if player.try_use_exclusive_skill():
 			hud.set_build_text(_compose_build_summary())
-	elif event.is_action_pressed("pause_game") and not run_finished and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
+	elif event.is_action_pressed("pause_game") and not run_finished and not home_active and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
@@ -185,12 +188,38 @@ func _connect_signals() -> void:
 	player.exclusive_skill_used.connect(_on_player_exclusive_skill_used)
 	player.exclusive_skill_cooldown_changed.connect(_on_player_exclusive_skill_cooldown_changed)
 	player.died.connect(_on_player_died)
+	home_panel.start_requested.connect(_on_home_start_requested)
+	home_panel.character_upgrade_requested.connect(_on_home_character_upgrade_requested)
 	character_select_panel.character_selected.connect(_on_character_selected)
 	branch_select_panel.branch_selected.connect(_on_branch_selected)
 	level_up_panel.option_selected.connect(_on_upgrade_selected)
 	result_panel.restart_requested.connect(_restart_run)
 	result_panel.meta_upgrade_requested.connect(_on_meta_upgrade_requested)
 	special_card_panel.card_selected.connect(_on_special_card_selected)
+
+
+func _present_home() -> void:
+	home_active = true
+	hud.visible = false
+	hud.set_objective_text("目标：准备进入暗街")
+	_set_modal_pause(true)
+	home_panel.present(CHARACTER_CATALOG.get_character_definitions(), meta_progression, GAME_TITLE)
+
+
+func _on_home_start_requested() -> void:
+	home_active = false
+	home_panel.hide_panel()
+	hud.visible = true
+	_present_character_selection()
+
+
+func _on_home_character_upgrade_requested(character_id: String, upgrade_id: String) -> void:
+	if not home_active:
+		return
+	if not meta_progression.purchase_character_upgrade(character_id, upgrade_id):
+		return
+	audio_manager.play_sfx("level_up", 0.9, -4.0)
+	home_panel.refresh(meta_progression)
 
 
 func _present_character_selection() -> void:
@@ -211,6 +240,7 @@ func _on_character_selected(index: int) -> void:
 	selected_character_name = String(character.get("name", ""))
 	player.set_character_definition(character, skill)
 	meta_progression.apply_to_player(player)
+	meta_progression.apply_character_to_player(player, selected_character_id)
 	player.sync_upgrade_levels(upgrade_levels)
 	current_character_options.clear()
 	character_selection_active = false
@@ -660,11 +690,13 @@ func _finish_run(victory: bool) -> void:
 		return
 
 	run_finished = true
+	home_active = false
 	manual_pause = false
 	character_selection_active = false
 	branch_selection_active = false
 	level_up_active = false
 	special_card_active = false
+	home_panel.hide_panel()
 	character_select_panel.hide_panel()
 	branch_select_panel.hide_panel()
 	level_up_panel.hide_panel()
@@ -702,7 +734,7 @@ func _refresh_result_panel(title: String, summary: String) -> void:
 		summary,
 		meta_progression.shards,
 		shard_gain_this_run,
-		meta_progression.build_upgrade_view_models()
+		[]
 	)
 
 

@@ -8,6 +8,7 @@ signal meta_upgrade_requested(upgrade_id: String)
 @onready var summary_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/SummaryLabel
 @onready var shard_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/ShardLabel
 @onready var upgrades_grid: GridContainer = $CenterContainer/Panel/MarginContainer/VBoxContainer/MetaUpgrades
+@onready var restart_button: Button = $CenterContainer/Panel/MarginContainer/VBoxContainer/RestartButton
 
 var upgrade_buttons: Array[Button] = []
 
@@ -15,7 +16,8 @@ var upgrade_buttons: Array[Button] = []
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	hide()
-	$CenterContainer/Panel/MarginContainer/VBoxContainer/RestartButton.pressed.connect(_on_restart_pressed)
+	restart_button.text = "返回首页"
+	restart_button.pressed.connect(_on_restart_pressed)
 	for child in upgrades_grid.get_children():
 		if child is Button:
 			var button: Button = child as Button
@@ -26,8 +28,9 @@ func _ready() -> void:
 func show_result(title_text: String, summary_text: String, shard_total: int, shard_gain: int, upgrade_models: Array[Dictionary]) -> void:
 	title_label.text = title_text
 	summary_label.text = summary_text
-	shard_label.text = "暗核碎片 %d  （本局 +%d）" % [shard_total, shard_gain]
-	_ensure_upgrade_button_count(upgrade_models.size())
+	shard_label.text = "暗核碎片 %d  （本局 +%d）\n可在首页人物成长中使用" % [shard_total, shard_gain]
+	upgrades_grid.visible = false
+	_ensure_upgrade_button_count(0)
 	for index in range(upgrade_buttons.size()):
 		var button: Button = upgrade_buttons[index]
 		if index >= upgrade_models.size():
