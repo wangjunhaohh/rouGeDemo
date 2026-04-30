@@ -1,7 +1,6 @@
 extends RefCounted
 class_name MetaProgression
 
-const SAVE_PATH := "user://meta_progression.save"
 const UPGRADE_ORDER := [
 	"endurance",
 	"drill",
@@ -262,34 +261,25 @@ const CHARACTER_DEFINITIONS := {
 var shards: int = 0
 var upgrades: Dictionary = {}
 var character_upgrades: Dictionary = {}
+var offline_reward_shards: int = 0
 
 
 static func load_or_create() -> MetaProgression:
 	var profile := MetaProgression.new()
-	if not FileAccess.file_exists(SAVE_PATH):
-		return profile
-
-	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-	if file == null:
-		return profile
-
-	var parsed = JSON.parse_string(file.get_as_text())
-	if parsed is Dictionary:
-		profile.shards = int(parsed.get("shards", 0))
-		profile.upgrades = parsed.get("upgrades", {}).duplicate(true)
-		profile.character_upgrades = parsed.get("character_upgrades", {}).duplicate(true)
+	var state := SaveManager.load_progression_state()
+	profile.shards = int(state.get("shards", 0))
+	profile.upgrades = Dictionary(state.get("upgrades", {})).duplicate(true)
+	profile.character_upgrades = Dictionary(state.get("character_upgrades", {})).duplicate(true)
+	profile.offline_reward_shards = int(state.get("offline_reward_shards", 0))
 	return profile
 
 
 func save() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-	if file == null:
-		return
-	file.store_string(JSON.stringify({
-		"shards": shards,
-		"upgrades": upgrades,
-		"character_upgrades": character_upgrades
-	}, "\t"))
+	SaveManager.save_progression_state(shards, upgrades, character_upgrades)
+
+
+func record_run(run_record: Dictionary) -> void:
+	SaveManager.record_run(run_record)
 
 
 func get_level(upgrade_id: String) -> int:

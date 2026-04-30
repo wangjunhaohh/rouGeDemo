@@ -53,6 +53,8 @@ func _refresh() -> void:
 	if _meta_progression == null:
 		return
 	shard_label.text = "暗核碎片 %d" % _meta_progression.shards
+	if _meta_progression.offline_reward_shards > 0:
+		shard_label.text += "\n离线收益 +%d" % _meta_progression.offline_reward_shards
 	_refresh_character_buttons()
 	call_deferred("_render_selected_tree")
 

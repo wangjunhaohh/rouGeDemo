@@ -708,6 +708,7 @@ func _finish_run(victory: bool) -> void:
 	shard_gain_this_run = _calculate_shard_gain(victory)
 	meta_progression.shards += shard_gain_this_run
 	meta_progression.save()
+	meta_progression.record_run(_build_run_record(victory))
 
 	if victory:
 		audio_manager.play_sfx("victory", 1.0, -0.5)
@@ -726,6 +727,24 @@ func _finish_run(victory: bool) -> void:
 		_compose_build_summary()
 	]
 	_refresh_result_panel(title, summary)
+
+
+func _build_run_record(victory: bool) -> Dictionary:
+	return {
+		"run_id": "%d_%d" % [run_seed, int(Time.get_unix_time_from_system())],
+		"version": "v0.15",
+		"victory": victory,
+		"elapsed_time": elapsed_time,
+		"level": level,
+		"kills": kills,
+		"shard_gain": shard_gain_this_run,
+		"boss_spawned": boss_spawned,
+		"boss_defeated": boss_defeated,
+		"character_id": selected_character_id,
+		"branch_id": selected_branch_id,
+		"upgrade_levels": upgrade_levels.duplicate(true),
+		"special_cards": selected_special_cards.duplicate()
+	}
 
 
 func _refresh_result_panel(title: String, summary: String) -> void:
