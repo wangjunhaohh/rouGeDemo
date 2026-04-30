@@ -212,6 +212,8 @@ var _unstoppable_time_left := 0.0
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
 @onready var collision_shape: CollisionShape2D = $CollisionShape2D
 @onready var camera: Camera2D = $Camera2D
+@onready var world_health_bar: Node2D = $WorldHealthBar
+@onready var world_health_fill: ColorRect = $WorldHealthBar/Fill
 
 
 func _ready() -> void:
@@ -225,7 +227,8 @@ func _ready() -> void:
 	_pulse_timer = pulse_cooldown
 	_apply_shape()
 	_configure_camera()
-	health_changed.emit(current_health, max_health)
+	set_world_health_visible(false)
+	refresh_health_ui()
 
 
 func _physics_process(delta: float) -> void:
@@ -270,7 +273,7 @@ func apply_contact_damage(amount: float, source_position: Vector2) -> void:
 	_invulnerability_left = invulnerability_time
 	var knockback_multiplier := 0.18 if blocked or _unstoppable_time_left > 0.0 else 1.0
 	velocity += (global_position - source_position).normalized() * 160.0 * knockback_multiplier
-	health_changed.emit(current_health, max_health)
+	refresh_health_ui()
 	_trigger_feedback("hurt")
 	trigger_camera_shake(8.0, 0.16)
 	if _branch_reflect_damage > 0.0 and _branch_reflect_radius > 0.0:
@@ -289,7 +292,7 @@ func apply_upgrade(upgrade: UpgradeData) -> void:
 	_apply_effect(upgrade.effect_type, upgrade.amount)
 	if not upgrade.secondary_effect_type.is_empty():
 		_apply_effect(upgrade.secondary_effect_type, upgrade.secondary_amount)
-	health_changed.emit(current_health, max_health)
+	refresh_health_ui()
 
 
 func get_pickup_radius() -> float:
@@ -451,7 +454,24 @@ func get_selected_branch_name() -> String:
 
 
 func refresh_health_ui() -> void:
+	_update_world_health_bar()
 	health_changed.emit(current_health, max_health)
+
+
+func set_world_health_visible(active: bool) -> void:
+	world_health_bar.visible = active
+	if active:
+		_update_world_health_bar()
+
+
+func _update_world_health_bar() -> void:
+	if world_health_bar == null or world_health_fill == null:
+		return
+	var ratio := 0.0
+	if max_health > 0.0:
+		ratio = clampf(current_health / max_health, 0.0, 1.0)
+	world_health_fill.size = Vector2(34.0 * ratio, 4.0)
+	world_health_fill.color = Color(0.94, 0.14, 0.16, 1.0)
 
 
 func try_use_exclusive_skill() -> bool:
@@ -562,7 +582,7 @@ func on_enemy_defeated(world_position: Vector2, status_snapshot: Dictionary, was
 		elif was_boss:
 			heal_amount *= 2.5
 		current_health = clampf(current_health + heal_amount, 0.0, max_health)
-		health_changed.emit(current_health, max_health)
+		refresh_health_ui()
 	if _selected_branch_id != "debuff" or status_snapshot.is_empty():
 		return
 	var total_layers: int = _status_snapshot_layer_count(status_snapshot)
@@ -647,6 +667,38 @@ func get_build_summary() -> String:
 	if not synergy_names.is_empty():
 		summary += " | 联动 %s" % " / ".join(synergy_names)
 	return summary
+
+
+func get_pause_detail_lines() -> Array[String]:
+	var skill_text := "专属技能 未选择"
+	if not _exclusive_skill_definition.is_empty():
+		var skill_name: String = String(_exclusive_skill_definition.get("name", ""))
+		if _exclusive_skill_cooldown_left <= 0.0:
+			skill_text = "专属技能 %s：就绪" % skill_name
+		else:
+			skill_text = "专属技能 %s：%ds / %ds" % [
+				skill_name,
+				int(ceilf(_exclusive_skill_cooldown_left)),
+				int(ceilf(_exclusive_skill_cooldown_total))
+			]
+	var pulse_text := "脉冲 未解锁"
+	if pulse_enabled:
+		pulse_text = "脉冲 伤害 %.0f | 半径 %.0f | 冷却 %.1fs" % [pulse_damage, pulse_radius, pulse_cooldown]
+	var shield_text := "护盾 无"
+	if _branch_shield_max > 0.0:
+		shield_text = "护盾 %.0f / %.0f" % [_branch_shield, _branch_shield_max]
+	var mechanic_text := _branch_mechanic_summary()
+	if mechanic_text.is_empty():
+		mechanic_text = "无额外分支机制"
+	return [
+		"生命 %.0f / %.0f | %s" % [current_health, max_health, shield_text],
+		"主攻 伤害 %.0f | 冷却 %.2fs | 发数 %d | 穿透 %d" % [projectile_damage, projectile_cooldown, projectile_count, projectile_pierce],
+		"移动 %.0f | 暴击 %.0f%% | 暴伤 %.1fx" % [move_speed, critical_chance * 100.0, critical_damage_multiplier],
+		"护甲 %.0f | 承伤倍率 %.0f%% | 拾取 %.0f" % [_character_armor + _branch_armor, _branch_damage_taken_multiplier * 100.0, pickup_radius],
+		skill_text,
+		pulse_text,
+		"分支机制 %s" % mechanic_text
+	]
 
 
 func _handle_movement(delta: float) -> void:

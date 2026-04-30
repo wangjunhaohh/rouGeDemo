@@ -121,6 +121,7 @@ var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 func _ready() -> void:
 	randomize()
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_configure_process_modes()
 	run_seed = int(Time.get_unix_time_from_system()) ^ randi()
 	card_rng.seed = run_seed
 	_ensure_input_map()
@@ -201,6 +202,7 @@ func _connect_signals() -> void:
 func _present_home() -> void:
 	home_active = true
 	hud.visible = false
+	player.set_world_health_visible(false)
 	hud.set_objective_text("目标：准备进入暗街")
 	_set_modal_pause(true)
 	home_panel.present(CHARACTER_CATALOG.get_character_definitions(), meta_progression, GAME_TITLE)
@@ -225,6 +227,7 @@ func _on_home_character_upgrade_requested(character_id: String, upgrade_id: Stri
 func _present_character_selection() -> void:
 	current_character_options = CHARACTER_CATALOG.get_character_definitions()
 	character_selection_active = true
+	player.set_world_health_visible(false)
 	hud.set_objective_text("目标：选择出战人物")
 	hud.show_event("选择剑客或法师，决定本局基础属性和专属技能", 2.4)
 	_set_modal_pause(true)
@@ -272,6 +275,7 @@ func _on_branch_selected(index: int) -> void:
 	branch_selection_active = false
 	branch_select_panel.hide_panel()
 	_set_modal_pause(false)
+	player.set_world_health_visible(true)
 	hud.configure_boss_goal(BOSS_SPAWN_TIME)
 	hud.set_build_text(_compose_build_summary())
 	hud.show_event("已接入主分支：%s" % selected_branch_name, 2.0)
@@ -703,6 +707,7 @@ func _finish_run(victory: bool) -> void:
 	special_card_panel.hide_panel()
 	hud.set_pause_state(false)
 	hud.hide_boss()
+	player.set_world_health_visible(false)
 	get_tree().paused = true
 
 	shard_gain_this_run = _calculate_shard_gain(victory)
@@ -782,8 +787,8 @@ func _on_meta_upgrade_requested(upgrade_id: String) -> void:
 
 func _toggle_manual_pause() -> void:
 	manual_pause = not manual_pause
+	hud.set_pause_state(manual_pause, _pause_detail_title(), _pause_detail_lines(), _compose_build_summary())
 	get_tree().paused = manual_pause
-	hud.set_pause_state(manual_pause)
 
 
 func _restart_run() -> void:
@@ -791,11 +796,60 @@ func _restart_run() -> void:
 	get_tree().reload_current_scene()
 
 
+func _configure_process_modes() -> void:
+	var gameplay_nodes: Array[Node] = [
+		arena,
+		player,
+		enemies_layer,
+		projectiles_layer,
+		drops_layer,
+		cards_layer,
+		effects_layer
+	]
+	for node in gameplay_nodes:
+		node.process_mode = Node.PROCESS_MODE_PAUSABLE
+	home_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	character_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	branch_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	level_up_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	result_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	special_card_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS
+
+
 func _refresh_hud() -> void:
 	hud.set_health(player.current_health, player.max_health)
 	hud.set_experience(current_experience, experience_to_next, level)
 	hud.set_elapsed_time(elapsed_time)
 	hud.set_kills(kills)
+
+
+func _pause_detail_title() -> String:
+	var character_text := selected_character_name
+	if character_text.is_empty():
+		character_text = "未选择人物"
+	var branch_text := selected_branch_name
+	if branch_text.is_empty():
+		branch_text = "未选择分支"
+	return "%s / %s" % [character_text, branch_text]
+
+
+func _pause_detail_lines() -> Array[String]:
+	var experience_percent := 0.0
+	if experience_to_next > 0.0:
+		experience_percent = clampf(current_experience / experience_to_next * 100.0, 0.0, 100.0)
+	var needed_experience := maxf(experience_to_next - current_experience, 0.0)
+	var lines: Array[String] = [
+		"等级 %d | 经验 %.0f / %.0f (%.0f%%) | 升级还需 %.0f" % [
+			level,
+			current_experience,
+			experience_to_next,
+			experience_percent,
+			needed_experience
+		]
+	]
+	lines.append_array(player.get_pause_detail_lines())
+	return lines
 
 
 func _compose_build_summary() -> String:
