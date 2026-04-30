@@ -6,6 +6,7 @@ const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const EXPERIENCE_SCENE := preload("res://scenes/props/experience_orb.tscn")
 const CONTENT_CATALOG := preload("res://scripts/data/content_catalog.gd")
 const BRANCH_CATALOG := preload("res://scripts/data/branch_catalog.gd")
+const CHARACTER_CATALOG := preload("res://scripts/data/character_catalog.gd")
 const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
 
@@ -65,7 +66,10 @@ var current_special_card_options: Array[Dictionary] = []
 var upgrade_levels: Dictionary = {}
 var meta_progression: MetaProgression
 var selected_special_cards: Array[String] = []
+var current_character_options: Array[Dictionary] = []
 var current_branch_options: Array[Dictionary] = []
+var selected_character_id := ""
+var selected_character_name := ""
 var selected_branch_id := ""
 var selected_branch_name := ""
 
@@ -81,6 +85,7 @@ var next_card_event_index := 0
 var run_seed := 0
 
 var manual_pause := false
+var character_selection_active := false
 var branch_selection_active := false
 var level_up_active := false
 var special_card_active := false
@@ -103,6 +108,7 @@ var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 @onready var effects_layer: Node2D = $Effects
 @onready var audio_manager: AudioManager = $AudioManager
 @onready var hud: HUD = $UI/HUD
+@onready var character_select_panel: CharacterSelectPanel = $UI/CharacterSelectPanel
 @onready var branch_select_panel: BranchSelectPanel = $UI/BranchSelectPanel
 @onready var level_up_panel: LevelUpPanel = $UI/LevelUpPanel
 @onready var result_panel: ResultPanel = $UI/ResultPanel
@@ -119,18 +125,17 @@ func _ready() -> void:
 	meta_progression = MetaProgression.load_or_create()
 	_load_definitions()
 	_connect_signals()
-	meta_progression.apply_to_player(player)
 	player.sync_upgrade_levels(upgrade_levels)
 	hud.configure_boss_goal(BOSS_SPAWN_TIME)
 	_update_stage(true)
 	_refresh_hud()
 	hud.set_build_text(_compose_build_summary())
 	hud.set_pause_state(false)
-	_present_branch_selection()
+	_present_character_selection()
 
 
 func _process(delta: float) -> void:
-	if manual_pause or branch_selection_active or level_up_active or special_card_active or run_finished:
+	if manual_pause or character_selection_active or branch_selection_active or level_up_active or special_card_active or run_finished:
 		return
 
 	elapsed_time += delta
@@ -163,7 +168,10 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("pause_game") and not run_finished and not branch_selection_active and not level_up_active and not special_card_active:
+	if event.is_action_pressed("use_skill") and not run_finished and not manual_pause and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
+		if player.try_use_exclusive_skill():
+			hud.set_build_text(_compose_build_summary())
+	elif event.is_action_pressed("pause_game") and not run_finished and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
@@ -174,7 +182,10 @@ func _connect_signals() -> void:
 	player.effect_spawned.connect(_on_effect_spawned)
 	player.health_changed.connect(_on_player_health_changed)
 	player.shot_fired.connect(_on_player_shot_fired)
+	player.exclusive_skill_used.connect(_on_player_exclusive_skill_used)
+	player.exclusive_skill_cooldown_changed.connect(_on_player_exclusive_skill_cooldown_changed)
 	player.died.connect(_on_player_died)
+	character_select_panel.character_selected.connect(_on_character_selected)
 	branch_select_panel.branch_selected.connect(_on_branch_selected)
 	level_up_panel.option_selected.connect(_on_upgrade_selected)
 	result_panel.restart_requested.connect(_restart_run)
@@ -182,10 +193,38 @@ func _connect_signals() -> void:
 	special_card_panel.card_selected.connect(_on_special_card_selected)
 
 
+func _present_character_selection() -> void:
+	current_character_options = CHARACTER_CATALOG.get_character_definitions()
+	character_selection_active = true
+	hud.set_objective_text("目标：选择出战人物")
+	hud.show_event("选择剑客或法师，决定本局基础属性和专属技能", 2.4)
+	_set_modal_pause(true)
+	character_select_panel.present(current_character_options)
+
+
+func _on_character_selected(index: int) -> void:
+	if index < 0 or index >= current_character_options.size():
+		return
+	var character: Dictionary = current_character_options[index]
+	var skill: Dictionary = CHARACTER_CATALOG.get_skill_definition(String(character.get("exclusive_skill_id", "")))
+	selected_character_id = String(character.get("id", ""))
+	selected_character_name = String(character.get("name", ""))
+	player.set_character_definition(character, skill)
+	meta_progression.apply_to_player(player)
+	player.sync_upgrade_levels(upgrade_levels)
+	current_character_options.clear()
+	character_selection_active = false
+	character_select_panel.hide_panel()
+	hud.set_build_text(_compose_build_summary())
+	_refresh_hud()
+	hud.show_event("已选择人物：%s | 技能：%s（Space）" % [selected_character_name, String(skill.get("name", ""))], 2.4)
+	_present_branch_selection()
+
+
 func _present_branch_selection() -> void:
 	current_branch_options = BRANCH_CATALOG.get_branch_definitions()
 	branch_selection_active = true
-	hud.set_objective_text("目标：先选择本局主分支")
+	hud.set_objective_text("目标：选择本局主分支")
 	hud.show_event("选择一个主分支，决定本局成长倾向和武器风格", 2.4)
 	_set_modal_pause(true)
 	branch_select_panel.present(current_branch_options)
@@ -215,6 +254,7 @@ func _ensure_input_map() -> void:
 	_register_action("move_down", [KEY_S, KEY_DOWN])
 	_register_action("pause_game", [KEY_ESCAPE, KEY_P])
 	_register_action("restart_run", [KEY_R])
+	_register_action("use_skill", [KEY_SPACE])
 
 
 func _register_action(action_name: String, keycodes: Array[int]) -> void:
@@ -445,6 +485,16 @@ func _on_player_shot_fired(weapon_name: String) -> void:
 		audio_manager.play_sfx("shoot", randf_range(0.92, 1.08), -6.0)
 
 
+func _on_player_exclusive_skill_used(skill_name: String, world_position: Vector2) -> void:
+	audio_manager.play_sfx("level_up", 0.92, -3.0)
+	hud.show_event("专属技能：%s" % skill_name, 1.2)
+	_spawn_burst(world_position, Color(0.62, 0.84, 1.0, 1.0), 5.0, 14, 0.28, 118.0)
+
+
+func _on_player_exclusive_skill_cooldown_changed(skill_name: String, cooldown_left: float, cooldown_total: float) -> void:
+	hud.set_skill_status(skill_name, cooldown_left, cooldown_total)
+
+
 func _on_player_died() -> void:
 	projectiles_layer.process_mode = Node.PROCESS_MODE_DISABLED
 	effects_layer.process_mode = Node.PROCESS_MODE_DISABLED
@@ -611,9 +661,11 @@ func _finish_run(victory: bool) -> void:
 
 	run_finished = true
 	manual_pause = false
+	character_selection_active = false
 	branch_selection_active = false
 	level_up_active = false
 	special_card_active = false
+	character_select_panel.hide_panel()
 	branch_select_panel.hide_panel()
 	level_up_panel.hide_panel()
 	special_card_panel.hide_panel()

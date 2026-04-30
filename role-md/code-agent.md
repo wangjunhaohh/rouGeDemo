@@ -420,3 +420,221 @@ Player (CharacterBody2D)
   - `frame_06_idle_end`
 - 命中时机应落在 `slash` 段附近，而不是拖到收招末尾
 - 后续替换成正式 Spine 导出帧时，也必须维持这个动作语义顺序
+
+
+## 多人物系统实现规范
+
+### 实现目标
+- 支持多个可选人物。
+- 每个人物拥有独立基础属性配置。
+- 每个人物拥有独立专属技能配置。
+- 人物选择结果需要进入本局状态。
+- 人物系统必须数据化，不能把具体人物逻辑硬编码在主流程里。
+
+### 基础要求
+- 开局前允许玩家选择人物。
+- 进入战斗后，根据选择的人物加载对应属性、技能、动画和推荐分支。
+- 人物专属技能需要支持冷却、持续时间、伤害倍率、范围、特效和音效。
+- 专属技能可以被局内升级卡修改。
+- 人物配置需要支持后续继续扩展新角色。
+
+### 数据结构建议
+
+#### CharacterDefinition
+建议字段：
+- id
+- name
+- description
+- base_stats
+- exclusive_skill_id
+- recommended_branches
+- difficulty
+- icon
+- preview_animation
+- character_scene
+- animation_set
+- default_weapon_ids
+
+#### ExclusiveSkillDefinition
+建议字段：
+- id
+- owner_character_id
+- name
+- cooldown
+- duration
+- damage_scale
+- radius
+- tick_interval
+- max_hit_per_target
+- tags
+- animation_key
+- vfx_key
+- sfx_key
+- skill_scene
+- upgrade_hooks
+
+#### RunState
+建议字段：
+- selected_character_id
+- selected_branch
+- current_skill_cooldown
+- character_modifiers
+- exclusive_skill_upgrades
+- active_character_definition
+
+### 实现约束
+- 人物配置、技能配置、升级配置应尽量使用资源文件或数据表管理。
+- 不同人物不能共用完全相同的技能逻辑后只替换名字。
+- 人物专属技能需要有统一接口，方便 UI、冷却、升级和测试系统调用。
+- 人物选择、流派选择、武器选择需要拆开，不要混成一个不可维护的大系统。
+
+
+## 剑客实现要求：瞬影剑阵
+
+### 技能实现目标
+实现一个高攻击近战人物，专属技能为多段残影斩击。
+
+### 剑客基础属性
+第一版建议：
+- 最大生命：90
+- 攻击力：14
+- 攻击速度：1.15
+- 移动速度：210
+- 护甲：2
+- 暴击率：8%
+- 技能冷却修正：0%
+
+### 瞬影剑阵实现要求
+- 使用多段斩击区域判定。
+- 可通过计时器或动画事件触发多次 hit。
+- 每次 hit 使用圆形、扇形或多个斩击区域。
+- 支持残影特效和刀光特效。
+- 技能期间可以锁定移动、限制移动速度，或允许轻微移动。
+- 技能期间可提供短暂减伤，但不能默认长时间无敌。
+- 对同一目标需要有命中次数上限，避免 Boss 被秒杀。
+- 技能结束后需要进入短暂收招状态。
+
+### 第一版技能参数
+- 冷却：18 秒
+- 持续：1.2 秒
+- 斩击次数：5
+- 单段伤害：攻击力 70%
+- 范围：160
+- 同目标最大命中：4 次
+- 释放期间减伤：50%
+
+### 系统结构建议
+- SwordsmanSkillController：管理剑客专属技能释放。
+- SlashSequenceController：管理多段斩击节奏。
+- AfterImageController：管理残影显示。
+- SlashVFXController：管理刀光、斩击线、命中特效。
+- HitLimitTracker：记录同一技能周期内每个敌人的受击次数。
+
+### 事件时序建议
+- start_cast：播放起手动画。
+- slash_1 到 slash_5：依次触发斩击判定和刀光。
+- final_slash：触发终结斩击。
+- recover：进入收招。
+- finish：恢复普通状态。
+
+## 法师实现要求：环域轰炸
+
+### 技能实现目标
+实现一个范围法术人物，专属技能为自身周围生成持续轰炸圈。
+
+### 法师基础属性
+第一版建议：
+- 最大生命：75
+- 攻击力：8
+- 法术强度：16
+- 攻击速度：0.9
+- 移动速度：190
+- 护甲：1
+- 技能冷却修正：5%
+- 技能范围修正：10%
+
+### 环域轰炸实现要求
+- 释放技能后生成一个轰炸圈 Area2D。
+- 第一版建议轰炸圈跟随角色移动。
+- 轰炸圈持续存在数秒。
+- 在持续时间内周期性随机选择圈内落点。
+- 每个落点先显示预警，再延迟爆炸。
+- 爆炸使用 Area2D 范围检测敌人。
+- 爆炸支持附加异常状态，例如灼烧、减速、易伤。
+- 技能结束后清理轰炸圈、预警和未触发爆炸节点。
+
+### 第一版技能参数
+- 冷却：16 秒
+- 持续：4 秒
+- 轰炸圈半径：180
+- 轰炸间隔：0.35 秒
+- 爆炸半径：45
+- 单次伤害：法术强度 90%
+- 是否跟随角色：是
+
+### 系统结构建议
+- MageSkillController：管理法师专属技能释放。
+- BombardmentCircle：管理轰炸圈。
+- BombardmentPointSpawner：管理随机落点。
+- BombardmentWarning：管理落点预警。
+- BombardmentExplosion：管理爆炸判定。
+- ElementEffectResolver：处理异常状态附加。
+
+### 事件时序建议
+- start_cast：播放施法动作。
+- spawn_circle：生成轰炸圈。
+- tick_bombardment：周期性生成落点。
+- warning：显示落点预警。
+- explode：触发爆炸判定和特效。
+- finish：轰炸圈消散。
+
+
+## 人物专属升级实现规范
+
+### 实现目标
+- 支持人物专属升级卡。
+- 支持专属技能被局内升级改变。
+- 支持不同人物的专属升级只在对应人物出现。
+- 支持专属升级与流派标签联动。
+
+### 规则要求
+- 剑客专属升级只在选择剑客时进入升级池。
+- 法师专属升级只在选择法师时进入升级池。
+- 通用升级仍可对所有人物生效。
+- 人物专属升级可以带有流派标签，例如 melee、slash、magic、aoe、debuff。
+- 升级卡刷新系统需要同时考虑：
+  - 当前人物
+  - 当前流派
+  - 当前已有升级
+  - 权重配置
+
+### 数据字段建议
+UpgradeCardDefinition 增加：
+- character_id
+- required_character_id
+- skill_id
+- upgrade_type
+- stat_modifiers
+- skill_modifiers
+- tags
+- rarity
+- weight
+
+### 技能修改示例
+剑客升级可能修改：
+- 斩击次数
+- 斩击范围
+- 单段伤害
+- 技能冷却
+- 残影数量
+- 技能期间减伤
+- 异常附加
+
+法师升级可能修改：
+- 轰炸圈半径
+- 轰炸频率
+- 爆炸半径
+- 技能持续时间
+- 元素异常概率
+- 终结爆炸
+- 技能期间护盾

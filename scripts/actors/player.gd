@@ -7,6 +7,8 @@ const WEAPON_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
 const SENTRY_NODE_SCENE := preload("res://scenes/props/sentry_node.tscn")
 const GUARD_BURST_SCENE := preload("res://scenes/effects/guard_burst.tscn")
 const SCORCH_ORB_SCENE := preload("res://scenes/weapons/scorch_orb.tscn")
+const SLASH_SEQUENCE_EFFECT := preload("res://scripts/effects/slash_sequence_effect.gd")
+const BOMBARDMENT_CIRCLE_EFFECT := preload("res://scripts/effects/bombardment_circle_effect.gd")
 const WEAPON_BASE_SCALE := 0.68
 const WEAPON_FLASH_BASE_SCALE := 0.72
 const DEFAULT_WEAPON_FRAMES := {
@@ -31,6 +33,8 @@ signal projectile_spawned(projectile: Node2D)
 signal effect_spawned(effect: Node2D)
 signal health_changed(current_health: float, max_health: float)
 signal shot_fired(weapon_name: String)
+signal exclusive_skill_used(skill_name: String, world_position: Vector2)
+signal exclusive_skill_cooldown_changed(skill_name: String, cooldown_left: float, cooldown_total: float)
 signal died
 
 @export var move_speed := 240.0
@@ -53,6 +57,7 @@ var projectile_range := 420.0
 var knockback_force := 260.0
 var critical_chance := 0.0
 var critical_damage_multiplier := 1.5
+var spell_power := 8.0
 
 var pulse_enabled := false
 var pulse_damage := 20.0
@@ -75,6 +80,17 @@ var _weapon_flash_duration := 0.0
 var _weapon_pulse_left := 0.0
 var _weapon_flash_color := Color(1.0, 0.92, 0.74, 0.0)
 var _dead := false
+var _selected_character_id := ""
+var _selected_character_name := ""
+var _character_armor := 0.0
+var _exclusive_skill_definition: Dictionary = {}
+var _exclusive_skill_cooldown_left := 0.0
+var _exclusive_skill_cooldown_total := 0.0
+var _exclusive_skill_display_seconds := -1
+var _exclusive_skill_cooldown_multiplier := 1.0
+var _exclusive_skill_radius_multiplier := 1.0
+var _exclusive_skill_damage_taken_multiplier := 1.0
+var _exclusive_skill_defense_time_left := 0.0
 var _selected_branch_id := ""
 var _selected_branch_name := ""
 var _branch_damage_taken_multiplier := 1.0
@@ -220,6 +236,7 @@ func _physics_process(delta: float) -> void:
 	_handle_movement(delta)
 	_handle_attack(delta)
 	_handle_pulse(delta)
+	_handle_exclusive_skill_timers(delta)
 	_handle_invulnerability(delta)
 	_unstoppable_time_left = maxf(_unstoppable_time_left - delta, 0.0)
 	_update_weapon_animation(delta)
@@ -229,7 +246,8 @@ func _physics_process(delta: float) -> void:
 func apply_contact_damage(amount: float, source_position: Vector2) -> void:
 	if current_health <= 0.0 or _invulnerability_left > 0.0 or _dead:
 		return
-	var resolved_damage: float = maxf(amount * _branch_damage_taken_multiplier - _branch_armor, 1.0)
+	var armor_value: float = _character_armor + _branch_armor
+	var resolved_damage: float = maxf(amount * _branch_damage_taken_multiplier * _exclusive_skill_damage_taken_multiplier - armor_value, 1.0)
 	var blocked := false
 	if _branch_block_chance > 0.0 and randf() <= _branch_block_chance:
 		blocked = true
@@ -279,6 +297,32 @@ func get_pickup_radius() -> float:
 
 func apply_meta_bonus(effect_type: String, amount: float) -> void:
 	_apply_effect(effect_type, amount)
+
+
+func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
+	_selected_character_id = String(character.get("id", ""))
+	_selected_character_name = String(character.get("name", ""))
+	var base_stats: Dictionary = Dictionary(character.get("base_stats", {}))
+	max_health = float(base_stats.get("max_health", max_health))
+	current_health = max_health
+	projectile_damage = float(base_stats.get("projectile_damage", projectile_damage))
+	var attack_speed: float = maxf(float(base_stats.get("attack_speed", 1.0)), 0.2)
+	projectile_cooldown = BODY_ATTACK_BASE_COOLDOWN / attack_speed
+	move_speed = float(base_stats.get("move_speed", move_speed))
+	_character_armor = maxf(float(base_stats.get("armor", 0.0)), 0.0)
+	critical_chance = clampf(float(base_stats.get("critical_chance", 0.0)), 0.0, 0.65)
+	spell_power = float(base_stats.get("spell_power", projectile_damage))
+	_exclusive_skill_cooldown_multiplier = maxf(float(base_stats.get("skill_cooldown_multiplier", 1.0)), 0.2)
+	_exclusive_skill_radius_multiplier = maxf(float(base_stats.get("skill_radius_multiplier", 1.0)), 0.2)
+	_exclusive_skill_definition = skill.duplicate(true)
+	_exclusive_skill_cooldown_left = 0.0
+	_exclusive_skill_cooldown_total = _exclusive_skill_total_cooldown()
+	_exclusive_skill_display_seconds = -1
+	_exclusive_skill_defense_time_left = 0.0
+	_exclusive_skill_damage_taken_multiplier = 1.0
+	_projectile_timer = minf(_projectile_timer, projectile_cooldown * 0.3)
+	refresh_health_ui()
+	_emit_exclusive_skill_cooldown(true)
 
 
 func set_branch_definition(definition: Dictionary) -> void:
@@ -408,6 +452,104 @@ func refresh_health_ui() -> void:
 	health_changed.emit(current_health, max_health)
 
 
+func try_use_exclusive_skill() -> bool:
+	if _dead or _exclusive_skill_definition.is_empty() or _exclusive_skill_cooldown_left > 0.0:
+		return false
+	var skill_id: String = String(_exclusive_skill_definition.get("id", ""))
+	var used := false
+	match skill_id:
+		"shadow_sword_array":
+			used = _cast_shadow_sword_array()
+		"arcane_bombardment":
+			used = _cast_arcane_bombardment()
+	if not used:
+		return false
+	_exclusive_skill_cooldown_total = _exclusive_skill_total_cooldown()
+	_exclusive_skill_cooldown_left = _exclusive_skill_cooldown_total
+	_emit_exclusive_skill_cooldown(true)
+	exclusive_skill_used.emit(String(_exclusive_skill_definition.get("name", "")), global_position)
+	return true
+
+
+func _handle_exclusive_skill_timers(delta: float) -> void:
+	if _exclusive_skill_cooldown_left > 0.0:
+		_exclusive_skill_cooldown_left = maxf(_exclusive_skill_cooldown_left - delta, 0.0)
+		_emit_exclusive_skill_cooldown(false)
+	if _exclusive_skill_defense_time_left <= 0.0:
+		_exclusive_skill_damage_taken_multiplier = 1.0
+		return
+	_exclusive_skill_defense_time_left = maxf(_exclusive_skill_defense_time_left - delta, 0.0)
+	if _exclusive_skill_defense_time_left <= 0.0:
+		_exclusive_skill_damage_taken_multiplier = 1.0
+
+
+func _exclusive_skill_status_text() -> String:
+	if _exclusive_skill_definition.is_empty():
+		return "未选择"
+	var skill_name: String = String(_exclusive_skill_definition.get("name", ""))
+	return skill_name
+
+
+func _exclusive_skill_total_cooldown() -> float:
+	if _exclusive_skill_definition.is_empty():
+		return 0.0
+	return float(_exclusive_skill_definition.get("cooldown", 1.0)) * _exclusive_skill_cooldown_multiplier
+
+
+func _emit_exclusive_skill_cooldown(force_emit: bool) -> void:
+	var skill_name: String = String(_exclusive_skill_definition.get("name", ""))
+	var display_seconds := int(ceilf(_exclusive_skill_cooldown_left))
+	if not force_emit and display_seconds == _exclusive_skill_display_seconds:
+		return
+	_exclusive_skill_display_seconds = display_seconds
+	exclusive_skill_cooldown_changed.emit(skill_name, _exclusive_skill_cooldown_left, _exclusive_skill_cooldown_total)
+
+
+func _cast_shadow_sword_array() -> bool:
+	var effect: SlashSequenceEffect = SLASH_SEQUENCE_EFFECT.new()
+	var duration: float = float(_exclusive_skill_definition.get("duration", 1.2))
+	var slash_damage: float = projectile_damage * float(_exclusive_skill_definition.get("damage_scale", 0.7))
+	effect.global_position = global_position
+	effect.setup(
+		self,
+		slash_damage,
+		float(_exclusive_skill_definition.get("radius", 160.0)) * _exclusive_skill_radius_multiplier,
+		int(_exclusive_skill_definition.get("slash_count", 5)),
+		duration,
+		int(_exclusive_skill_definition.get("max_hit_per_target", 4)),
+		float(_exclusive_skill_definition.get("knockback", knockback_force * 0.65)),
+		Color(0.86, 0.94, 1.0, 1.0)
+	)
+	effect_spawned.emit(effect)
+	_exclusive_skill_damage_taken_multiplier = clampf(float(_exclusive_skill_definition.get("damage_taken_multiplier", 0.5)), 0.15, 1.0)
+	_exclusive_skill_defense_time_left = duration
+	trigger_camera_shake(4.4, 0.12)
+	return true
+
+
+func _cast_arcane_bombardment() -> bool:
+	var effect: BombardmentCircleEffect = BOMBARDMENT_CIRCLE_EFFECT.new()
+	var radius_multiplier := _exclusive_skill_radius_multiplier
+	effect.global_position = global_position
+	effect.setup(
+		self,
+		spell_power * float(_exclusive_skill_definition.get("damage_scale", 0.9)),
+		float(_exclusive_skill_definition.get("radius", 180.0)) * radius_multiplier,
+		float(_exclusive_skill_definition.get("explosion_radius", 45.0)) * radius_multiplier,
+		float(_exclusive_skill_definition.get("duration", 4.0)),
+		float(_exclusive_skill_definition.get("tick_interval", 0.35)),
+		float(_exclusive_skill_definition.get("warning_delay", 0.28)),
+		float(_exclusive_skill_definition.get("burn_damage", 0.0)),
+		float(_exclusive_skill_definition.get("burn_duration", 0.0)),
+		float(_exclusive_skill_definition.get("slow_duration", 0.0)),
+		float(_exclusive_skill_definition.get("slow_amount", 1.0)),
+		Color(0.56, 0.82, 1.0, 1.0)
+	)
+	effect_spawned.emit(effect)
+	trigger_camera_shake(3.2, 0.08)
+	return true
+
+
 func on_enemy_defeated(world_position: Vector2, status_snapshot: Dictionary, was_elite: bool, was_boss: bool) -> void:
 	if _dead:
 		return
@@ -480,13 +622,17 @@ func get_build_summary() -> String:
 		projectile_pierce,
 		pulse_text
 	]
+	if not _selected_character_name.is_empty():
+		summary = "人物 %s | 技能 %s | %s" % [_selected_character_name, _exclusive_skill_status_text(), summary]
 	if not _selected_branch_name.is_empty():
 		summary = "分支 %s | %s" % [_selected_branch_name, summary]
 	var branch_mechanic_text := _branch_mechanic_summary()
 	if not branch_mechanic_text.is_empty():
 		summary += " | 机制 %s" % branch_mechanic_text
 	if _branch_armor > 0.0:
-		summary += " | 护甲 %.0f" % _branch_armor
+		summary += " | 护甲 %.0f" % (_character_armor + _branch_armor)
+	elif _character_armor > 0.0:
+		summary += " | 护甲 %.0f" % _character_armor
 	if _branch_shield_max > 0.0:
 		summary += " | 护盾 %.0f/%.0f" % [_branch_shield, _branch_shield_max]
 	if _branch_curse_damage > 0.0 or _branch_corrosion_amount > 0.0 or _branch_control_chance > 0.0:

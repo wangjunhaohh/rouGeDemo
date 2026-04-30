@@ -11,6 +11,7 @@ class_name HUD
 @onready var level_label: Label = $MarginContainer/Content/TopRow/LevelPanel/LevelLabel
 @onready var timer_label: Label = $MarginContainer/Content/TopRow/LevelPanel/TimerLabel
 @onready var kill_label: Label = $MarginContainer/Content/TopRow/LevelPanel/KillLabel
+@onready var skill_label: Label = $MarginContainer/Content/TopRow/LevelPanel/SkillLabel
 @onready var objective_label: Label = $MarginContainer/Content/TopRow/LevelPanel/ObjectiveLabel
 @onready var build_label: Label = $MarginContainer/Content/BottomRow/BuildPanel/BuildLabel
 @onready var event_label: Label = $EventLabel
@@ -70,6 +71,18 @@ func set_elapsed_time(seconds: float) -> void:
 
 func set_kills(total_kills: int) -> void:
 	kill_label.text = "击败 %d" % total_kills
+
+
+func set_skill_status(skill_name: String, cooldown_left: float, cooldown_total: float) -> void:
+	if skill_name.is_empty():
+		skill_label.text = "技能 未选择"
+		return
+	if cooldown_left <= 0.0:
+		skill_label.text = "技能 %s：Space 就绪" % skill_name
+		return
+	var remaining_seconds := int(ceilf(cooldown_left))
+	var total_seconds := int(ceilf(cooldown_total))
+	skill_label.text = "技能 %s：%ds / %ds" % [skill_name, remaining_seconds, total_seconds]
 
 
 func set_build_text(summary: String) -> void:
