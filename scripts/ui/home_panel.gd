@@ -35,7 +35,7 @@ func present(characters: Array[Dictionary], meta_progression: MetaProgression, g
 	if _selected_character_id.is_empty() and not _characters.is_empty():
 		_selected_character_id = String(_characters[0].get("id", ""))
 	title_label.text = game_title
-	subtitle_label.text = "暗街、余烬、碎片与未完成的轮回"
+	subtitle_label.text = "青墟、旧宫、碎片与未完成的轮回"
 	show()
 	_refresh()
 
@@ -52,7 +52,7 @@ func hide_panel() -> void:
 func _refresh() -> void:
 	if _meta_progression == null:
 		return
-	shard_label.text = "暗核碎片 %d" % _meta_progression.shards
+	shard_label.text = "青墟碎片 %d" % _meta_progression.shards
 	if _meta_progression.offline_reward_shards > 0:
 		shard_label.text += "\n离线收益 +%d" % _meta_progression.offline_reward_shards
 	_refresh_character_buttons()

@@ -28,7 +28,7 @@ func _ready() -> void:
 func show_result(title_text: String, summary_text: String, shard_total: int, shard_gain: int, upgrade_models: Array[Dictionary]) -> void:
 	title_label.text = title_text
 	summary_label.text = summary_text
-	shard_label.text = "暗核碎片 %d  （本局 +%d）\n可在首页人物成长中使用" % [shard_total, shard_gain]
+	shard_label.text = "青墟碎片 %d  （本局 +%d）\n可在首页人物成长中使用" % [shard_total, shard_gain]
 	upgrades_grid.visible = false
 	_ensure_upgrade_button_count(0)
 	for index in range(upgrade_buttons.size()):

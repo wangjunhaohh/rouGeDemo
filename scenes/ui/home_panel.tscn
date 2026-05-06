@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/home_panel.gd" id="1"]
-[ext_resource type="Texture2D" path="res://art/backgrounds/arena_tile.png" id="2"]
-[ext_resource type="Texture2D" path="res://art/backgrounds/panel_tile.png" id="3"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/ink_home_background.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/ink_panel_vertical.png" id="3"]
 [ext_resource type="Script" path="res://scripts/ui/skill_tree_lines.gd" id="4"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/ink_popup_wide.png" id="5"]
 
 [node name="HomePanel" type="Control"]
 layout_mode = 3
@@ -36,7 +37,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.02, 0.025, 0.03, 0.72)
+color = Color(0.03, 0.055, 0.065, 0.46)
 
 [node name="MarginContainer" type="MarginContainer" parent="."]
 layout_mode = 1
@@ -66,12 +67,12 @@ theme_override_constants/separation = 8
 [node name="TitleLabel" type="Label" parent="MarginContainer/Root/TopRow/TitleBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 44
-text = "暗核余烬"
+text = "青墟问道"
 
 [node name="SubTitleLabel" type="Label" parent="MarginContainer/Root/TopRow/TitleBox"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 16
-text = "暗街、余烬、碎片与未完成的轮回"
+text = "青墟、旧宫、碎片与未完成的轮回"
 
 [node name="ActionBox" type="VBoxContainer" parent="MarginContainer/Root/TopRow"]
 layout_mode = 2
@@ -82,7 +83,7 @@ theme_override_constants/separation = 10
 layout_mode = 2
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 18
-text = "暗核碎片 0"
+text = "青墟碎片 0"
 
 [node name="StartButton" type="Button" parent="MarginContainer/Root/TopRow/ActionBox"]
 layout_mode = 2
@@ -144,7 +145,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("3")
+texture = ExtResource("5")
 texture_filter = 0
 expand_mode = 1
 stretch_mode = 6

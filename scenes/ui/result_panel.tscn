@@ -1,7 +1,7 @@
 [gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/result_panel.gd" id="1"]
-[ext_resource type="Texture2D" path="res://art/backgrounds/panel_tile.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/ink_popup_tall.png" id="2"]
 
 [node name="ResultPanel" type="Control"]
 visible = false
@@ -71,7 +71,7 @@ text = "结果摘要"
 
 [node name="ShardLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
-text = "暗核碎片 0"
+text = "青墟碎片 0"
 
 [node name="MetaUpgrades" type="GridContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2

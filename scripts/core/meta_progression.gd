@@ -100,7 +100,7 @@ const DEFINITIONS := {
 	},
 	"salvage": {
 		"name": "残响回收",
-		"description": "结算暗核碎片 +12%",
+		"description": "结算青墟碎片 +12%",
 		"cost": 26,
 		"cost_step": 16,
 		"max_level": 3,

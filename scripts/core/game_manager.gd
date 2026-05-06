@@ -1,7 +1,7 @@
 extends Node2D
 class_name GameManager
 
-const GAME_TITLE := "暗核余烬"
+const GAME_TITLE := "青墟问道"
 const BOSS_SPAWN_TIME := 390.0
 const ENEMY_SCENE := preload("res://scenes/enemies/enemy.tscn")
 const EXPERIENCE_SCENE := preload("res://scenes/props/experience_orb.tscn")
@@ -203,7 +203,7 @@ func _present_home() -> void:
 	home_active = true
 	hud.visible = false
 	player.set_world_health_visible(false)
-	hud.set_objective_text("目标：准备进入暗街")
+	hud.set_objective_text("目标：准备进入青墟")
 	_set_modal_pause(true)
 	home_panel.present(CHARACTER_CATALOG.get_character_definitions(), meta_progression, GAME_TITLE)
 

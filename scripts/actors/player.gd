@@ -221,7 +221,7 @@ func _ready() -> void:
 	hurtbox.add_to_group("player_hurtbox")
 	hurtbox.set_meta("player_ref", self)
 	collision_layer = 1
-	collision_mask = 0
+	collision_mask = 8
 	current_health = max_health
 	_projectile_timer = projectile_cooldown * 0.3
 	_pulse_timer = pulse_cooldown
