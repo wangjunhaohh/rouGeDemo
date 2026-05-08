@@ -192,6 +192,12 @@ var _branch_weapon_tint := Color(1.0, 1.0, 1.0, 1.0)
 var _branch_flash_tint := Color(1.0, 0.92, 0.74, 0.95)
 var _body_direction_key := "right"
 var _body_sprite_frames: SpriteFrames
+var _default_body_sprite_frames: SpriteFrames
+var _default_body_visual_scale := Vector2.ONE
+var _default_body_visual_offset := Vector2.ZERO
+var _default_body_texture_filter := CanvasItem.TEXTURE_FILTER_NEAREST
+var _body_visual_base_scale := Vector2.ONE
+var _hide_melee_weapon_visual := false
 var _attack_phase: int = AttackPhase.IDLE
 var _attack_phase_time_left := 0.0
 var _attack_direction := Vector2.RIGHT
@@ -225,6 +231,11 @@ func _ready() -> void:
 	current_health = max_health
 	_projectile_timer = projectile_cooldown * 0.3
 	_pulse_timer = pulse_cooldown
+	_default_body_sprite_frames = body_visual.sprite_frames
+	_default_body_visual_scale = body_visual.scale
+	_default_body_visual_offset = body_visual.offset
+	_default_body_texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_body_visual_base_scale = _default_body_visual_scale
 	_apply_shape()
 	_configure_camera()
 	set_world_health_visible(false)
@@ -306,6 +317,7 @@ func apply_meta_bonus(effect_type: String, amount: float) -> void:
 func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
 	_selected_character_id = String(character.get("id", ""))
 	_selected_character_name = String(character.get("name", ""))
+	_apply_character_body_visual(character)
 	var base_stats: Dictionary = Dictionary(character.get("base_stats", {}))
 	max_health = float(base_stats.get("max_health", max_health))
 	current_health = max_health
@@ -770,7 +782,7 @@ func _start_primary_attack(target_position: Vector2) -> void:
 	_set_slash_hitbox_active(false)
 	if _branch_weapon_type == "melee":
 		_start_body_attack_animation(direction)
-	body_visual.scale = Vector2(1.03, 0.98)
+	body_visual.scale = Vector2(_body_visual_base_scale.x * 1.03, _body_visual_base_scale.y * 0.98)
 
 
 func _update_attack_state(delta: float) -> void:
@@ -1359,7 +1371,7 @@ func _trigger_weapon_fire(direction: Vector2, overcharge_active: bool) -> void:
 	_weapon_flash_color = _branch_flash_tint
 	if overcharge_active:
 		_weapon_flash_color = _branch_flash_tint.lightened(0.12)
-	body_visual.scale = Vector2(1.04, 0.97)
+	body_visual.scale = Vector2(_body_visual_base_scale.x * 1.04, _body_visual_base_scale.y * 0.97)
 
 
 func _trigger_pulse_fire() -> void:
@@ -1367,14 +1379,14 @@ func _trigger_pulse_fire() -> void:
 	_weapon_flash_duration = _weapon_flash_left
 	_weapon_pulse_left = 0.18
 	_weapon_flash_color = _branch_flash_tint.lerp(Color(0.48, 0.9, 1.0, 0.88), 0.5)
-	body_visual.scale = Vector2(1.06, 0.95)
+	body_visual.scale = Vector2(_body_visual_base_scale.x * 1.06, _body_visual_base_scale.y * 0.95)
 
 
 func _update_weapon_animation(delta: float) -> void:
 	_weapon_recoil_strength = lerpf(_weapon_recoil_strength, 0.0, minf(delta * 16.0, 1.0))
 	_weapon_flash_left = maxf(_weapon_flash_left - delta, 0.0)
 	_weapon_pulse_left = maxf(_weapon_pulse_left - delta, 0.0)
-	body_visual.scale = body_visual.scale.lerp(Vector2.ONE, minf(delta * 10.0, 1.0))
+	body_visual.scale = body_visual.scale.lerp(_body_visual_base_scale, minf(delta * 10.0, 1.0))
 
 	var direction: Vector2 = _aim_direction.normalized()
 	if _attack_phase != AttackPhase.IDLE:
@@ -1385,6 +1397,8 @@ func _update_weapon_animation(delta: float) -> void:
 	weapon_pivot.position = ATTACHMENT_PIVOT_OFFSET
 	attack_point.position = _attack_point_local_position(direction)
 	_update_slash_hitbox_transform(direction)
+	if _sync_weapon_visual_visibility():
+		return
 	var weapon_position := direction * _branch_weapon_length
 	var weapon_rotation := direction.angle()
 	var weapon_phase_key := "idle"
@@ -1512,6 +1526,45 @@ func _apply_branch_visual_style() -> void:
 	weapon_impact.texture = _sequence_frame(_branch_impact_sequences, "release", 0.0, _branch_flash_frame("a"))
 	weapon_impact.scale = Vector2.ONE * _branch_flash_base_scale
 	weapon_impact.modulate = Color(1.0, 1.0, 1.0, 0.0)
+	_sync_weapon_visual_visibility()
+
+
+func _apply_character_body_visual(character: Dictionary) -> void:
+	if body_visual == null:
+		return
+	var character_sprite_frames := character.get("body_sprite_frames", null) as SpriteFrames
+	if character_sprite_frames == null:
+		character_sprite_frames = _default_body_sprite_frames
+	if character_sprite_frames != null:
+		body_visual.sprite_frames = character_sprite_frames
+		_body_sprite_frames = character_sprite_frames
+
+	var raw_visual_scale: Variant = character.get("body_visual_scale", _default_body_visual_scale)
+	match typeof(raw_visual_scale):
+		TYPE_VECTOR2:
+			body_visual.scale = raw_visual_scale
+		TYPE_FLOAT, TYPE_INT:
+			body_visual.scale = Vector2.ONE * float(raw_visual_scale)
+		_:
+			body_visual.scale = _default_body_visual_scale
+	_body_visual_base_scale = body_visual.scale
+
+	var raw_visual_offset: Variant = character.get("body_visual_offset", _default_body_visual_offset)
+	body_visual.offset = raw_visual_offset if typeof(raw_visual_offset) == TYPE_VECTOR2 else _default_body_visual_offset
+	body_visual.texture_filter = int(character.get("body_texture_filter", _default_body_texture_filter))
+	_hide_melee_weapon_visual = bool(character.get("hide_melee_weapon_visual", false))
+	_sync_weapon_visual_visibility()
+	_update_body_direction_sprite(_last_move_direction, true)
+
+
+func _sync_weapon_visual_visibility() -> bool:
+	if weapon_visual == null or weapon_trail == null or weapon_impact == null:
+		return false
+	var hide_weapon_visual := _hide_melee_weapon_visual and _branch_weapon_type == "melee"
+	weapon_visual.visible = not hide_weapon_visual
+	weapon_trail.visible = not hide_weapon_visual
+	weapon_impact.visible = not hide_weapon_visual
+	return hide_weapon_visual
 
 
 func _build_body_sprite_frames() -> SpriteFrames:

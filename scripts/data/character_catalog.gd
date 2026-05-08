@@ -1,6 +1,8 @@
 extends RefCounted
 class_name CharacterCatalog
 
+const SWORDSMAN_BODY_SPRITE_FRAMES := preload("res://resources/animations/swordsman_body_sprite_frames.tres")
+
 
 static func get_character_definitions() -> Array[Dictionary]:
 	return [
@@ -13,6 +15,11 @@ static func get_character_definitions() -> Array[Dictionary]:
 			"recommended_branches": PackedStringArray(["肉盾流", "异常流"]),
 			"weakness": "生存中低，被围住时风险较高。",
 			"exclusive_skill_id": "shadow_sword_array",
+			"body_sprite_frames": SWORDSMAN_BODY_SPRITE_FRAMES,
+			"body_visual_scale": 0.45,
+			"body_visual_offset": Vector2(0.0, 3.0),
+			"body_texture_filter": CanvasItem.TEXTURE_FILTER_LINEAR,
+			"hide_melee_weapon_visual": true,
 			"base_stats": {
 				"max_health": 90.0,
 				"projectile_damage": 14.0,

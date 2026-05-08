@@ -1,0 +1,114 @@
+[gd_resource type="SpriteFrames" load_steps=17 format=3]
+
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/down.png" id="1"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/down_right.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/right.png" id="3"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/up_right.png" id="4"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/up.png" id="5"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/up_left.png" id="6"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/left.png" id="7"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/down_left.png" id="8"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_01.png" id="9"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_02.png" id="10"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_03.png" id="11"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_04.png" id="12"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_05.png" id="13"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_06.png" id="14"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_07.png" id="15"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_08.png" id="16"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1")
+}],
+"loop": false,
+"name": &"down",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("2")
+}],
+"loop": false,
+"name": &"down_right",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("3")
+}],
+"loop": false,
+"name": &"right",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("4")
+}],
+"loop": false,
+"name": &"up_right",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5")
+}],
+"loop": false,
+"name": &"up",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("6")
+}],
+"loop": false,
+"name": &"up_left",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("7")
+}],
+"loop": false,
+"name": &"left",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("8")
+}],
+"loop": false,
+"name": &"down_left",
+"speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16")
+}],
+"loop": false,
+"name": &"sword_attack",
+"speed": 24.0
+}]
