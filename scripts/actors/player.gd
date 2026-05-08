@@ -90,6 +90,7 @@ var _exclusive_skill_display_seconds := -1
 var _exclusive_skill_cooldown_multiplier := 1.0
 var _exclusive_skill_radius_multiplier := 1.0
 var _exclusive_skill_damage_multiplier := 1.0
+var _exclusive_skill_effect_speed_multiplier := 1.0
 var _exclusive_skill_damage_taken_multiplier := 1.0
 var _exclusive_skill_defense_time_left := 0.0
 var _selected_branch_id := ""
@@ -197,6 +198,7 @@ var _default_body_visual_scale := Vector2.ONE
 var _default_body_visual_offset := Vector2.ZERO
 var _default_body_texture_filter := CanvasItem.TEXTURE_FILTER_NEAREST
 var _body_visual_base_scale := Vector2.ONE
+var _body_attack_animation_speed_multiplier := 1.0
 var _hide_melee_weapon_visual := false
 var _attack_phase: int = AttackPhase.IDLE
 var _attack_phase_time_left := 0.0
@@ -328,8 +330,10 @@ func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
 	_character_armor = maxf(float(base_stats.get("armor", 0.0)), 0.0)
 	critical_chance = clampf(float(base_stats.get("critical_chance", 0.0)), 0.0, 0.65)
 	spell_power = float(base_stats.get("spell_power", projectile_damage))
+	_body_attack_animation_speed_multiplier = maxf(float(base_stats.get("attack_animation_speed_multiplier", 1.0)), 0.1)
 	_exclusive_skill_cooldown_multiplier = maxf(float(base_stats.get("skill_cooldown_multiplier", 1.0)), 0.2)
 	_exclusive_skill_radius_multiplier = maxf(float(base_stats.get("skill_radius_multiplier", 1.0)), 0.2)
+	_exclusive_skill_effect_speed_multiplier = maxf(float(base_stats.get("skill_effect_speed", 1.0)), 0.1)
 	_exclusive_skill_definition = skill.duplicate(true)
 	_exclusive_skill_cooldown_left = 0.0
 	_exclusive_skill_cooldown_total = _exclusive_skill_total_cooldown()
@@ -543,6 +547,10 @@ func _cast_shadow_sword_array() -> bool:
 	var effect: SlashSequenceEffect = SLASH_SEQUENCE_EFFECT.new()
 	var duration: float = float(_exclusive_skill_definition.get("duration", 1.2))
 	var slash_damage: float = projectile_damage * float(_exclusive_skill_definition.get("damage_scale", 0.7)) * _exclusive_skill_damage_multiplier
+	var visual_config: Dictionary = Dictionary(_exclusive_skill_definition.get("effect_visual", {})).duplicate(true)
+	if not visual_config.is_empty():
+		var visual_speed_scale := maxf(float(visual_config.get("speed_scale", 1.0)), 0.05)
+		visual_config["speed_scale"] = visual_speed_scale * _exclusive_skill_effect_speed_multiplier
 	effect.global_position = global_position
 	effect.setup(
 		self,
@@ -552,7 +560,8 @@ func _cast_shadow_sword_array() -> bool:
 		duration,
 		int(_exclusive_skill_definition.get("max_hit_per_target", 4)),
 		float(_exclusive_skill_definition.get("knockback", knockback_force * 0.65)),
-		Color(0.86, 0.94, 1.0, 1.0)
+		Color(0.86, 0.94, 1.0, 1.0),
+		visual_config
 	)
 	effect_spawned.emit(effect)
 	_exclusive_skill_damage_taken_multiplier = clampf(float(_exclusive_skill_definition.get("damage_taken_multiplier", 0.5)), 0.15, 1.0)
@@ -1006,6 +1015,8 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			critical_damage_multiplier = clampf(critical_damage_multiplier + amount, 1.1, 3.0)
 		"spell_power":
 			spell_power = maxf(spell_power + amount, 0.0)
+		"attack_animation_speed_multiplier":
+			_body_attack_animation_speed_multiplier = clampf(_body_attack_animation_speed_multiplier + amount, 0.25, 3.0)
 		"character_armor":
 			_character_armor = clampf(_character_armor + amount, 0.0, 18.0)
 		"exclusive_skill_damage_multiplier":
@@ -1016,6 +1027,8 @@ func _apply_effect(effect_type: String, amount: float) -> void:
 			_emit_exclusive_skill_cooldown(true)
 		"exclusive_skill_radius_multiplier":
 			_exclusive_skill_radius_multiplier = clampf(_exclusive_skill_radius_multiplier + amount, 0.35, 2.4)
+		"exclusive_skill_effect_speed_multiplier":
+			_exclusive_skill_effect_speed_multiplier = clampf(_exclusive_skill_effect_speed_multiplier + amount, 0.25, 3.0)
 		"pickup_radius":
 			pickup_radius += amount
 		"unlock_pulse":
@@ -1634,7 +1647,7 @@ func _body_attack_playback_scale() -> float:
 	var phase_duration: float = maxf(_branch_windup_time + _branch_recovery_time, 0.05)
 	var clip_duration: float = _body_attack_clip_duration()
 	var phase_fit_scale: float = clip_duration / phase_duration
-	return clampf(phase_fit_scale * attack_speed_scale, BODY_ATTACK_MIN_SPEED_SCALE, BODY_ATTACK_MAX_SPEED_SCALE)
+	return clampf(phase_fit_scale * attack_speed_scale * _body_attack_animation_speed_multiplier, BODY_ATTACK_MIN_SPEED_SCALE, BODY_ATTACK_MAX_SPEED_SCALE)
 
 
 func _body_attack_clip_duration() -> float:

@@ -2,6 +2,7 @@ extends RefCounted
 class_name CharacterCatalog
 
 const SWORDSMAN_BODY_SPRITE_FRAMES := preload("res://resources/animations/swordsman_body_sprite_frames.tres")
+const SWORDSMAN_SKILL_EFFECT_SPRITE_FRAMES := preload("res://resources/animations/swordsman_skill_effect_sprite_frames.tres")
 
 
 static func get_character_definitions() -> Array[Dictionary]:
@@ -28,8 +29,10 @@ static func get_character_definitions() -> Array[Dictionary]:
 				"armor": 2.0,
 				"critical_chance": 0.08,
 				"spell_power": 8.0,
+				"attack_animation_speed_multiplier": 1.0,
 				"skill_cooldown_multiplier": 1.0,
-				"skill_radius_multiplier": 1.0
+				"skill_radius_multiplier": 1.0,
+				"skill_effect_speed": 1.0
 			}
 		},
 		{
@@ -49,8 +52,10 @@ static func get_character_definitions() -> Array[Dictionary]:
 				"armor": 1.0,
 				"critical_chance": 0.0,
 				"spell_power": 16.0,
+				"attack_animation_speed_multiplier": 1.0,
 				"skill_cooldown_multiplier": 0.95,
-				"skill_radius_multiplier": 1.1
+				"skill_radius_multiplier": 1.1,
+				"skill_effect_speed": 1.0
 			}
 		}
 	]
@@ -78,6 +83,15 @@ static func get_skill_definition(skill_id: String) -> Dictionary:
 			"max_hit_per_target": 4,
 			"damage_taken_multiplier": 0.5,
 			"knockback": 170.0,
+			"effect_visual": {
+				"sprite_frames": SWORDSMAN_SKILL_EFFECT_SPRITE_FRAMES,
+				"animation": "cast",
+				"base_size": 384.0,
+				"radius_scale": 2.35,
+				"speed_scale": 1.0,
+				"alpha": 0.92,
+				"z_index": 12
+			},
 			"tags": PackedStringArray(["melee", "slash", "burst"])
 		},
 		"arcane_bombardment": {
