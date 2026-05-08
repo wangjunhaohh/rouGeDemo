@@ -516,13 +516,33 @@ func _on_player_shot_fired(weapon_name: String) -> void:
 		audio_manager.play_sfx("shoot", 0.72, -3.0)
 		_spawn_burst(player.global_position, Color(0.43, 0.86, 1.0, 1.0), 4.0, 10, 0.24, 90.0)
 	else:
-		audio_manager.play_sfx("shoot", randf_range(0.92, 1.08), -6.0)
+		audio_manager.play_sfx(_primary_attack_sfx_name(), randf_range(0.94, 1.06), -5.0)
 
 
 func _on_player_exclusive_skill_used(skill_name: String, world_position: Vector2) -> void:
-	audio_manager.play_sfx("level_up", 0.92, -3.0)
+	audio_manager.play_sfx(_exclusive_skill_sfx_name(), 0.96, -2.5)
 	hud.show_event("专属技能：%s" % skill_name, 1.2)
 	_spawn_burst(world_position, Color(0.62, 0.84, 1.0, 1.0), 5.0, 14, 0.28, 118.0)
+
+
+func _primary_attack_sfx_name() -> String:
+	match selected_character_id:
+		"swordsman":
+			return "swordsman_attack"
+		"mage":
+			return "mage_attack"
+		_:
+			return "shoot"
+
+
+func _exclusive_skill_sfx_name() -> String:
+	match selected_character_id:
+		"swordsman":
+			return "swordsman_skill"
+		"mage":
+			return "mage_skill"
+		_:
+			return "level_up"
 
 
 func _on_player_exclusive_skill_cooldown_changed(skill_name: String, cooldown_left: float, cooldown_total: float) -> void:

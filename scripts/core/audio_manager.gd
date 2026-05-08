@@ -3,6 +3,10 @@ class_name AudioManager
 
 const SFX := {
 	"shoot": preload("res://audio/sfx/shoot.wav"),
+	"swordsman_attack": preload("res://audio/sfx/swordsman_attack.wav"),
+	"mage_attack": preload("res://audio/sfx/mage_attack.wav"),
+	"swordsman_skill": preload("res://audio/sfx/swordsman_skill.wav"),
+	"mage_skill": preload("res://audio/sfx/mage_skill.wav"),
 	"hit": preload("res://audio/sfx/hit.wav"),
 	"pickup": preload("res://audio/sfx/pickup.wav"),
 	"level_up": preload("res://audio/sfx/level_up.wav"),

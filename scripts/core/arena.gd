@@ -65,22 +65,6 @@ func _draw() -> void:
 		draw_texture_rect(arena_overlay, Rect2(rect.position + Vector2(96.0, 64.0), rect.size), true, overlay_modulate)
 	_draw_ancient_buildings()
 
-	var major_step: int = int(cell_size * 4.0)
-	var start_x: int = int(-half_size.x)
-	var end_x: int = int(half_size.x)
-	var start_y: int = int(-half_size.y)
-	var end_y: int = int(half_size.y)
-
-	var x: int = start_x
-	while x <= end_x:
-		draw_line(Vector2(x, start_y), Vector2(x, end_y), seam_color, 2.0)
-		x += major_step
-
-	var y: int = start_y
-	while y <= end_y:
-		draw_line(Vector2(start_x, y), Vector2(end_x, y), seam_color, 2.0)
-		y += major_step
-
 	draw_rect(rect, border_shadow_color, false, 6.0)
 	draw_rect(rect.grow(-32.0), border_accent_color, false, 2.0)
 	if boss_mode_active:
