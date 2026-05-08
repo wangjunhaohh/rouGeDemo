@@ -3,6 +3,8 @@ class_name CharacterCatalog
 
 const SWORDSMAN_BODY_SPRITE_FRAMES := preload("res://resources/animations/swordsman_body_sprite_frames.tres")
 const SWORDSMAN_SKILL_EFFECT_SPRITE_FRAMES := preload("res://resources/animations/swordsman_skill_effect_sprite_frames.tres")
+const MAGE_BODY_SPRITE_FRAMES := preload("res://resources/animations/mage_body_sprite_frames.tres")
+const MAGE_ICE_BIRD_SPRITE_FRAMES := preload("res://resources/animations/mage_ice_bird_sprite_frames.tres")
 
 
 static func get_character_definitions() -> Array[Dictionary]:
@@ -20,6 +22,14 @@ static func get_character_definitions() -> Array[Dictionary]:
 			"body_visual_scale": 0.45,
 			"body_visual_offset": Vector2(0.0, 3.0),
 			"body_texture_filter": CanvasItem.TEXTURE_FILTER_LINEAR,
+			"primary_attack_type": "melee",
+			"primary_attack_range": 104.0,
+			"primary_attack_arc": 110.0,
+			"primary_windup_time": 0.18,
+			"primary_recovery_time": 0.15,
+			"primary_hit_frame_progress": 0.68,
+			"primary_attack_animation": "sword_attack",
+			"hide_primary_weapon_visual": true,
 			"hide_melee_weapon_visual": true,
 			"base_stats": {
 				"max_health": 90.0,
@@ -44,6 +54,31 @@ static func get_character_definitions() -> Array[Dictionary]:
 			"recommended_branches": PackedStringArray(["异常流", "召唤流"]),
 			"weakness": "身板脆，怕被近身，技能空窗期压力较高。",
 			"exclusive_skill_id": "arcane_bombardment",
+			"body_sprite_frames": MAGE_BODY_SPRITE_FRAMES,
+			"body_visual_scale": 0.45,
+			"body_visual_offset": Vector2(0.0, 3.0),
+			"body_texture_filter": CanvasItem.TEXTURE_FILTER_LINEAR,
+			"primary_attack_type": "projectile",
+			"primary_windup_time": 0.2,
+			"primary_recovery_time": 0.12,
+			"primary_hit_frame_progress": 0.68,
+			"primary_muzzle_distance": 24.0,
+			"primary_attack_animation": "ice_attack",
+			"primary_attack_spawn_frame": 4,
+			"hide_primary_weapon_visual": true,
+			"primary_projectile": {
+				"sprite_frames": MAGE_ICE_BIRD_SPRITE_FRAMES,
+				"flight_animation": "flight",
+				"impact_animation": "impact",
+				"visual_scale": 0.45,
+				"collision_radius": 18.0,
+				"area_damage_radius": 30.0,
+				"impact_duration": 0.12,
+				"speed_multiplier": 0.95,
+				"spin": 0.0,
+				"texture_filter": CanvasItem.TEXTURE_FILTER_LINEAR,
+				"area_damage_on_impact": true
+			},
 			"base_stats": {
 				"max_health": 75.0,
 				"projectile_damage": 8.0,

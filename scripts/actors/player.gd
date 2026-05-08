@@ -201,6 +201,17 @@ var _default_body_texture_filter := CanvasItem.TEXTURE_FILTER_NEAREST
 var _body_visual_base_scale := Vector2.ONE
 var _body_attack_animation_speed_multiplier := 1.0
 var _hide_melee_weapon_visual := false
+var _hide_primary_weapon_visual := false
+var _primary_attack_type := ""
+var _primary_attack_range := -1.0
+var _primary_attack_arc := -1.0
+var _primary_windup_time := -1.0
+var _primary_recovery_time := -1.0
+var _primary_hit_frame_progress := -1.0
+var _primary_muzzle_distance := -1.0
+var _primary_attack_animation_key := ""
+var _primary_attack_spawn_frame := 0
+var _primary_projectile_config: Dictionary = {}
 var _attack_phase: int = AttackPhase.IDLE
 var _attack_phase_time_left := 0.0
 var _attack_direction := Vector2.RIGHT
@@ -320,6 +331,16 @@ func apply_meta_bonus(effect_type: String, amount: float) -> void:
 func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
 	_selected_character_id = String(character.get("id", ""))
 	_selected_character_name = String(character.get("name", ""))
+	_primary_attack_type = String(character.get("primary_attack_type", ""))
+	_primary_attack_range = float(character.get("primary_attack_range", -1.0))
+	_primary_attack_arc = float(character.get("primary_attack_arc", -1.0))
+	_primary_windup_time = float(character.get("primary_windup_time", -1.0))
+	_primary_recovery_time = float(character.get("primary_recovery_time", -1.0))
+	_primary_hit_frame_progress = float(character.get("primary_hit_frame_progress", -1.0))
+	_primary_muzzle_distance = float(character.get("primary_muzzle_distance", -1.0))
+	_primary_attack_animation_key = String(character.get("primary_attack_animation", ""))
+	_primary_attack_spawn_frame = max(0, int(character.get("primary_attack_spawn_frame", 0)))
+	_primary_projectile_config = Dictionary(character.get("primary_projectile", {})).duplicate(true)
 	_apply_character_body_visual(character)
 	var base_stats: Dictionary = Dictionary(character.get("base_stats", {}))
 	max_health = float(base_stats.get("max_health", max_health))
@@ -782,7 +803,7 @@ func _handle_movement(delta: float) -> void:
 func _handle_attack(delta: float) -> void:
 	if _dead:
 		return
-	if _branch_weapon_type != "melee" and projectile_scene == null:
+	if _current_primary_attack_type() != "melee" and projectile_scene == null:
 		return
 	_projectile_timer = maxf(_projectile_timer - delta, 0.0)
 	_update_attack_state(delta)
@@ -804,7 +825,7 @@ func _handle_attack(delta: float) -> void:
 func _pick_primary_attack_target(targets: Array[Node2D]) -> Node2D:
 	if targets.is_empty():
 		return null
-	if _branch_weapon_type != "melee":
+	if _current_primary_attack_type() != "melee":
 		return targets[0]
 	var melee_reach: float = _current_melee_reach() + 20.0
 	for target in targets:
@@ -823,11 +844,11 @@ func _start_primary_attack(target_position: Vector2) -> void:
 	_attack_direction = direction
 	_attack_target_position = target_position
 	_attack_phase = AttackPhase.WINDUP
-	_attack_phase_time_left = maxf(_branch_windup_time, 0.01)
+	_attack_phase_time_left = maxf(_current_primary_windup_time(), 0.01)
 	_attack_hit_resolved = false
 	_aim_direction = direction
 	_set_slash_hitbox_active(false)
-	if _branch_weapon_type == "melee":
+	if _should_play_body_attack_animation():
 		_start_body_attack_animation(direction)
 	body_visual.scale = Vector2(_body_visual_base_scale.x * 1.03, _body_visual_base_scale.y * 0.98)
 
@@ -839,14 +860,18 @@ func _update_attack_state(delta: float) -> void:
 	if _attack_phase == AttackPhase.WINDUP:
 		if _attack_hit_resolved:
 			return
-		if _attack_phase_progress(_branch_windup_time) < _branch_hit_frame_progress and _attack_phase_time_left > 0.0:
-			return
+		if _uses_body_frame_attack_spawn():
+			if not _body_attack_spawn_frame_reached():
+				return
+		else:
+			if _attack_phase_progress(_current_primary_windup_time()) < _current_primary_hit_frame_progress() and _attack_phase_time_left > 0.0:
+				return
 		_attack_hit_resolved = true
 		_resolve_primary_attack()
-		if _branch_weapon_type == "melee":
+		if _current_primary_attack_type() == "melee":
 			_set_slash_hitbox_active(true)
 		_attack_phase = AttackPhase.RECOVERY
-		_attack_phase_time_left = maxf(_branch_recovery_time, 0.01)
+		_attack_phase_time_left = maxf(_current_primary_recovery_time(), 0.01)
 		return
 	if _attack_phase == AttackPhase.RECOVERY and _attack_phase_time_left <= 0.0:
 		_attack_phase = AttackPhase.IDLE
@@ -859,7 +884,7 @@ func _resolve_primary_attack() -> void:
 	var shot_count: int = max(projectile_count + _get_bonus_projectile_count(), 1)
 	var overcharge_active: bool = _has_overcharge_synergy() and _attack_sequence % 4 == 0
 	_trigger_weapon_fire(_attack_direction, overcharge_active)
-	match _branch_weapon_type:
+	match _current_primary_attack_type():
 		"melee":
 			_perform_melee_attack(shot_count, overcharge_active)
 		"thrown":
@@ -875,9 +900,10 @@ func _resolve_primary_attack() -> void:
 	if overcharge_active:
 		trigger_camera_shake(3.0, 0.07)
 	var shot_name := "projectile"
-	if _branch_weapon_type == "melee":
+	var primary_attack_type := _current_primary_attack_type()
+	if primary_attack_type == "melee":
 		shot_name = "melee"
-	elif _branch_weapon_type == "thrown":
+	elif primary_attack_type == "thrown" or primary_attack_type == "projectile":
 		shot_name = "spell"
 	else:
 		shot_name = "command"
@@ -944,10 +970,17 @@ func _spawn_primary_projectile(direction: Vector2, overcharge_active: bool, bonu
 	if projectile == null:
 		return
 	var projectile_damage_value: float = _roll_primary_damage(projectile_damage * (1.45 if overcharge_active else 1.0))
+	var projectile_config := _primary_projectile_config
 	var projectile_speed_value: float = projectile_speed * _branch_projectile_speed_multiplier * (1.12 if overcharge_active else 1.0)
+	projectile_speed_value *= float(projectile_config.get("speed_multiplier", 1.0))
 	var projectile_range_value: float = projectile_range * _branch_projectile_range_multiplier + (32.0 if _has_linebreak_synergy() else 0.0)
+	projectile_range_value *= float(projectile_config.get("range_multiplier", 1.0))
 	var projectile_pierce_value: int = projectile_pierce + (1 if bonus_pierce else 0)
+	if projectile_config.has("pierce_override"):
+		projectile_pierce_value = int(projectile_config.get("pierce_override", projectile_pierce_value))
 	projectile.global_position = _attack_point_world_position(direction)
+	if not projectile_config.is_empty():
+		projectile.global_position += direction.normalized() * float(projectile_config.get("spawn_offset", 0.0))
 	projectile.setup(
 		projectile_damage_value,
 		direction,
@@ -960,17 +993,61 @@ func _spawn_primary_projectile(direction: Vector2, overcharge_active: bool, bonu
 		_branch_projectile_scale,
 		_branch_projectile_spin
 	)
+	if not projectile_config.is_empty():
+		projectile.apply_projectile_visual_config(projectile_config)
 	_configure_status_payload(projectile)
 	projectile.set_damage_vs_status_multiplier(_branch_status_damage_multiplier)
 	projectile_spawned.emit(projectile)
 
 
 func _current_melee_reach() -> float:
-	return _branch_attack_range + maxf(projectile_range - 420.0, 0.0) * 0.18 + float(projectile_pierce) * 7.0
+	return _current_primary_attack_range() + maxf(projectile_range - 420.0, 0.0) * 0.18 + float(projectile_pierce) * 7.0
 
 
 func _current_melee_arc() -> float:
-	return _branch_attack_arc + float(projectile_pierce) * 8.0
+	return _current_primary_attack_arc() + float(projectile_pierce) * 8.0
+
+
+func _current_primary_attack_type() -> String:
+	if not _primary_attack_type.is_empty():
+		return _primary_attack_type
+	return _branch_weapon_type
+
+
+func _current_primary_attack_range() -> float:
+	if _primary_attack_range > 0.0:
+		return maxf(_primary_attack_range, _branch_attack_range)
+	return _branch_attack_range
+
+
+func _current_primary_attack_arc() -> float:
+	if _primary_attack_arc > 0.0:
+		return maxf(_primary_attack_arc, _branch_attack_arc)
+	return _branch_attack_arc
+
+
+func _current_primary_windup_time() -> float:
+	if _primary_windup_time >= 0.0:
+		return _primary_windup_time
+	return _branch_windup_time
+
+
+func _current_primary_recovery_time() -> float:
+	if _primary_recovery_time >= 0.0:
+		return _primary_recovery_time
+	return _branch_recovery_time
+
+
+func _current_primary_hit_frame_progress() -> float:
+	if _primary_hit_frame_progress >= 0.0:
+		return clampf(_primary_hit_frame_progress, 0.15, 1.0)
+	return _branch_hit_frame_progress
+
+
+func _current_primary_muzzle_distance() -> float:
+	if _primary_muzzle_distance >= 0.0:
+		return _primary_muzzle_distance
+	return _branch_muzzle_distance
 
 
 func _handle_pulse(delta: float) -> void:
@@ -1405,7 +1482,7 @@ func _configure_camera() -> void:
 
 func _trigger_weapon_fire(direction: Vector2, overcharge_active: bool) -> void:
 	_aim_direction = direction
-	match _branch_weapon_type:
+	match _current_primary_attack_type():
 		"melee":
 			_weapon_recoil_strength = 1.9 if overcharge_active else 1.2
 			_weapon_flash_left = 0.14 if overcharge_active else 0.11
@@ -1457,16 +1534,16 @@ func _update_weapon_animation(delta: float) -> void:
 	var weapon_texture: Texture2D = _sequence_frame(_branch_weapon_sequences, weapon_phase_key, weapon_phase_progress, _branch_weapon_frame("idle"))
 	var flash_position := direction * _branch_flash_distance
 	var flash_rotation := direction.angle()
-	match _branch_weapon_type:
+	match _current_primary_attack_type():
 		"melee":
 			if _attack_phase == AttackPhase.WINDUP:
-				var windup_progress := _attack_phase_progress(_branch_windup_time)
+				var windup_progress := _attack_phase_progress(_current_primary_windup_time())
 				weapon_phase_key = "windup"
 				weapon_phase_progress = windup_progress
 				weapon_position = direction.rotated(-0.9) * (_branch_weapon_length - 5.0 + windup_progress * 3.0)
 				weapon_rotation = direction.angle() - 1.2 + windup_progress * 0.32
 			elif _attack_phase == AttackPhase.RECOVERY:
-				var recovery_progress := _attack_phase_progress(_branch_recovery_time)
+				var recovery_progress := _attack_phase_progress(_current_primary_recovery_time())
 				if recovery_progress < 0.42:
 					weapon_phase_key = "release"
 					weapon_phase_progress = recovery_progress / 0.42
@@ -1484,13 +1561,13 @@ func _update_weapon_animation(delta: float) -> void:
 			flash_rotation = direction.angle() + 0.24
 		"thrown":
 			if _attack_phase == AttackPhase.WINDUP:
-				var cast_progress := _attack_phase_progress(_branch_windup_time)
+				var cast_progress := _attack_phase_progress(_current_primary_windup_time())
 				weapon_phase_key = "windup"
 				weapon_phase_progress = cast_progress
 				weapon_position = direction.rotated(-0.46) * (_branch_weapon_length - 4.0)
 				weapon_rotation = direction.angle() - 0.72 + cast_progress * 0.18
 			elif _attack_phase == AttackPhase.RECOVERY:
-				var release_progress := _attack_phase_progress(_branch_recovery_time)
+				var release_progress := _attack_phase_progress(_current_primary_recovery_time())
 				if release_progress < 0.58:
 					weapon_phase_key = "release"
 					weapon_phase_progress = release_progress / 0.58
@@ -1508,13 +1585,13 @@ func _update_weapon_animation(delta: float) -> void:
 			flash_rotation = direction.angle()
 		_:
 			if _attack_phase == AttackPhase.WINDUP:
-				var charge_progress := _attack_phase_progress(_branch_windup_time)
+				var charge_progress := _attack_phase_progress(_current_primary_windup_time())
 				weapon_phase_key = "windup"
 				weapon_phase_progress = charge_progress
 				weapon_position = direction * (_branch_weapon_length - 4.0)
 				weapon_rotation = direction.angle() - 0.18 + charge_progress * 0.08
 			elif _attack_phase == AttackPhase.RECOVERY:
-				var release_snap_progress := _attack_phase_progress(_branch_recovery_time)
+				var release_snap_progress := _attack_phase_progress(_current_primary_recovery_time())
 				if release_snap_progress < 0.62:
 					weapon_phase_key = "release"
 					weapon_phase_progress = release_snap_progress / 0.62
@@ -1604,6 +1681,7 @@ func _apply_character_body_visual(character: Dictionary) -> void:
 	body_visual.offset = raw_visual_offset if typeof(raw_visual_offset) == TYPE_VECTOR2 else _default_body_visual_offset
 	body_visual.texture_filter = int(character.get("body_texture_filter", _default_body_texture_filter))
 	_hide_melee_weapon_visual = bool(character.get("hide_melee_weapon_visual", false))
+	_hide_primary_weapon_visual = bool(character.get("hide_primary_weapon_visual", false))
 	_sync_weapon_visual_visibility()
 	_update_body_direction_sprite(_last_move_direction, true)
 
@@ -1611,7 +1689,7 @@ func _apply_character_body_visual(character: Dictionary) -> void:
 func _sync_weapon_visual_visibility() -> bool:
 	if weapon_visual == null or weapon_trail == null or weapon_impact == null:
 		return false
-	var hide_weapon_visual := _hide_melee_weapon_visual and _branch_weapon_type == "melee"
+	var hide_weapon_visual := _hide_primary_weapon_visual or (_hide_melee_weapon_visual and _current_primary_attack_type() == "melee")
 	weapon_visual.visible = not hide_weapon_visual
 	weapon_trail.visible = not hide_weapon_visual
 	weapon_impact.visible = not hide_weapon_visual
@@ -1643,7 +1721,7 @@ func _set_body_animation(animation_key: String, frame_index: int, flip_h: bool) 
 
 
 func _update_body_animation(direction: Vector2) -> void:
-	if _branch_weapon_type == "melee" and _attack_phase != AttackPhase.IDLE:
+	if _should_play_body_attack_animation() and _attack_phase != AttackPhase.IDLE:
 		var attack_direction: Vector2 = direction
 		if attack_direction == Vector2.ZERO:
 			attack_direction = _last_move_direction
@@ -1652,37 +1730,67 @@ func _update_body_animation(direction: Vector2) -> void:
 	_update_body_direction_sprite(direction)
 
 
+func _should_play_body_attack_animation() -> bool:
+	return _current_primary_attack_type() == "melee" or not _primary_attack_animation_key.is_empty()
+
+
+func _uses_body_frame_attack_spawn() -> bool:
+	return _primary_attack_spawn_frame > 0 and not _primary_attack_animation_key.is_empty() and _can_play_body_attack_animation()
+
+
+func _body_attack_spawn_frame_reached() -> bool:
+	if body_visual == null or body_visual.sprite_frames == null:
+		return false
+	var animation_key := _body_attack_animation_key()
+	if body_visual.animation != animation_key:
+		return false
+	var frame_count := body_visual.sprite_frames.get_frame_count(animation_key)
+	if frame_count <= 0:
+		return false
+	var target_frame := clampi(_primary_attack_spawn_frame - 1, 0, frame_count - 1)
+	return body_visual.frame >= target_frame
+
+
+func _body_attack_animation_key() -> String:
+	if not _primary_attack_animation_key.is_empty():
+		return _primary_attack_animation_key
+	return BODY_SWORD_ATTACK_ANIMATION
+
+
 func _start_body_attack_animation(direction: Vector2) -> void:
 	if not _can_play_body_attack_animation():
 		return
 	# 攻击动画交给 Player 下的 AnimatedSprite2D 播放，脚本只同步朝向和攻速倍率。
+	var animation_key := _body_attack_animation_key()
 	body_visual.flip_h = direction.x < -0.08
 	body_visual.speed_scale = _body_attack_playback_scale()
 	body_visual.frame = 0
 	body_visual.frame_progress = 0.0
-	body_visual.play(BODY_SWORD_ATTACK_ANIMATION)
+	body_visual.play(animation_key)
 
 
 func _sync_body_attack_animation(direction: Vector2) -> void:
 	if not _can_play_body_attack_animation():
 		return
+	var animation_key := _body_attack_animation_key()
 	body_visual.flip_h = direction.x < -0.08
 	body_visual.speed_scale = _body_attack_playback_scale()
-	if body_visual.animation != BODY_SWORD_ATTACK_ANIMATION:
+	if body_visual.animation != animation_key:
 		_start_body_attack_animation(direction)
 
 
 func _can_play_body_attack_animation() -> bool:
 	if body_visual == null or body_visual.sprite_frames == null:
 		return false
-	if not body_visual.sprite_frames.has_animation(BODY_SWORD_ATTACK_ANIMATION):
+	var animation_key := _body_attack_animation_key()
+	if animation_key.is_empty() or not body_visual.sprite_frames.has_animation(animation_key):
 		return false
-	return body_visual.sprite_frames.get_frame_count(BODY_SWORD_ATTACK_ANIMATION) > 0
+	return body_visual.sprite_frames.get_frame_count(animation_key) > 0
 
 
 func _body_attack_playback_scale() -> float:
 	var attack_speed_scale: float = BODY_ATTACK_BASE_COOLDOWN / maxf(projectile_cooldown, 0.05)
-	var phase_duration: float = maxf(_branch_windup_time + _branch_recovery_time, 0.05)
+	var phase_duration: float = maxf(_current_primary_windup_time() + _current_primary_recovery_time(), 0.05)
 	var clip_duration: float = _body_attack_clip_duration()
 	var phase_fit_scale: float = clip_duration / phase_duration
 	return clampf(phase_fit_scale * attack_speed_scale * _body_attack_animation_speed_multiplier, BODY_ATTACK_MIN_SPEED_SCALE, BODY_ATTACK_MAX_SPEED_SCALE)
@@ -1690,9 +1798,10 @@ func _body_attack_playback_scale() -> float:
 
 func _body_attack_clip_duration() -> float:
 	if not _can_play_body_attack_animation():
-		return maxf(_branch_windup_time + _branch_recovery_time, 0.05)
-	var frame_count: int = body_visual.sprite_frames.get_frame_count(BODY_SWORD_ATTACK_ANIMATION)
-	var animation_speed: float = maxf(body_visual.sprite_frames.get_animation_speed(BODY_SWORD_ATTACK_ANIMATION), 1.0)
+		return maxf(_current_primary_windup_time() + _current_primary_recovery_time(), 0.05)
+	var animation_key := _body_attack_animation_key()
+	var frame_count: int = body_visual.sprite_frames.get_frame_count(animation_key)
+	var animation_speed: float = maxf(body_visual.sprite_frames.get_animation_speed(animation_key), 1.0)
 	return float(frame_count) / animation_speed
 
 
@@ -1702,7 +1811,7 @@ func _attack_point_local_position(direction: Vector2) -> Vector2:
 		resolved_direction = _last_move_direction
 	if resolved_direction == Vector2.ZERO:
 		resolved_direction = Vector2.RIGHT
-	return ATTACHMENT_PIVOT_OFFSET + resolved_direction * _branch_muzzle_distance
+	return ATTACHMENT_PIVOT_OFFSET + resolved_direction * _current_primary_muzzle_distance()
 
 
 func _attack_point_world_position(direction: Vector2) -> Vector2:
