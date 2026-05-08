@@ -12,6 +12,7 @@ var tint := Color(0.84, 0.94, 1.0, 1.0)
 
 var _elapsed := 0.0
 var _visual_total_duration := 0.0
+var _visual_hold_time := 0.0
 var _next_slash_index := 0
 var _hit_counts: Dictionary = {}
 var _slash_marks: Array[Dictionary] = []
@@ -35,6 +36,8 @@ func _physics_process(delta: float) -> void:
 	_elapsed += delta
 	if is_instance_valid(caster):
 		global_position = caster.global_position
+	if _uses_visual_frames and _visual_sprite != null and _visual_sprite.visible and _elapsed >= _visual_total_duration + _visual_hold_time:
+		_visual_sprite.visible = false
 	var interval: float = duration / float(slash_count)
 	while _next_slash_index < slash_count and _elapsed >= interval * float(_next_slash_index):
 		_apply_slash(_next_slash_index)
@@ -111,6 +114,7 @@ func _apply_visual_config(visual_config: Dictionary) -> void:
 	var alpha := clampf(float(visual_config.get("alpha", 1.0)), 0.0, 1.0)
 	_visual_sprite.modulate = Color(1.0, 1.0, 1.0, alpha)
 	_visual_sprite.speed_scale = maxf(float(visual_config.get("speed_scale", 1.0)), 0.05)
+	_visual_hold_time = maxf(float(visual_config.get("hold_time", 0.0)), 0.0)
 	add_child(_visual_sprite)
 	_visual_sprite.play(animation_name)
 

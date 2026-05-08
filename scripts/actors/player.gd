@@ -93,6 +93,7 @@ var _exclusive_skill_damage_multiplier := 1.0
 var _exclusive_skill_effect_speed_multiplier := 1.0
 var _exclusive_skill_damage_taken_multiplier := 1.0
 var _exclusive_skill_defense_time_left := 0.0
+var _exclusive_skill_move_lock_left := 0.0
 var _selected_branch_id := ""
 var _selected_branch_name := ""
 var _branch_damage_taken_multiplier := 1.0
@@ -513,6 +514,7 @@ func _handle_exclusive_skill_timers(delta: float) -> void:
 	if _exclusive_skill_cooldown_left > 0.0:
 		_exclusive_skill_cooldown_left = maxf(_exclusive_skill_cooldown_left - delta, 0.0)
 		_emit_exclusive_skill_cooldown(false)
+	_exclusive_skill_move_lock_left = maxf(_exclusive_skill_move_lock_left - delta, 0.0)
 	if _exclusive_skill_defense_time_left <= 0.0:
 		_exclusive_skill_damage_taken_multiplier = 1.0
 		return
@@ -566,6 +568,7 @@ func _cast_shadow_sword_array() -> bool:
 	effect_spawned.emit(effect)
 	_exclusive_skill_damage_taken_multiplier = clampf(float(_exclusive_skill_definition.get("damage_taken_multiplier", 0.5)), 0.15, 1.0)
 	_exclusive_skill_defense_time_left = duration
+	_exclusive_skill_move_lock_left = maxf(_exclusive_skill_move_lock_left, _exclusive_skill_move_lock_duration(visual_config, duration))
 	trigger_camera_shake(4.4, 0.12)
 	return true
 
@@ -654,6 +657,30 @@ func _spread_death_statuses(enemy: Enemy, status_snapshot: Dictionary) -> void:
 		enemy.apply_status_effect("control", minf(_branch_control_duration, 0.32), 0.0)
 
 
+func _exclusive_skill_move_lock_duration(visual_config: Dictionary, fallback_duration: float) -> float:
+	var configured_duration := float(_exclusive_skill_definition.get("movement_lock_duration", -1.0))
+	if configured_duration >= 0.0:
+		return configured_duration
+	if visual_config.is_empty():
+		return fallback_duration
+	var sprite_frames := visual_config.get("sprite_frames", null) as SpriteFrames
+	if sprite_frames == null:
+		return fallback_duration
+	var animation_name := String(visual_config.get("animation", "cast"))
+	if animation_name.is_empty() or not sprite_frames.has_animation(animation_name):
+		var names := sprite_frames.get_animation_names()
+		if names.is_empty():
+			return fallback_duration
+		animation_name = String(names[0])
+	var frame_count := sprite_frames.get_frame_count(animation_name)
+	if frame_count <= 0:
+		return fallback_duration
+	var animation_speed := maxf(sprite_frames.get_animation_speed(animation_name), 1.0)
+	var speed_scale := maxf(float(visual_config.get("speed_scale", 1.0)), 0.05)
+	var hold_time := maxf(float(visual_config.get("hold_time", 0.0)), 0.0)
+	return float(frame_count) / (animation_speed * speed_scale) + hold_time
+
+
 func get_build_summary() -> String:
 	var pulse_text := "未解锁"
 	if pulse_enabled:
@@ -723,6 +750,17 @@ func get_pause_detail_lines() -> Array[String]:
 
 
 func _handle_movement(delta: float) -> void:
+	if _exclusive_skill_move_lock_left > 0.0:
+		velocity = Vector2.ZERO
+		move_and_slide()
+		global_position = Vector2(
+			clampf(global_position.x, -arena_half_size.x, arena_half_size.x),
+			clampf(global_position.y, -arena_half_size.y, arena_half_size.y)
+		)
+		if _attack_phase == AttackPhase.IDLE:
+			_update_body_direction_sprite(_last_move_direction)
+		return
+
 	var input_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_direction.length() > 0.0:
 		_last_move_direction = input_direction.normalized()
