@@ -14,7 +14,7 @@ var _display_branches: Array[Dictionary] = []
 var _detail_tween: Tween
 var _active_detail_key := ""
 
-@onready var title_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/TitleLabel
+@onready var title_label: Label = $ScreenTitleLabel
 @onready var subtitle_label: Label = $CenterContainer/Panel/MarginContainer/VBoxContainer/SubTitleLabel
 @onready var panel: PanelContainer = $CenterContainer/Panel
 @onready var backdrop: ColorRect = $Backdrop
@@ -32,7 +32,7 @@ func _ready() -> void:
 	InkUIStyle.apply_screen_panel(panel)
 	InkUIStyle.apply_dial_center_panel(detail_panel)
 	subtitle_label.visible = false
-	InkUIStyle.apply_label_colors(title_label)
+	InkUIStyle.apply_ink_heading(title_label, 34)
 	InkUIStyle.apply_label_colors(detail_title_label, detail_summary_label)
 	InkUIStyle.apply_label_colors(detail_description_label, detail_hint_label)
 	backdrop.color = Color(0.01, 0.015, 0.014, 0.48)
@@ -184,11 +184,9 @@ func _set_center_content(key: String, title: String, summary: String, descriptio
 func _apply_center_text(title: String, summary: String, description: String, hint: String) -> void:
 	detail_title_label.text = title
 	detail_summary_label.text = ""
-	var body_text := description
-	if not summary.is_empty() and not description.is_empty():
-		body_text = "%s\n%s" % [summary, description]
-	elif not summary.is_empty():
-		body_text = summary
+	var body_text := summary
+	if body_text.is_empty():
+		body_text = description
 	detail_description_label.text = body_text
 	detail_description_label.visible = not body_text.is_empty()
 	detail_hint_label.text = ""
@@ -197,13 +195,16 @@ func _apply_center_text(title: String, summary: String, description: String, hin
 func _configure_center_text_bounds() -> void:
 	detail_summary_label.visible = false
 	detail_hint_label.visible = false
+	InkUIStyle.apply_ink_heading(detail_title_label, 30, Color(0.12, 0.1, 0.07, 1.0))
+	InkUIStyle.apply_ink_body_label(detail_description_label, 16)
 	for label in [detail_description_label]:
 		label.clip_text = true
 		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	detail_title_label.clip_text = true
 	detail_title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	detail_description_label.max_lines_visible = 4
+	detail_description_label.max_lines_visible = 3
 
 
 func _orbit_button_rotation(angle: float) -> float:

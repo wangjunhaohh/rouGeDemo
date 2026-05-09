@@ -8,6 +8,7 @@ const CARD_BG := Color(0.07, 0.085, 0.08, 0.86)
 const CARD_HOVER_BG := Color(0.1, 0.12, 0.105, 0.94)
 const INK_TEXT := Color(0.93, 0.91, 0.84, 1.0)
 const MUTED_TEXT := Color(0.72, 0.75, 0.68, 1.0)
+const INK_BRUSH_FONT := preload("res://art/fonts/MaShanZheng-Regular.ttf")
 const BRANCH_PLAQUE_NORMAL := preload("res://art/ui/branch_plaque.png")
 const BRANCH_PLAQUE_HOVER := preload("res://art/ui/branch_plaque_hover.png")
 const BRANCH_PLAQUE_PRESSED := preload("res://art/ui/branch_plaque_pressed.png")
@@ -50,6 +51,7 @@ static func apply_character_button(button: Button, accent: Color = Color(0.78, 0
 
 static func apply_orbit_button(button: Button, accent: Color = Color(0.78, 0.68, 0.46, 1.0)) -> void:
 	_apply_button_base(button, 18)
+	button.add_theme_font_override("font", INK_BRUSH_FONT)
 	button.add_theme_stylebox_override("normal", _make_texture_box(BRANCH_PLAQUE_NORMAL))
 	button.add_theme_stylebox_override("hover", _make_texture_box(BRANCH_PLAQUE_HOVER))
 	button.add_theme_stylebox_override("pressed", _make_texture_box(BRANCH_PLAQUE_PRESSED))
@@ -71,6 +73,23 @@ static func apply_label_colors(title: Label, subtitle: Label = null) -> void:
 		subtitle.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.55))
 		subtitle.add_theme_constant_override("shadow_offset_x", 1)
 		subtitle.add_theme_constant_override("shadow_offset_y", 1)
+
+
+static func apply_ink_heading(label: Label, font_size: int, font_color: Color = INK_TEXT) -> void:
+	label.add_theme_font_override("font", INK_BRUSH_FONT)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", font_color)
+	label.add_theme_color_override("font_shadow_color", Color(0.0, 0.0, 0.0, 0.82))
+	label.add_theme_constant_override("shadow_offset_x", 2)
+	label.add_theme_constant_override("shadow_offset_y", 2)
+
+
+static func apply_ink_body_label(label: Label, font_size: int) -> void:
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", Color(0.12, 0.11, 0.08, 1.0))
+	label.add_theme_color_override("font_shadow_color", Color(0.94, 0.96, 0.88, 0.78))
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
 
 
 static func _apply_button_base(button: Button, font_size: int) -> void:

@@ -62,10 +62,11 @@ layout_mode = 2
 theme_override_constants/separation = 14
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
+visible = false
 layout_mode = 2
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 28
-text = "选择本局主分支"
+text = ""
 
 [node name="SubTitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 visible = false
@@ -109,12 +110,13 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -150.0
-offset_top = -112.0
-offset_right = 150.0
-offset_bottom = 112.0
+offset_left = -162.0
+offset_top = -98.0
+offset_right = 162.0
+offset_bottom = 98.0
 grow_horizontal = 2
 grow_vertical = 2
+clip_contents = true
 
 [node name="MarginContainer" type="MarginContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/DialArea/CenterInfoPanel"]
 layout_mode = 2
@@ -126,13 +128,14 @@ theme_override_constants/margin_bottom = 12
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/DialArea/CenterInfoPanel/MarginContainer"]
 layout_mode = 2
 theme_override_constants/separation = 8
+alignment = 1
 
 [node name="DetailTitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/DialArea/CenterInfoPanel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 horizontal_alignment = 1
 clip_text = true
 text_overrun_behavior = 3
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 30
 text = "肉盾流"
 
 [node name="DetailSummaryLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/DialArea/CenterInfoPanel/MarginContainer/VBoxContainer"]
@@ -150,10 +153,11 @@ text = ""
 layout_mode = 2
 size_flags_vertical = 3
 horizontal_alignment = 1
+vertical_alignment = 1
 clip_text = true
 text_overrun_behavior = 3
-max_lines_visible = 4
-theme_override_font_sizes/font_size = 12
+max_lines_visible = 3
+theme_override_font_sizes/font_size = 16
 autowrap_mode = 3
 text = "悬浮外圈分支时显示说明。"
 
@@ -196,3 +200,12 @@ custom_minimum_size = Vector2(192, 72)
 theme_override_font_sizes/font_size = 18
 autowrap_mode = 3
 text = "召唤流"
+
+[node name="ScreenTitleLabel" type="Label" parent="."]
+layout_mode = 1
+offset_left = 34.0
+offset_top = 26.0
+offset_right = 420.0
+offset_bottom = 78.0
+theme_override_font_sizes/font_size = 34
+text = "选择本局主分支"
