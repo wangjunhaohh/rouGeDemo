@@ -1,7 +1,8 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/character_select_panel.gd" id="1"]
 [ext_resource type="Texture2D" path="res://art/backgrounds/ink_popup_wide.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/ui/ink_dragon_popup_frame.png" id="3"]
 
 [node name="CharacterSelectPanel" type="Control"]
 visible = false
@@ -21,7 +22,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.68)
+color = Color(0.01, 0.015, 0.014, 0.72)
 
 [node name="CenterContainer" type="CenterContainer" parent="."]
 layout_mode = 1
@@ -33,9 +34,10 @@ grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
 layout_mode = 2
-custom_minimum_size = Vector2(1080, 390)
+custom_minimum_size = Vector2(1040, 430)
 
 [node name="PanelTexture" type="TextureRect" parent="CenterContainer/Panel"]
+modulate = Color(0.78, 0.82, 0.76, 0.82)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -48,12 +50,29 @@ texture_filter = 0
 expand_mode = 1
 stretch_mode = 6
 
+[node name="DragonFrame" type="TextureRect" parent="CenterContainer/Panel"]
+modulate = Color(1, 1, 1, 0.88)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -36.0
+offset_top = -26.0
+offset_right = 36.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="MarginContainer" type="MarginContainer" parent="CenterContainer/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 24
-theme_override_constants/margin_top = 24
-theme_override_constants/margin_right = 24
-theme_override_constants/margin_bottom = 24
+theme_override_constants/margin_left = 42
+theme_override_constants/margin_top = 34
+theme_override_constants/margin_right = 42
+theme_override_constants/margin_bottom = 34
 
 [node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/MarginContainer"]
 layout_mode = 2
@@ -62,7 +81,7 @@ theme_override_constants/separation = 18
 [node name="TitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
 horizontal_alignment = 1
-theme_override_font_sizes/font_size = 26
+theme_override_font_sizes/font_size = 28
 text = "选择出战人物"
 
 [node name="SubTitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
@@ -70,16 +89,17 @@ layout_mode = 2
 horizontal_alignment = 1
 theme_override_font_sizes/font_size = 15
 autowrap_mode = 3
-text = "人物决定基础属性和专属技能，随后仍可选择本局主分支。"
+text = "人物决定基础攻击、专属技能和初始节奏，随后选择本局主分支。"
 
 [node name="Options" type="HBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
 layout_mode = 2
+size_flags_vertical = 3
 theme_override_constants/separation = 18
 
 [node name="OptionA" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/Options"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 230)
+custom_minimum_size = Vector2(0, 246)
 theme_override_font_sizes/font_size = 17
 autowrap_mode = 3
 text = "人物 A"
@@ -87,7 +107,7 @@ text = "人物 A"
 [node name="OptionB" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/Options"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 230)
+custom_minimum_size = Vector2(0, 246)
 theme_override_font_sizes/font_size = 17
 autowrap_mode = 3
 text = "人物 B"
@@ -95,7 +115,7 @@ text = "人物 B"
 [node name="OptionC" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/Options"]
 layout_mode = 2
 size_flags_horizontal = 3
-custom_minimum_size = Vector2(0, 230)
+custom_minimum_size = Vector2(0, 246)
 theme_override_font_sizes/font_size = 17
 autowrap_mode = 3
 text = "人物 C"

@@ -257,8 +257,8 @@ func _on_character_selected(index: int) -> void:
 func _present_branch_selection() -> void:
 	current_branch_options = BRANCH_CATALOG.get_branch_definitions()
 	branch_selection_active = true
-	hud.set_objective_text("目标：选择本局主分支")
-	hud.show_event("选择一个主分支，决定本局成长倾向和武器风格", 2.4)
+	hud.visible = false
+	player.set_world_health_visible(false)
 	_set_modal_pause(true)
 	branch_select_panel.present(current_branch_options)
 
@@ -275,6 +275,7 @@ func _on_branch_selected(index: int) -> void:
 	branch_selection_active = false
 	branch_select_panel.hide_panel()
 	_set_modal_pause(false)
+	hud.visible = true
 	player.set_world_health_visible(true)
 	hud.configure_boss_goal(BOSS_SPAWN_TIME)
 	hud.set_build_text(_compose_build_summary())
