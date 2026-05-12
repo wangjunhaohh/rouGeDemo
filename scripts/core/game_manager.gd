@@ -10,6 +10,7 @@ const BRANCH_CATALOG := preload("res://scripts/data/branch_catalog.gd")
 const CHARACTER_CATALOG := preload("res://scripts/data/character_catalog.gd")
 const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
+const ACTIVE_MAP_ID := "snow_mountain"
 
 const STAGE_CONFIGS := [
 	{
@@ -100,6 +101,7 @@ var boss_defeated := false
 var active_boss: Enemy
 var card_rng := RandomNumberGenerator.new()
 var card_event_times: Array[float] = [95.0, 205.0, 320.0]
+var enemy_spawns_enabled := true
 
 @onready var arena: Node2D = $Arena
 @onready var player: Player = $Player
@@ -129,9 +131,13 @@ func _ready() -> void:
 	meta_progression = MetaProgression.load_or_create()
 	_load_definitions()
 	_connect_signals()
+	_configure_current_map()
 	player.sync_upgrade_levels(upgrade_levels)
-	hud.configure_boss_goal(BOSS_SPAWN_TIME)
-	_update_stage(true)
+	if enemy_spawns_enabled:
+		hud.configure_boss_goal(BOSS_SPAWN_TIME)
+		_update_stage(true)
+	else:
+		_configure_exploration_hud()
 	_refresh_hud()
 	hud.set_build_text(_compose_build_summary())
 	hud.set_pause_state(false)
@@ -144,6 +150,9 @@ func _process(delta: float) -> void:
 
 	elapsed_time += delta
 	hud.set_elapsed_time(elapsed_time)
+	if not enemy_spawns_enabled:
+		return
+
 	_update_stage(false)
 	_update_boss_hud()
 
@@ -172,13 +181,47 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if event.is_action_pressed("use_skill") and not run_finished and not home_active and not manual_pause and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
-		if player.try_use_exclusive_skill():
-			hud.set_build_text(_compose_build_summary())
+	if event.is_action_pressed("use_skill") and _can_accept_gameplay_input():
+		_try_use_player_skill()
 	elif event.is_action_pressed("pause_game") and not run_finished and not home_active and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
+
+
+func _can_accept_gameplay_input() -> bool:
+	return not run_finished \
+		and not home_active \
+		and not manual_pause \
+		and not character_selection_active \
+		and not branch_selection_active \
+		and not level_up_active \
+		and not special_card_active
+
+
+func _try_use_player_skill() -> void:
+	if player.try_use_exclusive_skill():
+		hud.set_build_text(_compose_build_summary())
+
+
+func _sync_mobile_controls() -> void:
+	var active := hud.visible and _can_accept_gameplay_input()
+	hud.set_mobile_controls_active(active)
+	if not active:
+		player.set_external_move_direction(Vector2.ZERO)
+
+
+func _on_mobile_move_changed(direction: Vector2) -> void:
+	if not _can_accept_gameplay_input():
+		player.set_external_move_direction(Vector2.ZERO)
+		return
+	player.set_external_move_direction(direction)
+
+
+func _on_mobile_skill_pressed() -> void:
+	if not _can_accept_gameplay_input():
+		return
+	_try_use_player_skill()
 
 
 func _connect_signals() -> void:
@@ -197,11 +240,38 @@ func _connect_signals() -> void:
 	result_panel.restart_requested.connect(_restart_run)
 	result_panel.meta_upgrade_requested.connect(_on_meta_upgrade_requested)
 	special_card_panel.card_selected.connect(_on_special_card_selected)
+	hud.mobile_move_changed.connect(_on_mobile_move_changed)
+	hud.mobile_skill_pressed.connect(_on_mobile_skill_pressed)
+
+
+func _configure_current_map() -> void:
+	if arena.has_method("set_map_id"):
+		arena.set_map_id(ACTIVE_MAP_ID)
+	if arena.has_method("is_enemy_spawning_enabled"):
+		enemy_spawns_enabled = bool(arena.call("is_enemy_spawning_enabled"))
+	if arena.has_method("get_player_start_position"):
+		player.global_position = arena.call("get_player_start_position")
+	var bounds_half_size := player.arena_half_size
+	if arena.has_method("get_player_bounds_half_size"):
+		bounds_half_size = arena.call("get_player_bounds_half_size")
+	var camera_zoom := Vector2(0.95, 0.95)
+	if arena.has_method("get_player_camera_zoom"):
+		camera_zoom = arena.call("get_player_camera_zoom")
+	player.configure_map_movement(bounds_half_size, camera_zoom, arena)
+
+
+func _configure_exploration_hud() -> void:
+	if hud.has_method("set_timer_target_enabled"):
+		hud.set_timer_target_enabled(false)
+	hud.set_stage_text(1, "雪山古道")
+	hud.set_objective_text("目标：探索雪山古道")
+	hud.hide_boss()
 
 
 func _present_home() -> void:
 	home_active = true
 	hud.visible = false
+	_sync_mobile_controls()
 	player.set_world_health_visible(false)
 	hud.set_objective_text("目标：准备进入青墟")
 	_set_modal_pause(true)
@@ -212,6 +282,7 @@ func _on_home_start_requested() -> void:
 	home_active = false
 	home_panel.hide_panel()
 	hud.visible = true
+	_sync_mobile_controls()
 	_present_character_selection()
 
 
@@ -227,6 +298,7 @@ func _on_home_character_upgrade_requested(character_id: String, upgrade_id: Stri
 func _present_character_selection() -> void:
 	current_character_options = CHARACTER_CATALOG.get_character_definitions()
 	character_selection_active = true
+	_sync_mobile_controls()
 	player.set_world_health_visible(false)
 	hud.set_objective_text("目标：选择出战人物")
 	hud.show_event("选择剑客或法师，决定本局基础属性和专属技能", 2.4)
@@ -248,6 +320,7 @@ func _on_character_selected(index: int) -> void:
 	current_character_options.clear()
 	character_selection_active = false
 	character_select_panel.hide_panel()
+	_sync_mobile_controls()
 	hud.set_build_text(_compose_build_summary())
 	_refresh_hud()
 	hud.show_event("已选择人物：%s | 技能：%s（Space）" % [selected_character_name, String(skill.get("name", ""))], 2.4)
@@ -258,6 +331,7 @@ func _present_branch_selection() -> void:
 	current_branch_options = BRANCH_CATALOG.get_branch_definitions()
 	branch_selection_active = true
 	hud.visible = false
+	_sync_mobile_controls()
 	player.set_world_health_visible(false)
 	_set_modal_pause(true)
 	branch_select_panel.present(current_branch_options)
@@ -277,7 +351,11 @@ func _on_branch_selected(index: int) -> void:
 	_set_modal_pause(false)
 	hud.visible = true
 	player.set_world_health_visible(true)
-	hud.configure_boss_goal(BOSS_SPAWN_TIME)
+	_sync_mobile_controls()
+	if enemy_spawns_enabled:
+		hud.configure_boss_goal(BOSS_SPAWN_TIME)
+	else:
+		_configure_exploration_hud()
 	hud.set_build_text(_compose_build_summary())
 	hud.show_event("已接入主分支：%s" % selected_branch_name, 2.0)
 
@@ -609,6 +687,7 @@ func _present_level_up() -> void:
 		return
 
 	level_up_active = true
+	_sync_mobile_controls()
 	_set_modal_pause(true)
 	audio_manager.play_sfx("level_up", 1.0, -1.5)
 	level_up_panel.present(current_upgrade_options, upgrade_levels, selected_branch_name)
@@ -708,6 +787,7 @@ func _on_upgrade_selected(index: int) -> void:
 
 	level_up_active = false
 	_set_modal_pause(false)
+	_sync_mobile_controls()
 
 
 func _finish_run(victory: bool) -> void:
@@ -728,6 +808,7 @@ func _finish_run(victory: bool) -> void:
 	special_card_panel.hide_panel()
 	hud.set_pause_state(false)
 	hud.hide_boss()
+	_sync_mobile_controls()
 	player.set_world_health_visible(false)
 	get_tree().paused = true
 
@@ -810,6 +891,7 @@ func _toggle_manual_pause() -> void:
 	manual_pause = not manual_pause
 	hud.set_pause_state(manual_pause, _pause_detail_title(), _pause_detail_lines(), _compose_build_summary())
 	get_tree().paused = manual_pause
+	_sync_mobile_controls()
 
 
 func _restart_run() -> void:
@@ -1016,6 +1098,7 @@ func _on_special_card_pickup(pickup: SpecialCardPickup) -> void:
 	if current_special_card_options.is_empty():
 		return
 	special_card_active = true
+	_sync_mobile_controls()
 	_set_modal_pause(true)
 	hud.show_event("特殊技能卡启动，选择一张改变本局节奏", 1.8)
 	special_card_panel.present(current_special_card_options, "选择一张技能卡。高收益卡通常伴随代价。")
@@ -1088,6 +1171,7 @@ func _on_special_card_selected(index: int) -> void:
 	special_card_active = false
 	special_card_panel.hide_panel()
 	_set_modal_pause(false)
+	_sync_mobile_controls()
 
 
 func _clear_special_card_pickups() -> void:

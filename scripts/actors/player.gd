@@ -218,6 +218,8 @@ var _attack_direction := Vector2.RIGHT
 var _attack_target_position := Vector2.ZERO
 var _attack_hit_resolved := false
 var _unstoppable_time_left := 0.0
+var _external_move_direction := Vector2.ZERO
+var _movement_constraint_provider: Node
 
 @onready var body_visual: AnimatedSprite2D = $AnimatedSprite2D
 @onready var hurtbox: Area2D = $Hurtbox
@@ -326,6 +328,21 @@ func get_pickup_radius() -> float:
 
 func apply_meta_bonus(effect_type: String, amount: float) -> void:
 	_apply_effect(effect_type, amount)
+
+
+func set_external_move_direction(direction: Vector2) -> void:
+	if direction.length() > 1.0:
+		_external_move_direction = direction.normalized()
+		return
+	_external_move_direction = direction
+
+
+func configure_map_movement(bounds_half_size: Vector2, camera_zoom: Vector2, constraint_provider: Node = null) -> void:
+	arena_half_size = bounds_half_size
+	_movement_constraint_provider = constraint_provider
+	if camera != null:
+		camera.zoom = camera_zoom
+		_configure_camera()
 
 
 func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
@@ -772,17 +789,18 @@ func get_pause_detail_lines() -> Array[String]:
 
 func _handle_movement(delta: float) -> void:
 	if _exclusive_skill_move_lock_left > 0.0:
+		var locked_previous_position := global_position
 		velocity = Vector2.ZERO
 		move_and_slide()
-		global_position = Vector2(
-			clampf(global_position.x, -arena_half_size.x, arena_half_size.x),
-			clampf(global_position.y, -arena_half_size.y, arena_half_size.y)
-		)
+		_constrain_map_position(locked_previous_position)
 		if _attack_phase == AttackPhase.IDLE:
 			_update_body_direction_sprite(_last_move_direction)
 		return
 
-	var input_direction := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	var previous_position := global_position
+	var input_direction := _external_move_direction
+	if input_direction == Vector2.ZERO:
+		input_direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	if input_direction.length() > 0.0:
 		_last_move_direction = input_direction.normalized()
 		if _weapon_flash_left <= 0.0:
@@ -792,12 +810,46 @@ func _handle_movement(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, friction * delta)
 
 	move_and_slide()
-	global_position = Vector2(
-		clampf(global_position.x, -arena_half_size.x, arena_half_size.x),
-		clampf(global_position.y, -arena_half_size.y, arena_half_size.y)
-	)
+	_constrain_map_position(previous_position)
 	if _attack_phase == AttackPhase.IDLE:
 		_update_body_direction_sprite(_last_move_direction)
+
+
+func _constrain_map_position(previous_position: Vector2) -> void:
+	var bounded_position := _apply_movement_bounds(global_position)
+	if _is_position_allowed(bounded_position):
+		global_position = bounded_position
+		return
+
+	var horizontal_position := _apply_movement_bounds(Vector2(bounded_position.x, previous_position.y))
+	if _is_position_allowed(horizontal_position):
+		global_position = horizontal_position
+		velocity.y = 0.0
+		return
+
+	var vertical_position := _apply_movement_bounds(Vector2(previous_position.x, bounded_position.y))
+	if _is_position_allowed(vertical_position):
+		global_position = vertical_position
+		velocity.x = 0.0
+		return
+
+	global_position = _apply_movement_bounds(previous_position)
+	velocity = Vector2.ZERO
+
+
+func _apply_movement_bounds(position: Vector2) -> Vector2:
+	return Vector2(
+		clampf(position.x, -arena_half_size.x, arena_half_size.x),
+		clampf(position.y, -arena_half_size.y, arena_half_size.y)
+	)
+
+
+func _is_position_allowed(position: Vector2) -> bool:
+	if _movement_constraint_provider == null:
+		return true
+	if not _movement_constraint_provider.has_method("is_position_walkable"):
+		return true
+	return bool(_movement_constraint_provider.call("is_position_walkable", position))
 
 
 func _handle_attack(delta: float) -> void:
