@@ -193,6 +193,7 @@ var _branch_projectile_texture: Texture2D
 var _branch_weapon_tint := Color(1.0, 1.0, 1.0, 1.0)
 var _branch_flash_tint := Color(1.0, 0.92, 0.74, 0.95)
 var _body_direction_key := "right"
+var _body_is_moving := false
 var _body_sprite_frames: SpriteFrames
 var _default_body_sprite_frames: SpriteFrames
 var _default_body_visual_scale := Vector2.ONE
@@ -790,6 +791,7 @@ func get_pause_detail_lines() -> Array[String]:
 func _handle_movement(delta: float) -> void:
 	if _exclusive_skill_move_lock_left > 0.0:
 		var locked_previous_position := global_position
+		_body_is_moving = false
 		velocity = Vector2.ZERO
 		move_and_slide()
 		_constrain_map_position(locked_previous_position)
@@ -801,7 +803,8 @@ func _handle_movement(delta: float) -> void:
 	var input_direction := _external_move_direction
 	if input_direction == Vector2.ZERO:
 		input_direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	if input_direction.length() > 0.0:
+	_body_is_moving = input_direction.length() > 0.0
+	if _body_is_moving:
 		_last_move_direction = input_direction.normalized()
 		if _weapon_flash_left <= 0.0:
 			_aim_direction = _last_move_direction
@@ -2112,11 +2115,48 @@ func _direction_to_sprite_key(direction: Vector2) -> String:
 			return "up_right"
 
 
+func _walk_animation_for_direction_key(direction_key: String) -> String:
+	match direction_key:
+		"right", "left":
+			return "walk_right"
+		"down_right", "down_left":
+			return "walk_down_right"
+		"up_right", "up_left":
+			return "walk_up_right"
+		_:
+			return ""
+
+
+func _walk_animation_flip_h(direction_key: String) -> bool:
+	return direction_key == "left" or direction_key == "down_left" or direction_key == "up_left"
+
+
+func _play_body_walk_animation(direction_key: String, force: bool = false) -> bool:
+	if body_visual == null or body_visual.sprite_frames == null:
+		return false
+	var animation_key := _walk_animation_for_direction_key(direction_key)
+	if animation_key.is_empty() or not body_visual.sprite_frames.has_animation(animation_key):
+		return false
+	var should_flip := _walk_animation_flip_h(direction_key)
+	_body_direction_key = direction_key
+	if not force and body_visual.animation == animation_key and body_visual.flip_h == should_flip and body_visual.is_playing():
+		return true
+	body_visual.flip_h = should_flip
+	body_visual.speed_scale = 1.0
+	if force or body_visual.animation != animation_key:
+		body_visual.frame = 0
+		body_visual.frame_progress = 0.0
+	body_visual.play(animation_key)
+	return true
+
+
 func _update_body_direction_sprite(direction: Vector2, force: bool = false) -> void:
 	if not force and _attack_phase != AttackPhase.IDLE:
 		# 攻击期间 AnimatedSprite2D 由 sword_attack 播放控制，避免移动方向帧每帧打断动画。
 		return
 	var key: String = _direction_to_sprite_key(direction)
+	if _body_is_moving and _play_body_walk_animation(key, force):
+		return
 	if not force and key == _body_direction_key and body_visual.animation == key:
 		return
 	_body_direction_key = key

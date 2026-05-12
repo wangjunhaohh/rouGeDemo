@@ -1,4 +1,4 @@
-[gd_resource type="SpriteFrames" load_steps=17 format=3]
+[gd_resource type="SpriteFrames" load_steps=23 format=3]
 
 [ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/down.png" id="1"]
 [ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/directions/down_right.png" id="2"]
@@ -16,6 +16,12 @@
 [ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_06.png" id="14"]
 [ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_07.png" id="15"]
 [ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/sword_attack/frame_08.png" id="16"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/walk/frame_01.png" id="17"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/walk/frame_02.png" id="18"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/walk/frame_03.png" id="19"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/walk/frame_04.png" id="20"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/walk/frame_05.png" id="21"]
+[ext_resource type="Texture2D" path="res://art/sprites/characters/swordsman/walk/frame_06.png" id="22"]
 
 [resource]
 animations = [{
@@ -82,6 +88,75 @@ animations = [{
 "loop": false,
 "name": &"down_left",
 "speed": 1.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("17")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22")
+}],
+"loop": true,
+"name": &"walk_down_right",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("17")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22")
+}],
+"loop": true,
+"name": &"walk_right",
+"speed": 10.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("17")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22")
+}],
+"loop": true,
+"name": &"walk_up_right",
+"speed": 10.0
 }, {
 "frames": [{
 "duration": 1.0,
