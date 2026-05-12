@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "mage"
+display_name = "Forest Mage"
+behavior = "burst_shooter"
+max_health = 58.0
+move_speed = 96.0
+touch_damage = 8.0
+experience_reward = 13
+size = 15.0
+spawn_weight = 0.52
+color = Color(0.42, 0.82, 0.3, 1)
+preferred_distance = 250.0
+projectile_cooldown = 1.85
+projectile_speed = 265.0
+projectile_damage = 9.0
+shot_count = 3
+shot_spread = 0.22
+strafe_strength = 0.7

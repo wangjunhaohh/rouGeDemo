@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://xwu6hd3k7kbe"
-path="res://.godot/imported/weapon_blaster.png-68eaece4e7836f8d6abe73d086c07be8.ctex"
+uid="uid://fe4xsdyw0m8h"
+path="res://.godot/imported/down.png-5bfd2adbb528477b156acf601cc21137.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/sprites/weapon_blaster.png"
-dest_files=["res://.godot/imported/weapon_blaster.png-68eaece4e7836f8d6abe73d086c07be8.ctex"]
+source_file="res://art/sprites/characters/swordsman2/down.png"
+dest_files=["res://.godot/imported/down.png-5bfd2adbb528477b156acf601cc21137.ctex"]
 
 [params]
 

@@ -1,0 +1,151 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/settings_panel.gd" id="1"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/start_menu_background.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/vignette.png" id="3"]
+
+[node name="SettingsPanel" type="Control"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 1
+script = ExtResource("1")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.02, 0.03, 0.05, 0.58)
+
+[node name="Vignette" type="TextureRect" parent="."]
+modulate = Color(1, 1, 1, 0.3)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("3")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(860, 540)
+
+[node name="MarginContainer" type="MarginContainer" parent="CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 34
+theme_override_constants/margin_top = 30
+theme_override_constants/margin_right = 34
+theme_override_constants/margin_bottom = 30
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "设置"
+
+[node name="SubTitleLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "调整主音量、音效与音乐音量，修改会自动保存。"
+
+[node name="SettingsList" type="VBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 18
+
+[node name="MasterRow" type="HBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="NameLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/MasterRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 0)
+text = "主音量"
+
+[node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/MasterRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ValueLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/MasterRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 0)
+horizontal_alignment = 2
+text = "100%"
+
+[node name="SfxRow" type="HBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="NameLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/SfxRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 0)
+text = "音效"
+
+[node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/SfxRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ValueLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/SfxRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 0)
+horizontal_alignment = 2
+text = "100%"
+
+[node name="MusicRow" type="HBoxContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="NameLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/MusicRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(140, 0)
+text = "音乐"
+
+[node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/MusicRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ValueLabel" type="Label" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/SettingsList/MusicRow"]
+layout_mode = 2
+custom_minimum_size = Vector2(72, 0)
+horizontal_alignment = 2
+text = "100%"
+
+[node name="ButtonRow" type="CenterContainer" parent="CenterContainer/Panel/MarginContainer/VBoxContainer"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="CenterContainer/Panel/MarginContainer/VBoxContainer/ButtonRow"]
+layout_mode = 2
+text = "返回"

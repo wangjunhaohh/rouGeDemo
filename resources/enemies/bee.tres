@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "bee"
+display_name = "Wild Bee"
+behavior = "dash"
+max_health = 24.0
+move_speed = 154.0
+touch_damage = 9.0
+experience_reward = 9
+size = 11.0
+spawn_weight = 0.72
+color = Color(0.92, 0.76, 0.24, 1)
+preferred_distance = 116.0
+contact_cooldown = 0.66
+dash_cooldown = 1.25
+dash_duration = 0.22
+dash_speed_multiplier = 3.1

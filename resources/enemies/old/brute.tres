@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "brute"
+display_name = "肉盾怪"
+behavior = "chase"
+max_health = 94.0
+move_speed = 68.0
+touch_damage = 20.0
+experience_reward = 12
+size = 18.0
+spawn_weight = 0.95
+color = Color(0.76, 0.54, 0.24, 1)

@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://xwu6hd3k7kbe"
-path="res://.godot/imported/weapon_blaster.png-68eaece4e7836f8d6abe73d086c07be8.ctex"
+uid="uid://bl7xcxjj3ygcy"
+path="res://.godot/imported/start_menu_button_pressed_fx.png-fa1e1626efbe155ce6043511efbda325.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/sprites/weapon_blaster.png"
-dest_files=["res://.godot/imported/weapon_blaster.png-68eaece4e7836f8d6abe73d086c07be8.ctex"]
+source_file="res://art/ui/start_menu_button_pressed_fx.png"
+dest_files=["res://.godot/imported/start_menu_button_pressed_fx.png-fa1e1626efbe155ce6043511efbda325.ctex"]
 
 [params]
 

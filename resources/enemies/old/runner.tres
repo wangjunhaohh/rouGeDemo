@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "runner"
+display_name = "追击怪"
+behavior = "chase"
+max_health = 26.0
+move_speed = 155.0
+touch_damage = 9.0
+experience_reward = 4
+size = 12.0
+spawn_weight = 1.6
+color = Color(0.88, 0.32, 0.28, 1)

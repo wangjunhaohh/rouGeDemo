@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/enemy_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+enemy_id = "archer"
+display_name = "Goblin Archer"
+behavior = "shooter"
+max_health = 34.0
+move_speed = 106.0
+touch_damage = 7.0
+experience_reward = 8
+size = 13.0
+spawn_weight = 0.95
+color = Color(0.42, 0.82, 0.3, 1)
+preferred_distance = 248.0
+projectile_cooldown = 1.75
+projectile_speed = 252.0
+projectile_damage = 11.0
+strafe_strength = 0.92

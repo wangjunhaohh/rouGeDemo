@@ -86,6 +86,8 @@ var shard_gain_this_run := 0
 var next_card_event_index := 0
 var run_seed := 0
 
+var start_menu_active := false
+var settings_active := false
 var home_active := false
 var manual_pause := false
 var character_selection_active := false
@@ -111,6 +113,8 @@ var enemy_spawns_enabled := true
 @onready var cards_layer: Node2D = $Cards
 @onready var effects_layer: Node2D = $Effects
 @onready var audio_manager: AudioManager = $AudioManager
+@onready var start_menu_panel: StartMenuPanel = $UI/StartMenuPanel
+@onready var settings_panel: SettingsPanel = $UI/SettingsPanel
 @onready var home_panel: HomePanel = $UI/HomePanel
 @onready var hud: HUD = $UI/HUD
 @onready var character_select_panel: CharacterSelectPanel = $UI/CharacterSelectPanel
@@ -141,11 +145,11 @@ func _ready() -> void:
 	_refresh_hud()
 	hud.set_build_text(_compose_build_summary())
 	hud.set_pause_state(false)
-	_present_home()
+	_present_start_menu()
 
 
 func _process(delta: float) -> void:
-	if home_active or manual_pause or character_selection_active or branch_selection_active or level_up_active or special_card_active or run_finished:
+	if start_menu_active or settings_active or home_active or manual_pause or character_selection_active or branch_selection_active or level_up_active or special_card_active or run_finished:
 		return
 
 	elapsed_time += delta
@@ -183,7 +187,7 @@ func _process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("use_skill") and _can_accept_gameplay_input():
 		_try_use_player_skill()
-	elif event.is_action_pressed("pause_game") and not run_finished and not home_active and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
+	elif event.is_action_pressed("pause_game") and not run_finished and not start_menu_active and not settings_active and not home_active and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
@@ -191,6 +195,8 @@ func _input(event: InputEvent) -> void:
 
 func _can_accept_gameplay_input() -> bool:
 	return not run_finished \
+		and not start_menu_active \
+		and not settings_active \
 		and not home_active \
 		and not manual_pause \
 		and not character_selection_active \
@@ -232,6 +238,10 @@ func _connect_signals() -> void:
 	player.exclusive_skill_used.connect(_on_player_exclusive_skill_used)
 	player.exclusive_skill_cooldown_changed.connect(_on_player_exclusive_skill_cooldown_changed)
 	player.died.connect(_on_player_died)
+	start_menu_panel.start_requested.connect(_on_start_menu_start_requested)
+	start_menu_panel.settings_requested.connect(_on_start_menu_settings_requested)
+	start_menu_panel.exit_requested.connect(_on_start_menu_exit_requested)
+	settings_panel.back_requested.connect(_on_settings_back_requested)
 	home_panel.start_requested.connect(_on_home_start_requested)
 	home_panel.character_upgrade_requested.connect(_on_home_character_upgrade_requested)
 	character_select_panel.character_selected.connect(_on_character_selected)
@@ -268,13 +278,55 @@ func _configure_exploration_hud() -> void:
 	hud.hide_boss()
 
 
+func _present_start_menu() -> void:
+	start_menu_active = true
+	settings_active = false
+	home_active = false
+	hud.visible = false
+	_sync_mobile_controls()
+	player.set_world_health_visible(false)
+	_set_modal_pause(true)
+	home_panel.hide_panel()
+	settings_panel.hide_panel()
+	start_menu_panel.present(GAME_TITLE)
+
+
+func _on_start_menu_start_requested() -> void:
+	start_menu_active = false
+	settings_active = false
+	start_menu_panel.hide_panel()
+	settings_panel.hide_panel()
+	_present_home()
+
+
+func _on_start_menu_settings_requested() -> void:
+	settings_active = true
+	start_menu_panel.hide_panel()
+	settings_panel.present()
+
+
+func _on_start_menu_exit_requested() -> void:
+	get_tree().quit()
+
+
+func _on_settings_back_requested() -> void:
+	settings_active = false
+	settings_panel.hide_panel()
+	if start_menu_active:
+		start_menu_panel.present(GAME_TITLE)
+
+
 func _present_home() -> void:
+	start_menu_active = false
+	settings_active = false
 	home_active = true
 	hud.visible = false
 	_sync_mobile_controls()
 	player.set_world_health_visible(false)
 	hud.set_objective_text("目标：准备进入青墟")
 	_set_modal_pause(true)
+	start_menu_panel.hide_panel()
+	settings_panel.hide_panel()
 	home_panel.present(CHARACTER_CATALOG.get_character_definitions(), meta_progression, GAME_TITLE)
 
 
@@ -795,12 +847,16 @@ func _finish_run(victory: bool) -> void:
 		return
 
 	run_finished = true
+	start_menu_active = false
+	settings_active = false
 	home_active = false
 	manual_pause = false
 	character_selection_active = false
 	branch_selection_active = false
 	level_up_active = false
 	special_card_active = false
+	start_menu_panel.hide_panel()
+	settings_panel.hide_panel()
 	home_panel.hide_panel()
 	character_select_panel.hide_panel()
 	branch_select_panel.hide_panel()
@@ -911,6 +967,8 @@ func _configure_process_modes() -> void:
 	]
 	for node in gameplay_nodes:
 		node.process_mode = Node.PROCESS_MODE_PAUSABLE
+	start_menu_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	settings_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	home_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	character_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	branch_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
