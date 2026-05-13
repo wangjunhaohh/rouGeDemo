@@ -222,6 +222,7 @@ var _attack_hit_resolved := false
 var _unstoppable_time_left := 0.0
 var _external_move_direction := Vector2.ZERO
 var _movement_constraint_provider: Node
+var _use_world_y_sort := false
 
 @onready var body_visual: AnimatedSprite2D = $AnimatedSprite2D
 @onready var hurtbox: Area2D = $Hurtbox
@@ -342,6 +343,10 @@ func set_external_move_direction(direction: Vector2) -> void:
 func configure_map_movement(bounds_half_size: Vector2, camera_zoom: Vector2, constraint_provider: Node = null) -> void:
 	arena_half_size = bounds_half_size
 	_movement_constraint_provider = constraint_provider
+	_use_world_y_sort = constraint_provider != null \
+		and constraint_provider.has_method("uses_world_y_sort") \
+		and bool(constraint_provider.call("uses_world_y_sort"))
+	_sync_world_y_sort_index()
 	if camera != null:
 		camera.zoom = camera_zoom
 		if constraint_provider != null and constraint_provider.has_method("get_player_camera_offset"):
@@ -805,6 +810,7 @@ func _handle_movement(delta: float) -> void:
 		velocity = Vector2.ZERO
 		move_and_slide()
 		_constrain_map_position(locked_previous_position)
+		_sync_world_y_sort_index()
 		if _attack_phase == AttackPhase.IDLE:
 			_update_body_direction_sprite(_last_move_direction)
 		return
@@ -824,6 +830,7 @@ func _handle_movement(delta: float) -> void:
 
 	move_and_slide()
 	_constrain_map_position(previous_position)
+	_sync_world_y_sort_index()
 	if _attack_phase == AttackPhase.IDLE:
 		_update_body_direction_sprite(_last_move_direction)
 
@@ -863,6 +870,15 @@ func _is_position_allowed(position: Vector2) -> bool:
 	if not _movement_constraint_provider.has_method("is_position_walkable"):
 		return true
 	return bool(_movement_constraint_provider.call("is_position_walkable", position))
+
+
+func _sync_world_y_sort_index() -> void:
+	if _use_world_y_sort:
+		z_as_relative = false
+		z_index = clampi(int(round(global_position.y)), -2048, 2048)
+		return
+	z_as_relative = true
+	z_index = 0
 
 
 func _handle_attack(delta: float) -> void:

@@ -11,6 +11,7 @@ const CHARACTER_CATALOG := preload("res://scripts/data/character_catalog.gd")
 const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
 const LOBBY_MAP_ID := "qingxu_lobby"
+const SKY_PALACE_MAP_ID := "sky_palace_manual"
 const ACTIVE_MAP_ID := "snow_mountain"
 
 const STAGE_CONFIGS := [
@@ -259,6 +260,7 @@ func _handle_lobby_interaction_input(event: InputEvent) -> bool:
 	if interaction_id == "xianminglu":
 		get_viewport().set_input_as_handled()
 		audio_manager.play_sfx("pickup", 1.0, -7.0)
+		_present_home()
 		return true
 	return false
 
@@ -290,6 +292,7 @@ func _connect_signals() -> void:
 	start_menu_panel.exit_requested.connect(_on_start_menu_exit_requested)
 	settings_panel.back_requested.connect(_on_settings_back_requested)
 	home_panel.start_requested.connect(_on_home_start_requested)
+	home_panel.sky_palace_requested.connect(_on_home_sky_palace_requested)
 	home_panel.character_upgrade_requested.connect(_on_home_character_upgrade_requested)
 	character_select_panel.character_selected.connect(_on_character_selected)
 	branch_select_panel.branch_selected.connect(_on_branch_selected)
@@ -324,8 +327,14 @@ func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
 func _configure_exploration_hud() -> void:
 	if hud.has_method("set_timer_target_enabled"):
 		hud.set_timer_target_enabled(false)
-	hud.set_stage_text(1, "雪山古道")
-	hud.set_objective_text("目标：探索雪山古道")
+	var config: Dictionary = {
+		"stage": "雪山古道",
+		"objective": "目标：探索雪山古道"
+	}
+	if arena.has_method("get_exploration_hud_config"):
+		config = Dictionary(arena.call("get_exploration_hud_config"))
+	hud.set_stage_text(1, String(config.get("stage", "雪山古道")))
+	hud.set_objective_text(String(config.get("objective", "目标：探索雪山古道")))
 	hud.hide_boss()
 
 
@@ -400,6 +409,29 @@ func _present_lobby() -> void:
 	_sync_mobile_controls()
 
 
+func _present_sky_palace() -> void:
+	start_menu_active = false
+	settings_active = false
+	settings_return_to_pause = false
+	home_active = false
+	character_selection_active = false
+	branch_selection_active = false
+	wendao_bei_active = false
+	hud.visible = false
+	player.set_world_health_visible(false)
+	player.set_forced_weapon_visual_hidden(true)
+	_configure_current_map(SKY_PALACE_MAP_ID)
+	_configure_exploration_hud()
+	_set_modal_pause(false)
+	start_menu_panel.hide_panel()
+	settings_panel.hide_panel()
+	home_panel.hide_panel()
+	character_select_panel.hide_panel()
+	branch_select_panel.hide_panel()
+	wendao_bei_panel.hide_panel()
+	_sync_mobile_controls()
+
+
 func _present_wendao_bei() -> void:
 	wendao_bei_active = true
 	_sync_mobile_controls()
@@ -439,6 +471,15 @@ func _on_home_start_requested() -> void:
 	hud.visible = true
 	_sync_mobile_controls()
 	_present_character_selection()
+
+
+func _on_home_sky_palace_requested() -> void:
+	if not home_active:
+		return
+	audio_manager.play_sfx("pickup", 1.0, -7.0)
+	home_active = false
+	home_panel.hide_panel()
+	_present_sky_palace()
 
 
 func _on_home_character_upgrade_requested(character_id: String, upgrade_id: String) -> void:
@@ -1135,7 +1176,7 @@ func _refresh_hud() -> void:
 
 func _pause_detail_title() -> String:
 	if _is_lobby_pause_context():
-		return "青墟大厅"
+		return _current_exploration_stage_name()
 	var character_text := selected_character_name
 	if character_text.is_empty():
 		character_text = "未选择人物"
@@ -1148,7 +1189,7 @@ func _pause_detail_title() -> String:
 func _pause_detail_lines() -> Array[String]:
 	if _is_lobby_pause_context():
 		return [
-			"当前位于大厅探索场景",
+			"当前位于%s探索场景" % _current_exploration_stage_name(),
 			"可以继续探索、调整设置，或返回主菜单"
 		]
 	var experience_percent := 0.0
@@ -1176,6 +1217,13 @@ func _pause_build_summary() -> String:
 
 func _is_lobby_pause_context() -> bool:
 	return not enemy_spawns_enabled and selected_character_id.is_empty() and selected_branch_id.is_empty()
+
+
+func _current_exploration_stage_name() -> String:
+	if arena != null and arena.has_method("get_exploration_hud_config"):
+		var config := Dictionary(arena.call("get_exploration_hud_config"))
+		return String(config.get("stage", "青墟大厅"))
+	return "青墟大厅"
 
 
 func _compose_build_summary() -> String:
