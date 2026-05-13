@@ -3,6 +3,9 @@ class_name HUD
 
 signal mobile_move_changed(direction: Vector2)
 signal mobile_skill_pressed
+signal pause_resume_requested
+signal pause_settings_requested
+signal pause_main_menu_requested
 
 const MOBILE_JOYSTICK_SIZE := 148.0
 const MOBILE_JOYSTICK_RADIUS := 56.0
@@ -23,17 +26,22 @@ const MOBILE_EDGE_MARGIN := 34.0
 @onready var kill_label: Label = $MarginContainer/Content/TopRow/LevelPanel/KillLabel
 @onready var skill_label: Label = $MarginContainer/Content/TopRow/LevelPanel/SkillLabel
 @onready var objective_label: Label = $MarginContainer/Content/TopRow/LevelPanel/ObjectiveLabel
+@onready var hud_content: VBoxContainer = $MarginContainer/Content
 @onready var bottom_row: HBoxContainer = $MarginContainer/Content/BottomRow
 @onready var build_label: Label = $MarginContainer/Content/BottomRow/BuildPanel/BuildLabel
 @onready var event_label: Label = $EventLabel
 @onready var boss_panel: Control = $BossPanel
 @onready var boss_name_label: Label = $BossPanel/MarginContainer/VBoxContainer/BossName
 @onready var boss_bar: ProgressBar = $BossPanel/MarginContainer/VBoxContainer/BossHealth
+@onready var pause_dim: ColorRect = $PauseDim
 @onready var pause_label: Label = $PauseLabel
 @onready var pause_panel: PanelContainer = $PausePanel
 @onready var pause_title_label: Label = $PausePanel/MarginContainer/VBoxContainer/TitleLabel
 @onready var pause_stats_label: Label = $PausePanel/MarginContainer/VBoxContainer/StatsLabel
 @onready var pause_build_label: Label = $PausePanel/MarginContainer/VBoxContainer/BuildLabel
+@onready var pause_resume_button: Button = $PausePanel/MarginContainer/VBoxContainer/ButtonBox/ResumeButton
+@onready var pause_settings_button: Button = $PausePanel/MarginContainer/VBoxContainer/ButtonBox/SettingsButton
+@onready var pause_main_menu_button: Button = $PausePanel/MarginContainer/VBoxContainer/ButtonBox/MainMenuButton
 
 var _event_time_left := 0.0
 var _boss_spawn_time := 390.0
@@ -62,9 +70,21 @@ func _ready() -> void:
 	health_label.visible = false
 	health_bar.visible = false
 	bottom_row.visible = false
+	pause_dim.visible = false
 	pause_panel.visible = false
 	boss_panel.visible = false
 	event_label.visible = false
+	_configure_pause_button(pause_resume_button)
+	_configure_pause_button(pause_settings_button)
+	_configure_pause_button(pause_main_menu_button)
+	pause_panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	pause_label.visible = false
+	pause_title_label.visible = false
+	pause_stats_label.visible = false
+	pause_build_label.visible = false
+	pause_resume_button.pressed.connect(func() -> void: pause_resume_requested.emit())
+	pause_settings_button.pressed.connect(func() -> void: pause_settings_requested.emit())
+	pause_main_menu_button.pressed.connect(func() -> void: pause_main_menu_requested.emit())
 	objective_label.text = "目标：撑到首领降临"
 	_mobile_controls_supported = _should_show_mobile_controls()
 	_build_mobile_controls()
@@ -167,7 +187,10 @@ func set_boss_objective_active(active: bool, objective_text: String = "目标：
 
 
 func set_pause_state(is_paused: bool, title_text: String = "", detail_lines: Array[String] = [], build_summary: String = "") -> void:
-	pause_label.visible = is_paused
+	vignette.visible = not is_paused
+	hud_content.visible = not is_paused
+	pause_dim.visible = is_paused
+	pause_label.visible = false
 	pause_panel.visible = is_paused
 	if not is_paused:
 		return
@@ -177,6 +200,7 @@ func set_pause_state(is_paused: bool, title_text: String = "", detail_lines: Arr
 		pause_build_label.text = ""
 	else:
 		pause_build_label.text = "构筑: %s" % build_summary
+	pause_resume_button.grab_focus()
 
 
 func show_event(text: String, duration: float = 2.0) -> void:
@@ -201,6 +225,13 @@ func set_mobile_controls_active(active: bool) -> void:
 	_update_mobile_controls_visibility()
 	if not active:
 		_reset_mobile_joystick()
+
+
+func _configure_pause_button(button: Button) -> void:
+	button.custom_minimum_size = Vector2(240.0, 46.0)
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	InkUIStyle.apply_character_button(button, Color(0.82, 0.69, 0.36, 1.0))
+	button.focus_mode = Control.FOCUS_ALL
 
 
 func _should_show_mobile_controls() -> bool:

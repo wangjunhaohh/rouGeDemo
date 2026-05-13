@@ -89,8 +89,10 @@ var run_seed := 0
 
 var start_menu_active := false
 var settings_active := false
+var settings_return_to_pause := false
 var home_active := false
 var manual_pause := false
+var manual_pause_previous_hud_visible := false
 var character_selection_active := false
 var branch_selection_active := false
 var wendao_bei_active := false
@@ -298,6 +300,9 @@ func _connect_signals() -> void:
 	wendao_bei_panel.back_requested.connect(_on_wendao_bei_back_requested)
 	hud.mobile_move_changed.connect(_on_mobile_move_changed)
 	hud.mobile_skill_pressed.connect(_on_mobile_skill_pressed)
+	hud.pause_resume_requested.connect(_on_pause_resume_requested)
+	hud.pause_settings_requested.connect(_on_pause_settings_requested)
+	hud.pause_main_menu_requested.connect(_on_pause_main_menu_requested)
 
 
 func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
@@ -327,6 +332,7 @@ func _configure_exploration_hud() -> void:
 func _present_start_menu() -> void:
 	start_menu_active = true
 	settings_active = false
+	settings_return_to_pause = false
 	home_active = false
 	hud.visible = false
 	_sync_mobile_controls()
@@ -341,6 +347,7 @@ func _present_start_menu() -> void:
 func _on_start_menu_start_requested() -> void:
 	start_menu_active = false
 	settings_active = false
+	settings_return_to_pause = false
 	start_menu_panel.hide_panel()
 	settings_panel.hide_panel()
 	_present_lobby()
@@ -348,6 +355,7 @@ func _on_start_menu_start_requested() -> void:
 
 func _on_start_menu_settings_requested() -> void:
 	settings_active = true
+	settings_return_to_pause = false
 	start_menu_panel.hide_panel()
 	settings_panel.present()
 
@@ -359,6 +367,13 @@ func _on_start_menu_exit_requested() -> void:
 func _on_settings_back_requested() -> void:
 	settings_active = false
 	settings_panel.hide_panel()
+	if settings_return_to_pause and manual_pause and not run_finished:
+		settings_return_to_pause = false
+		hud.visible = true
+		hud.set_pause_state(true, _pause_detail_title(), _pause_detail_lines(), _pause_build_summary())
+		_sync_mobile_controls()
+		return
+	settings_return_to_pause = false
 	if start_menu_active:
 		start_menu_panel.present(GAME_TITLE)
 
@@ -366,6 +381,7 @@ func _on_settings_back_requested() -> void:
 func _present_lobby() -> void:
 	start_menu_active = false
 	settings_active = false
+	settings_return_to_pause = false
 	home_active = false
 	character_selection_active = false
 	branch_selection_active = false
@@ -404,6 +420,7 @@ func _on_wendao_bei_back_requested() -> void:
 func _present_home() -> void:
 	start_menu_active = false
 	settings_active = false
+	settings_return_to_pause = false
 	home_active = true
 	hud.visible = false
 	_sync_mobile_controls()
@@ -936,6 +953,7 @@ func _finish_run(victory: bool) -> void:
 	run_finished = true
 	start_menu_active = false
 	settings_active = false
+	settings_return_to_pause = false
 	home_active = false
 	manual_pause = false
 	character_selection_active = false
@@ -1033,10 +1051,50 @@ func _on_meta_upgrade_requested(upgrade_id: String) -> void:
 
 
 func _toggle_manual_pause() -> void:
-	manual_pause = not manual_pause
-	hud.set_pause_state(manual_pause, _pause_detail_title(), _pause_detail_lines(), _compose_build_summary())
-	get_tree().paused = manual_pause
+	if manual_pause:
+		_resume_manual_pause()
+		return
+	manual_pause_previous_hud_visible = hud.visible
+	manual_pause = true
+	settings_return_to_pause = false
+	hud.visible = true
+	hud.set_pause_state(true, _pause_detail_title(), _pause_detail_lines(), _pause_build_summary())
+	get_tree().paused = true
 	_sync_mobile_controls()
+
+
+func _on_pause_resume_requested() -> void:
+	_resume_manual_pause()
+
+
+func _resume_manual_pause() -> void:
+	if not manual_pause:
+		return
+	manual_pause = false
+	settings_return_to_pause = false
+	hud.set_pause_state(false)
+	hud.visible = manual_pause_previous_hud_visible
+	get_tree().paused = false
+	_sync_mobile_controls()
+
+
+func _on_pause_settings_requested() -> void:
+	if not manual_pause or settings_active:
+		return
+	settings_active = true
+	settings_return_to_pause = true
+	hud.set_pause_state(false)
+	hud.visible = false
+	settings_panel.present()
+	_sync_mobile_controls()
+
+
+func _on_pause_main_menu_requested() -> void:
+	if not manual_pause:
+		return
+	settings_return_to_pause = false
+	get_tree().paused = false
+	get_tree().reload_current_scene()
 
 
 func _restart_run() -> void:
@@ -1076,6 +1134,8 @@ func _refresh_hud() -> void:
 
 
 func _pause_detail_title() -> String:
+	if _is_lobby_pause_context():
+		return "青墟大厅"
 	var character_text := selected_character_name
 	if character_text.is_empty():
 		character_text = "未选择人物"
@@ -1086,6 +1146,11 @@ func _pause_detail_title() -> String:
 
 
 func _pause_detail_lines() -> Array[String]:
+	if _is_lobby_pause_context():
+		return [
+			"当前位于大厅探索场景",
+			"可以继续探索、调整设置，或返回主菜单"
+		]
 	var experience_percent := 0.0
 	if experience_to_next > 0.0:
 		experience_percent = clampf(current_experience / experience_to_next * 100.0, 0.0, 100.0)
@@ -1101,6 +1166,16 @@ func _pause_detail_lines() -> Array[String]:
 	]
 	lines.append_array(player.get_pause_detail_lines())
 	return lines
+
+
+func _pause_build_summary() -> String:
+	if _is_lobby_pause_context():
+		return ""
+	return _compose_build_summary()
+
+
+func _is_lobby_pause_context() -> bool:
+	return not enemy_spawns_enabled and selected_character_id.is_empty() and selected_branch_id.is_empty()
 
 
 func _compose_build_summary() -> String:

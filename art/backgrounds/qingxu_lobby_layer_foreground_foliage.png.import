@@ -2,17 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://2220n34wq58q"
-path="res://.godot/imported/icon.svg-eee45c826365faa6677a249fe9f20dd4.ctex"
+uid="uid://dd4buyl5nuy0n"
+path="res://.godot/imported/qingxu_lobby_layer_foreground_foliage.png-ebab5cd21200caab1c095489e3e76374.ctex"
 metadata={
-"has_editor_variant": true,
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://addons/markdown_book/icon.svg"
-dest_files=["res://.godot/imported/icon.svg-eee45c826365faa6677a249fe9f20dd4.ctex"]
+source_file="res://art/backgrounds/qingxu_lobby_layer_foreground_foliage.png"
+dest_files=["res://.godot/imported/qingxu_lobby_layer_foreground_foliage.png-ebab5cd21200caab1c095489e3e76374.ctex"]
 
 [params]
 
@@ -39,6 +38,3 @@ process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
 process/size_limit=0
 detect_3d/compress_to=1
-svg/scale=1.0
-editor/scale_with_editor_scale=true
-editor/convert_colors_with_editor_theme=true
