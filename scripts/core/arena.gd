@@ -20,6 +20,8 @@ const LOBBY_CAMERA_ZOOM := Vector2(0.82, 0.82)
 const LOBBY_CAMERA_OFFSET := Vector2(0.0, -180.0)
 const LOBBY_LEFT_BANNER_RECT_PX := Rect2(563.0, 183.0, 62.0, 94.0)
 const LOBBY_RIGHT_BANNER_RECT_PX := Rect2(1572.0, 324.0, 74.0, 108.0)
+const LOBBY_WENDAO_BEI_HIT_RECT_PX := Rect2(445.0, 190.0, 205.0, 245.0)
+const LOBBY_XIANMINGLU_HIT_RECT_PX := Rect2(1305.0, 310.0, 330.0, 285.0)
 const SNOW_SOURCE_SIZE := Vector2(1535.0, 1024.0)
 const SNOW_MAP_SIZE := Vector2(3840.0, 2560.0)
 const SNOW_PLAYER_START_PX := Vector2(300.0, 800.0)
@@ -231,6 +233,17 @@ func get_player_start_position() -> Vector2:
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return _snow_px_to_world(SNOW_PLAYER_START_PX)
 	return Vector2.ZERO
+
+
+func get_lobby_interaction_at_world(world_position: Vector2) -> String:
+	if map_id != MAP_ID_QINGXU_LOBBY:
+		return ""
+	var map_pixel := _map_world_to_px(world_position, qingxu_lobby_source_size, LOBBY_MAP_SIZE)
+	if LOBBY_WENDAO_BEI_HIT_RECT_PX.has_point(map_pixel) or LOBBY_LEFT_BANNER_RECT_PX.has_point(map_pixel):
+		return "wendao_bei"
+	if LOBBY_XIANMINGLU_HIT_RECT_PX.has_point(map_pixel) or LOBBY_RIGHT_BANNER_RECT_PX.has_point(map_pixel):
+		return "xianminglu"
+	return ""
 
 
 func get_player_bounds_half_size() -> Vector2:

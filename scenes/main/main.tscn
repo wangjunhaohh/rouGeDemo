@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/home_panel.tscn" id="11"]
 [ext_resource type="PackedScene" path="res://scenes/ui/start_menu_panel.tscn" id="12"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_panel.tscn" id="13"]
+[ext_resource type="PackedScene" path="res://scenes/ui/wendao_bei_panel.tscn" id="14"]
 
 [node name="Game" type="Node2D" unique_id=1618156083]
 process_mode = 3
@@ -56,3 +57,5 @@ script = ExtResource("7")
 [node name="ResultPanel" parent="UI" unique_id=766103562 instance=ExtResource("6")]
 
 [node name="SpecialCardPanel" parent="UI" unique_id=131058901 instance=ExtResource("8")]
+
+[node name="WendaoBeiPanel" parent="UI" instance=ExtResource("14")]

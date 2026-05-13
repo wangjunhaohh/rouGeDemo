@@ -93,6 +93,7 @@ var home_active := false
 var manual_pause := false
 var character_selection_active := false
 var branch_selection_active := false
+var wendao_bei_active := false
 var level_up_active := false
 var special_card_active := false
 var run_finished := false
@@ -123,6 +124,7 @@ var enemy_spawns_enabled := true
 @onready var level_up_panel: LevelUpPanel = $UI/LevelUpPanel
 @onready var result_panel: ResultPanel = $UI/ResultPanel
 @onready var special_card_panel: SpecialCardPanel = $UI/SpecialCardPanel
+@onready var wendao_bei_panel: WendaoBeiPanel = $UI/WendaoBeiPanel
 
 
 func _ready() -> void:
@@ -150,7 +152,7 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
-	if start_menu_active or settings_active or home_active or manual_pause or character_selection_active or branch_selection_active or level_up_active or special_card_active or run_finished:
+	if start_menu_active or settings_active or home_active or manual_pause or character_selection_active or branch_selection_active or wendao_bei_active or level_up_active or special_card_active or run_finished:
 		return
 
 	elapsed_time += delta
@@ -186,9 +188,13 @@ func _process(delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if wendao_bei_active:
+		return
+	if _handle_lobby_interaction_input(event):
+		return
 	if event.is_action_pressed("use_skill") and _can_accept_gameplay_input():
 		_try_use_player_skill()
-	elif event.is_action_pressed("pause_game") and not run_finished and not start_menu_active and not settings_active and not home_active and not character_selection_active and not branch_selection_active and not level_up_active and not special_card_active:
+	elif event.is_action_pressed("pause_game") and not run_finished and not start_menu_active and not settings_active and not home_active and not character_selection_active and not branch_selection_active and not wendao_bei_active and not level_up_active and not special_card_active:
 		_toggle_manual_pause()
 	elif event.is_action_pressed("restart_run") and run_finished:
 		_restart_run()
@@ -202,6 +208,7 @@ func _can_accept_gameplay_input() -> bool:
 		and not manual_pause \
 		and not character_selection_active \
 		and not branch_selection_active \
+		and not wendao_bei_active \
 		and not level_up_active \
 		and not special_card_active
 
@@ -231,6 +238,43 @@ func _on_mobile_skill_pressed() -> void:
 	_try_use_player_skill()
 
 
+func _handle_lobby_interaction_input(event: InputEvent) -> bool:
+	if not _is_lobby_interaction_available():
+		return false
+	if not (event is InputEventMouseButton):
+		return false
+	var mouse_event := event as InputEventMouseButton
+	if mouse_event.button_index != MOUSE_BUTTON_LEFT or not mouse_event.pressed:
+		return false
+	if not arena.has_method("get_lobby_interaction_at_world"):
+		return false
+
+	var interaction_id: String = String(arena.call("get_lobby_interaction_at_world", get_global_mouse_position()))
+	if interaction_id == "wendao_bei":
+		get_viewport().set_input_as_handled()
+		_present_wendao_bei()
+		return true
+	if interaction_id == "xianminglu":
+		get_viewport().set_input_as_handled()
+		audio_manager.play_sfx("pickup", 1.0, -7.0)
+		return true
+	return false
+
+
+func _is_lobby_interaction_available() -> bool:
+	return not run_finished \
+		and not start_menu_active \
+		and not settings_active \
+		and not home_active \
+		and not manual_pause \
+		and not character_selection_active \
+		and not branch_selection_active \
+		and not wendao_bei_active \
+		and not level_up_active \
+		and not special_card_active \
+		and not enemy_spawns_enabled
+
+
 func _connect_signals() -> void:
 	player.projectile_spawned.connect(_on_projectile_spawned)
 	player.effect_spawned.connect(_on_effect_spawned)
@@ -251,6 +295,7 @@ func _connect_signals() -> void:
 	result_panel.restart_requested.connect(_restart_run)
 	result_panel.meta_upgrade_requested.connect(_on_meta_upgrade_requested)
 	special_card_panel.card_selected.connect(_on_special_card_selected)
+	wendao_bei_panel.back_requested.connect(_on_wendao_bei_back_requested)
 	hud.mobile_move_changed.connect(_on_mobile_move_changed)
 	hud.mobile_skill_pressed.connect(_on_mobile_skill_pressed)
 
@@ -324,6 +369,7 @@ func _present_lobby() -> void:
 	home_active = false
 	character_selection_active = false
 	branch_selection_active = false
+	wendao_bei_active = false
 	hud.visible = false
 	player.set_world_health_visible(false)
 	player.set_forced_weapon_visual_hidden(true)
@@ -334,6 +380,24 @@ func _present_lobby() -> void:
 	home_panel.hide_panel()
 	character_select_panel.hide_panel()
 	branch_select_panel.hide_panel()
+	wendao_bei_panel.hide_panel()
+	_sync_mobile_controls()
+
+
+func _present_wendao_bei() -> void:
+	wendao_bei_active = true
+	_sync_mobile_controls()
+	player.set_world_health_visible(false)
+	_set_modal_pause(true)
+	wendao_bei_panel.present()
+
+
+func _on_wendao_bei_back_requested() -> void:
+	if not wendao_bei_active:
+		return
+	wendao_bei_active = false
+	wendao_bei_panel.hide_panel()
+	_set_modal_pause(false)
 	_sync_mobile_controls()
 
 
@@ -876,6 +940,7 @@ func _finish_run(victory: bool) -> void:
 	manual_pause = false
 	character_selection_active = false
 	branch_selection_active = false
+	wendao_bei_active = false
 	level_up_active = false
 	special_card_active = false
 	start_menu_panel.hide_panel()
@@ -883,6 +948,7 @@ func _finish_run(victory: bool) -> void:
 	home_panel.hide_panel()
 	character_select_panel.hide_panel()
 	branch_select_panel.hide_panel()
+	wendao_bei_panel.hide_panel()
 	level_up_panel.hide_panel()
 	special_card_panel.hide_panel()
 	hud.set_pause_state(false)
@@ -995,6 +1061,7 @@ func _configure_process_modes() -> void:
 	home_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	character_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	branch_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	wendao_bei_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	level_up_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	result_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	special_card_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
