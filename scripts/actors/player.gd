@@ -344,6 +344,10 @@ func configure_map_movement(bounds_half_size: Vector2, camera_zoom: Vector2, con
 	_movement_constraint_provider = constraint_provider
 	if camera != null:
 		camera.zoom = camera_zoom
+		if constraint_provider != null and constraint_provider.has_method("get_player_camera_offset"):
+			camera.position = constraint_provider.call("get_player_camera_offset")
+		else:
+			camera.position = Vector2.ZERO
 		_configure_camera()
 
 

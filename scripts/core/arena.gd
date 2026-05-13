@@ -4,6 +4,8 @@ const ARENA_TILE_PATH := "res://art/backgrounds/ink_arena_tile.png"
 const ARENA_OVERLAY_PATH := "res://art/backgrounds/arena_overlay.png"
 const QINGXU_LOBBY_MAP_PATH := "res://art/backgrounds/qingxu_lobby_map.png"
 const QINGXU_LOBBY_WALK_MASK_PATH := "res://art/backgrounds/qingxu_lobby_walk_mask.png"
+const QINGXU_LOBBY_LEFT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_left_banner.png"
+const QINGXU_LOBBY_RIGHT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_right_banner.png"
 const SNOW_MOUNTAIN_MAP_PATH := "res://art/backgrounds/snow_mountain_map.png"
 const SNOW_MOUNTAIN_WALK_MASK_PATH := "res://art/backgrounds/snow_mountain_walk_mask.png"
 const BUILDING_COLLISION_LAYER := 8
@@ -15,6 +17,9 @@ const LOBBY_SOURCE_SIZE := Vector2(1672.0, 941.0)
 const LOBBY_MAP_SIZE := Vector2(3840.0, 2160.0)
 const LOBBY_PLAYER_START_PX := Vector2(836.0, 560.0)
 const LOBBY_CAMERA_ZOOM := Vector2(0.82, 0.82)
+const LOBBY_CAMERA_OFFSET := Vector2(0.0, -180.0)
+const LOBBY_LEFT_BANNER_RECT_PX := Rect2(563.0, 183.0, 62.0, 94.0)
+const LOBBY_RIGHT_BANNER_RECT_PX := Rect2(1572.0, 324.0, 74.0, 108.0)
 const SNOW_SOURCE_SIZE := Vector2(1535.0, 1024.0)
 const SNOW_MAP_SIZE := Vector2(3840.0, 2560.0)
 const SNOW_PLAYER_START_PX := Vector2(300.0, 800.0)
@@ -166,6 +171,8 @@ var qingxu_lobby_source_size := LOBBY_SOURCE_SIZE
 var qingxu_lobby_walk_mask: Texture2D
 var qingxu_lobby_walk_mask_image: Image
 var qingxu_lobby_walk_mask_size := LOBBY_SOURCE_SIZE
+var qingxu_lobby_left_banner: Texture2D
+var qingxu_lobby_right_banner: Texture2D
 var snow_mountain_map: Texture2D
 var snow_map_image: Image
 var snow_source_size := SNOW_SOURCE_SIZE
@@ -242,6 +249,12 @@ func get_player_camera_zoom() -> Vector2:
 	return Vector2(0.95, 0.95)
 
 
+func get_player_camera_offset() -> Vector2:
+	if map_id == MAP_ID_QINGXU_LOBBY:
+		return LOBBY_CAMERA_OFFSET
+	return Vector2.ZERO
+
+
 func is_position_walkable(world_position: Vector2) -> bool:
 	if map_id == MAP_ID_QINGXU_LOBBY:
 		if qingxu_lobby_walk_mask_image != null and not qingxu_lobby_walk_mask_image.is_empty():
@@ -278,6 +291,8 @@ func _load_map_textures() -> void:
 		qingxu_lobby_walk_mask_image = qingxu_lobby_walk_mask.get_image()
 		if qingxu_lobby_walk_mask_image != null and not qingxu_lobby_walk_mask_image.is_empty():
 			qingxu_lobby_walk_mask_size = Vector2(qingxu_lobby_walk_mask_image.get_width(), qingxu_lobby_walk_mask_image.get_height())
+	qingxu_lobby_left_banner = _load_optional_texture(QINGXU_LOBBY_LEFT_BANNER_PATH)
+	qingxu_lobby_right_banner = _load_optional_texture(QINGXU_LOBBY_RIGHT_BANNER_PATH)
 	snow_mountain_map = _load_optional_texture(SNOW_MOUNTAIN_MAP_PATH)
 	if snow_mountain_map != null:
 		snow_map_image = snow_mountain_map.get_image()
@@ -366,6 +381,12 @@ func _map_px_to_world(pixel_position: Vector2, source_size: Vector2, map_size: V
 		pixel_position.x / source_size.x * map_size.x - map_size.x * 0.5,
 		pixel_position.y / source_size.y * map_size.y - map_size.y * 0.5
 	)
+
+
+func _map_rect_px_to_world(raw_rect: Rect2, source_size: Vector2, map_size: Vector2) -> Rect2:
+	var top_left := _map_px_to_world(raw_rect.position, source_size, map_size)
+	var bottom_right := _map_px_to_world(raw_rect.position + raw_rect.size, source_size, map_size)
+	return Rect2(top_left, bottom_right - top_left)
 
 
 func _snow_world_to_px(world_position: Vector2) -> Vector2:
@@ -483,6 +504,10 @@ func _draw_qingxu_lobby_map() -> void:
 	draw_rect(rect, Color(0.82, 0.81, 0.76, 1.0), true)
 	if qingxu_lobby_map != null:
 		draw_texture_rect(qingxu_lobby_map, rect, false)
+	if qingxu_lobby_left_banner != null:
+		draw_texture_rect(qingxu_lobby_left_banner, _map_rect_px_to_world(LOBBY_LEFT_BANNER_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE), false)
+	if qingxu_lobby_right_banner != null:
+		draw_texture_rect(qingxu_lobby_right_banner, _map_rect_px_to_world(LOBBY_RIGHT_BANNER_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE), false)
 	if show_walkable_debug and qingxu_lobby_walk_mask != null:
 		draw_texture_rect(qingxu_lobby_walk_mask, rect, false, Color(1.0, 1.0, 1.0, 0.34))
 
