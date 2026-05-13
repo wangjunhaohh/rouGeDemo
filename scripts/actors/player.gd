@@ -2,7 +2,7 @@ extends CharacterBody2D
 class_name Player
 
 const CAMERA_EDGE_MARGIN := 12
-const WEAPON_TEXTURE := preload("res://art/sprites/weapon_blaster.png")
+const WEAPON_TEXTURE := preload("res://art/sprites/projectile_player.png")
 const WEAPON_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
 const SENTRY_NODE_SCENE := preload("res://scenes/props/sentry_node.tscn")
 const GUARD_BURST_SCENE := preload("res://scenes/effects/guard_burst.tscn")

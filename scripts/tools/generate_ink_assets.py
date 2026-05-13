@@ -882,7 +882,6 @@ def create_core_assets() -> None:
 
     save_image(make_player_projectile_sprite(), "art/sprites/projectile_player.png")
     save_image(make_experience_orb_sprite(), "art/sprites/experience_orb.png")
-    save_image(make_weapon_blaster_sprite(), "art/sprites/weapon_blaster.png")
     save_image(make_weapon_flash_sprite(), "art/sprites/weapon_flash.png")
     save_image(make_card_pickup_sprite(), "art/sprites/card_pickup.png")
     save_image(make_card_icon_sprite("buff"), "art/sprites/card_buff.png")

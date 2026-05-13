@@ -4,7 +4,7 @@ class_name BranchCatalog
 const TANK_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/tank/manifest.json"
 const DEBUFF_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/debuff/manifest.json"
 const BUILDING_SPINE_MANIFEST_PATH := "res://art/spine/branch_attacks/building/manifest.json"
-const FALLBACK_WEAPON_TEXTURE := preload("res://art/sprites/weapon_blaster.png")
+const FALLBACK_WEAPON_TEXTURE := preload("res://art/sprites/projectile_player.png")
 const FALLBACK_FLASH_TEXTURE := preload("res://art/sprites/weapon_flash.png")
 const FALLBACK_PROJECTILE_TEXTURE: Texture2D = preload("res://art/sprites/projectile_player.png")
 const TANK_WEAPON_FRAMES := {

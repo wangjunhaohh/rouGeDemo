@@ -31,7 +31,7 @@ func _ready() -> void:
 	_pulse_left = pulse_interval * 0.6 if pulse_interval > 0.0 else 0.0
 	base.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	glow.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	base.texture = preload("res://art/sprites/weapon_blaster.png")
+	base.texture = preload("res://art/sprites/projectile_player.png")
 	glow.texture = preload("res://art/sprites/weapon_flash.png")
 	base.modulate = accent_color
 	glow.modulate = Color(accent_color.r, accent_color.g, accent_color.b, 0.0)

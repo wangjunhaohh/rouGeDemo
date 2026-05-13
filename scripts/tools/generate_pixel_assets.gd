@@ -22,7 +22,6 @@ func _initialize() -> void:
 	_save_image(_generate_player_projectile_sprite(), "res://art/sprites/projectile_player.png")
 	_save_image(_generate_enemy_projectile_sprite(), "res://art/sprites/projectile_enemy.png")
 	_save_image(_generate_experience_orb_sprite(), "res://art/sprites/experience_orb.png")
-	_save_image(_generate_weapon_blaster_sprite(), "res://art/sprites/weapon_blaster.png")
 	_save_image(_generate_weapon_flash_sprite(), "res://art/sprites/weapon_flash.png")
 	_save_image(_generate_card_pickup_sprite(), "res://art/sprites/card_pickup.png")
 	_save_image(_generate_card_icon_sprite("buff"), "res://art/sprites/card_buff.png")
