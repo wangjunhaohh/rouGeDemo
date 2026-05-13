@@ -201,6 +201,7 @@ var _default_body_visual_offset := Vector2.ZERO
 var _default_body_texture_filter := CanvasItem.TEXTURE_FILTER_NEAREST
 var _body_visual_base_scale := Vector2.ONE
 var _body_attack_animation_speed_multiplier := 1.0
+var _force_hide_weapon_visual := false
 var _hide_melee_weapon_visual := false
 var _hide_primary_weapon_visual := false
 var _primary_attack_type := ""
@@ -344,6 +345,11 @@ func configure_map_movement(bounds_half_size: Vector2, camera_zoom: Vector2, con
 	if camera != null:
 		camera.zoom = camera_zoom
 		_configure_camera()
+
+
+func set_forced_weapon_visual_hidden(active: bool) -> void:
+	_force_hide_weapon_visual = active
+	_sync_weapon_visual_visibility()
 
 
 func set_character_definition(character: Dictionary, skill: Dictionary) -> void:
@@ -1744,7 +1750,7 @@ func _apply_character_body_visual(character: Dictionary) -> void:
 func _sync_weapon_visual_visibility() -> bool:
 	if weapon_visual == null or weapon_trail == null or weapon_impact == null:
 		return false
-	var hide_weapon_visual := _hide_primary_weapon_visual or (_hide_melee_weapon_visual and _current_primary_attack_type() == "melee")
+	var hide_weapon_visual := _force_hide_weapon_visual or _hide_primary_weapon_visual or (_hide_melee_weapon_visual and _current_primary_attack_type() == "melee")
 	weapon_visual.visible = not hide_weapon_visual
 	weapon_trail.visible = not hide_weapon_visual
 	weapon_impact.visible = not hide_weapon_visual

@@ -10,6 +10,7 @@ const BRANCH_CATALOG := preload("res://scripts/data/branch_catalog.gd")
 const CHARACTER_CATALOG := preload("res://scripts/data/character_catalog.gd")
 const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
+const LOBBY_MAP_ID := "qingxu_lobby"
 const ACTIVE_MAP_ID := "snow_mountain"
 
 const STAGE_CONFIGS := [
@@ -254,9 +255,9 @@ func _connect_signals() -> void:
 	hud.mobile_skill_pressed.connect(_on_mobile_skill_pressed)
 
 
-func _configure_current_map() -> void:
+func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
 	if arena.has_method("set_map_id"):
-		arena.set_map_id(ACTIVE_MAP_ID)
+		arena.set_map_id(target_map_id)
 	if arena.has_method("is_enemy_spawning_enabled"):
 		enemy_spawns_enabled = bool(arena.call("is_enemy_spawning_enabled"))
 	if arena.has_method("get_player_start_position"):
@@ -285,6 +286,7 @@ func _present_start_menu() -> void:
 	hud.visible = false
 	_sync_mobile_controls()
 	player.set_world_health_visible(false)
+	player.set_forced_weapon_visual_hidden(true)
 	_set_modal_pause(true)
 	home_panel.hide_panel()
 	settings_panel.hide_panel()
@@ -296,7 +298,7 @@ func _on_start_menu_start_requested() -> void:
 	settings_active = false
 	start_menu_panel.hide_panel()
 	settings_panel.hide_panel()
-	_present_home()
+	_present_lobby()
 
 
 func _on_start_menu_settings_requested() -> void:
@@ -316,6 +318,25 @@ func _on_settings_back_requested() -> void:
 		start_menu_panel.present(GAME_TITLE)
 
 
+func _present_lobby() -> void:
+	start_menu_active = false
+	settings_active = false
+	home_active = false
+	character_selection_active = false
+	branch_selection_active = false
+	hud.visible = false
+	player.set_world_health_visible(false)
+	player.set_forced_weapon_visual_hidden(true)
+	_configure_current_map(LOBBY_MAP_ID)
+	_set_modal_pause(false)
+	start_menu_panel.hide_panel()
+	settings_panel.hide_panel()
+	home_panel.hide_panel()
+	character_select_panel.hide_panel()
+	branch_select_panel.hide_panel()
+	_sync_mobile_controls()
+
+
 func _present_home() -> void:
 	start_menu_active = false
 	settings_active = false
@@ -323,6 +344,7 @@ func _present_home() -> void:
 	hud.visible = false
 	_sync_mobile_controls()
 	player.set_world_health_visible(false)
+	player.set_forced_weapon_visual_hidden(true)
 	hud.set_objective_text("目标：准备进入青墟")
 	_set_modal_pause(true)
 	start_menu_panel.hide_panel()
@@ -352,6 +374,7 @@ func _present_character_selection() -> void:
 	character_selection_active = true
 	_sync_mobile_controls()
 	player.set_world_health_visible(false)
+	player.set_forced_weapon_visual_hidden(false)
 	hud.set_objective_text("目标：选择出战人物")
 	hud.show_event("选择剑客或法师，决定本局基础属性和专属技能", 2.4)
 	_set_modal_pause(true)

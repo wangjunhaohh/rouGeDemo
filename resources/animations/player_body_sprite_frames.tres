@@ -8,12 +8,12 @@
 [ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_up_left.png" id="6"]
 [ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_left.png" id="7"]
 [ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_down_left.png" id="8"]
-[ext_resource type="Texture2D" path="res://art/animations/player_sword_attack/frame_01_idle.png" id="9"]
-[ext_resource type="Texture2D" path="res://art/animations/player_sword_attack/frame_02_ready.png" id="10"]
-[ext_resource type="Texture2D" path="res://art/animations/player_sword_attack/frame_03_slash.png" id="11"]
-[ext_resource type="Texture2D" path="res://art/animations/player_sword_attack/frame_04_followthrough.png" id="12"]
-[ext_resource type="Texture2D" path="res://art/animations/player_sword_attack/frame_05_recover.png" id="13"]
-[ext_resource type="Texture2D" path="res://art/animations/player_sword_attack/frame_06_idle_end.png" id="14"]
+[ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_right.png" id="9"]
+[ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_down_right.png" id="10"]
+[ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_down.png" id="11"]
+[ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_down_left.png" id="12"]
+[ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_left.png" id="13"]
+[ext_resource type="Texture2D" path="res://art/sprites/player_dirs/player_up_left.png" id="14"]
 
 [resource]
 animations = [{
