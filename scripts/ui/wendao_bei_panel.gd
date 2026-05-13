@@ -6,6 +6,17 @@ signal back_requested
 const BACKGROUND_TEXTURE := preload("res://art/backgrounds/wendao_bei_page.png")
 const CATEGORY_LIST_TEXTURE := preload("res://art/ui/wendao_category_list_base.png")
 const CATEGORY_SELECTED_TEXTURE := preload("res://art/ui/wendao_category_selected.png")
+const TASK_ROW_NORMAL_TEXTURE := preload("res://art/ui/wendao_task_row_normal.png")
+const TASK_ROW_SELECTED_TEXTURE := preload("res://art/ui/wendao_task_row_selected.png")
+const SOURCE_HAN_SERIF_FONT := preload("res://art/fonts/NotoSerifSC-VF.ttf")
+const TASK_ICON_TEXTURES := {
+	"achievement_intro_qingxu": preload("res://art/ui/achievement_intro_qingxu.png"),
+	"achievement_monster_01": preload("res://art/ui/achievement_monster_01.png"),
+	"achievement_mountain_01": preload("res://art/ui/achievement_mountain_01.png"),
+	"achievement_treasure_01": preload("res://art/ui/achievement_treasure_01.png"),
+	"achievement_qi_01": preload("res://art/ui/achievement_qi_01.png"),
+	"achievement_trial_01": preload("res://art/ui/achievement_trial_01.png"),
+}
 const DESIGN_SIZE := Vector2(1672.0, 941.0)
 const CURRENCY_START := Vector2(888.0, 24.0)
 const CURRENCY_ITEM_SIZE := Vector2(172.0, 42.0)
@@ -23,9 +34,26 @@ const CATEGORY_LABEL_OFFSET := Vector2(11.0, 12.0)
 const CATEGORY_LABEL_SIZE := Vector2(100.0, 44.0)
 const CATEGORY_DOT_OFFSET := Vector2(110.0, 8.0)
 const CATEGORY_DOT_SIZE := Vector2(11.0, 11.0)
-const LIST_START := Vector2(485.0, 224.0)
-const LIST_ITEM_SIZE := Vector2(470.0, 105.0)
-const LIST_ITEM_GAP := 120.0
+const TASK_ROW_RECTS := [
+	Rect2(455.0, 180.0, 530.0, 100.0),
+	Rect2(455.0, 300.0, 530.0, 100.0),
+	Rect2(455.0, 420.0, 530.0, 100.0),
+	Rect2(455.0, 526.0, 530.0, 100.0),
+	Rect2(455.0, 632.0, 530.0, 100.0),
+	Rect2(455.0, 738.0, 530.0, 100.0),
+]
+const TASK_SELECTED_ROW_OFFSET := Vector2(0.0, -4.0)
+const TASK_SELECTED_ROW_SIZE := Vector2(530.0, 116.0)
+const TASK_ICON_SIZE := Vector2(82.0, 82.0)
+const TASK_TITLE_OFFSET := Vector2(126.0, 17.0)
+const TASK_DESC_OFFSET := Vector2(126.0, 55.0)
+const TASK_PROGRESS_OFFSET := Vector2(418.0, 16.0)
+const TASK_STATUS_OFFSET := Vector2(410.0, 54.0)
+const TASK_TITLE_SIZE := Vector2(250.0, 34.0)
+const TASK_DESC_SIZE := Vector2(275.0, 30.0)
+const TASK_PROGRESS_SIZE := Vector2(84.0, 28.0)
+const TASK_STATUS_SIZE := Vector2(82.0, 34.0)
+const TASK_RED_DOT_OFFSET := Vector2(494.0, 47.0)
 const DETAIL_RECT := Rect2(1080.0, 178.0, 455.0, 642.0)
 const CLAIM_RECT := Rect2(1212.0, 715.0, 225.0, 72.0)
 const BACK_RECT := Rect2(822.0, 850.0, 240.0, 62.0)
@@ -53,6 +81,17 @@ const VIEW_DATA := {
 		"selectedId": "kill_monster_100",
 		"items": [
 			{
+				"id": "intro_qingxu",
+				"categoryId": "journey",
+				"title": "初入青墟",
+				"desc": "完成主线任务【青墟问道】",
+				"icon": "achievement_intro_qingxu",
+				"progress": {"current": 1, "target": 1},
+				"status": "completed",
+				"statusText": "已铭刻",
+				"redDot": false
+			},
+			{
 				"id": "kill_monster_100",
 				"categoryId": "monster",
 				"title": "斩妖初试",
@@ -62,6 +101,50 @@ const VIEW_DATA := {
 				"status": "claimable",
 				"statusText": "可领取",
 				"redDot": true
+			},
+			{
+				"id": "mountain_secret_10",
+				"categoryId": "explore",
+				"title": "山海初识",
+				"desc": "解锁10处山海秘境",
+				"icon": "achievement_mountain_01",
+				"progress": {"current": 7, "target": 10},
+				"status": "in_progress",
+				"statusText": "修行中",
+				"redDot": false
+			},
+			{
+				"id": "treasure_quality_5",
+				"categoryId": "collection",
+				"title": "灵宝入囊",
+				"desc": "获得5件紫色及以上品质灵宝",
+				"icon": "achievement_treasure_01",
+				"progress": {"current": 2, "target": 5},
+				"status": "unstarted",
+				"statusText": "未参悟",
+				"redDot": false
+			},
+			{
+				"id": "qi_mid_stage",
+				"categoryId": "journey",
+				"title": "炼气有成",
+				"desc": "境界达到炼气中期",
+				"icon": "achievement_qi_01",
+				"progress": {"current": 1, "target": 1},
+				"status": "completed",
+				"statusText": "已铭刻",
+				"redDot": false
+			},
+			{
+				"id": "trial_floor_3",
+				"categoryId": "trial",
+				"title": "试炼锋芒",
+				"desc": "通关试炼之地·第三层",
+				"icon": "achievement_trial_01",
+				"progress": {"current": 0, "target": 1},
+				"status": "unstarted",
+				"statusText": "未参悟",
+				"redDot": false
 			}
 		]
 	},
@@ -253,56 +336,76 @@ func _refresh_task_rows() -> void:
 	if not selected_in_filter:
 		selected_achievement_id = String(tasks[0].get("id", "")) if not tasks.is_empty() else ""
 
-	for index in range(tasks.size()):
+	var visible_count: int = min(tasks.size(), TASK_ROW_RECTS.size())
+	for index in range(visible_count):
 		_add_task_row(tasks[index], index)
 
 
 func _add_task_row(task: Dictionary, index: int) -> void:
-	var rect := Rect2(LIST_START + Vector2(0.0, LIST_ITEM_GAP * float(index)), LIST_ITEM_SIZE)
 	var selected := String(task.get("id", "")) == selected_achievement_id
+	var base_rect: Rect2 = TASK_ROW_RECTS[index]
+	var row_rect := Rect2(base_rect.position + TASK_SELECTED_ROW_OFFSET, TASK_SELECTED_ROW_SIZE) if selected else base_rect
+	var content_origin := row_rect.position
+
+	var row_texture := TextureRect.new()
+	row_texture.texture = TASK_ROW_SELECTED_TEXTURE if selected else TASK_ROW_NORMAL_TEXTURE
+	row_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	row_texture.stretch_mode = TextureRect.STRETCH_SCALE
+	row_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(row_texture)
+	task_row_nodes.append(row_texture)
+	_set_design_rect(row_texture, row_rect)
+
 	var button := _make_text_button("TaskRow%d" % index)
 	button.text = ""
 	button.pressed.connect(_on_task_pressed.bind(String(task.get("id", ""))))
-	button.add_theme_stylebox_override("normal", _make_row_box(selected))
-	button.add_theme_stylebox_override("hover", _make_row_box(true))
-	button.add_theme_stylebox_override("pressed", _make_row_box(true))
 	add_child(button)
 	task_row_nodes.append(button)
-	_set_design_rect(button, rect)
+	_set_design_rect(button, row_rect)
 
-	var icon_panel := _make_icon_placeholder(false)
-	add_child(icon_panel)
-	task_row_nodes.append(icon_panel)
-	_set_design_rect(icon_panel, Rect2(rect.position + Vector2(22.0, 18.0), Vector2(70.0, 70.0)))
+	var icon := _make_task_icon(String(task.get("icon", "")))
+	add_child(icon)
+	task_row_nodes.append(icon)
+	_set_design_rect(icon, Rect2(content_origin + _task_icon_offset(index), TASK_ICON_SIZE))
 
-	var title := _make_label(String(task.get("title", "")), 27, true)
+	var title := _make_label(String(task.get("title", "")), 28, false)
+	title.add_theme_color_override("font_color", Color(0.10, 0.08, 0.05, 1.0))
 	add_child(title)
 	task_row_nodes.append(title)
-	_set_design_rect(title, Rect2(rect.position + Vector2(112.0, 14.0), Vector2(210.0, 36.0)))
+	_set_design_rect(title, Rect2(content_origin + TASK_TITLE_OFFSET, TASK_TITLE_SIZE))
 
 	var desc := _make_label(String(task.get("desc", "")), 19, false)
+	desc.add_theme_color_override("font_color", Color(0.12, 0.10, 0.07, 1.0))
 	add_child(desc)
 	task_row_nodes.append(desc)
-	_set_design_rect(desc, Rect2(rect.position + Vector2(112.0, 55.0), Vector2(255.0, 30.0)))
+	_set_design_rect(desc, Rect2(content_origin + TASK_DESC_OFFSET, TASK_DESC_SIZE))
 
 	var progress_data: Dictionary = Dictionary(task.get("progress", {}))
 	var progress := _make_label("%d/%d" % [int(progress_data.get("current", 0)), int(progress_data.get("target", 0))], 20, false)
 	progress.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	progress.add_theme_color_override("font_color", Color(0.11, 0.10, 0.08, 1.0))
 	add_child(progress)
 	task_row_nodes.append(progress)
-	_set_design_rect(progress, Rect2(rect.position + Vector2(330.0, 15.0), Vector2(98.0, 30.0)))
+	_set_design_rect(progress, Rect2(content_origin + _task_progress_offset(index), TASK_PROGRESS_SIZE))
+
+	var status_panel := _make_task_status_panel(String(task.get("status", "")))
+	add_child(status_panel)
+	task_row_nodes.append(status_panel)
+	_set_design_rect(status_panel, Rect2(content_origin + _task_status_offset(index), TASK_STATUS_SIZE))
 
 	var status := _make_label(String(task.get("statusText", "")), 19, false)
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status.add_theme_color_override("font_color", _task_status_text_color(String(task.get("status", ""))))
 	add_child(status)
 	task_row_nodes.append(status)
-	_set_design_rect(status, Rect2(rect.position + Vector2(360.0, 55.0), Vector2(84.0, 31.0)))
+	_set_design_rect(status, Rect2(content_origin + _task_status_offset(index), TASK_STATUS_SIZE))
 
 	if bool(task.get("redDot", false)):
 		var dot := _make_red_dot()
 		add_child(dot)
 		task_row_nodes.append(dot)
-		_set_design_rect(dot, Rect2(rect.position + Vector2(438.0, 50.0), Vector2(11.0, 11.0)))
+		_set_design_rect(dot, Rect2(content_origin + TASK_RED_DOT_OFFSET, CATEGORY_DOT_SIZE))
 
 
 func _refresh_detail() -> void:
@@ -429,6 +532,70 @@ func _format_currency_value(item: Dictionary) -> String:
 	return "%d" % int(item.get("value", 0))
 
 
+func _make_task_icon(icon_id: String) -> Control:
+	if TASK_ICON_TEXTURES.has(icon_id):
+		var icon := TextureRect.new()
+		icon.texture = TASK_ICON_TEXTURES[icon_id]
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		return icon
+	return _make_icon_placeholder(false)
+
+
+func _task_icon_offset(index: int) -> Vector2:
+	if index >= 2:
+		return Vector2(27.0, 3.0)
+	return Vector2(27.0, 16.0)
+
+
+func _task_progress_offset(index: int) -> Vector2:
+	if index >= 2:
+		return Vector2(TASK_PROGRESS_OFFSET.x, 13.0)
+	return TASK_PROGRESS_OFFSET
+
+
+func _task_status_offset(index: int) -> Vector2:
+	if index >= 2:
+		return Vector2(TASK_STATUS_OFFSET.x, 43.0)
+	return TASK_STATUS_OFFSET
+
+
+func _make_task_status_panel(status_key: String) -> Panel:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := StyleBoxFlat.new()
+	match status_key:
+		"claimable":
+			box.bg_color = Color(0.86, 0.68, 0.40, 0.72)
+			box.border_color = Color(0.55, 0.35, 0.14, 0.55)
+		"completed":
+			box.bg_color = Color(0.86, 0.82, 0.74, 0.18)
+			box.border_color = Color(0.58, 0.12, 0.08, 0.70)
+		"in_progress":
+			box.bg_color = Color(0.80, 0.84, 0.80, 0.16)
+			box.border_color = Color(0.22, 0.36, 0.43, 0.70)
+		_:
+			box.bg_color = Color(0.76, 0.72, 0.64, 0.14)
+			box.border_color = Color(0.21, 0.18, 0.14, 0.55)
+	box.set_border_width_all(1)
+	box.set_corner_radius_all(5)
+	panel.add_theme_stylebox_override("panel", box)
+	return panel
+
+
+func _task_status_text_color(status_key: String) -> Color:
+	match status_key:
+		"claimable":
+			return Color(0.13, 0.09, 0.04, 1.0)
+		"completed":
+			return Color(0.58, 0.12, 0.08, 1.0)
+		"in_progress":
+			return Color(0.16, 0.28, 0.35, 1.0)
+		_:
+			return Color(0.11, 0.10, 0.08, 1.0)
+
+
 func _make_text_button(button_name: String) -> Button:
 	var button := Button.new()
 	button.name = button_name
@@ -456,6 +623,8 @@ func _make_label(text: String, font_size: int, use_brush_font: bool) -> Label:
 	label.add_theme_constant_override("shadow_offset_y", 1)
 	if use_brush_font:
 		label.add_theme_font_override("font", InkUIStyle.INK_BRUSH_FONT)
+	else:
+		label.add_theme_font_override("font", SOURCE_HAN_SERIF_FONT)
 	return label
 
 
@@ -483,14 +652,6 @@ func _make_paper_panel(alpha: float) -> Panel:
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel", _make_soft_box(Color(0.84, 0.80, 0.70, alpha), Color(0.42, 0.36, 0.26, 0.12), 8))
 	return panel
-
-
-func _make_row_box(selected: bool) -> StyleBoxFlat:
-	return _make_soft_box(
-		Color(0.83, 0.78, 0.68, 0.30 if selected else 0.20),
-		Color(0.56, 0.48, 0.36, 0.34 if selected else 0.18),
-		6
-	)
 
 
 func _make_soft_box(bg_color: Color, border_color: Color, radius: int) -> StyleBoxFlat:
