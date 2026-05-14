@@ -3,7 +3,6 @@ extends Node2D
 const ARENA_TILE_PATH := "res://art/backgrounds/ink_arena_tile.png"
 const ARENA_OVERLAY_PATH := "res://art/backgrounds/arena_overlay.png"
 const QINGXU_LOBBY_MAP_PATH := "res://art/backgrounds/qingxu_lobby_map.png"
-const QINGXU_LOBBY_WALK_MASK_PATH := "res://art/backgrounds/qingxu_lobby_walk_mask.png"
 const QINGXU_LOBBY_LEFT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_left_banner.png"
 const QINGXU_LOBBY_RIGHT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_right_banner.png"
 const SNOW_MOUNTAIN_MAP_PATH := "res://art/backgrounds/snow_mountain_map.png"
@@ -13,15 +12,12 @@ const MAP_ID_DEFAULT := "default_arena"
 const MAP_ID_QINGXU_LOBBY := "qingxu_lobby"
 const MAP_ID_SNOW_MOUNTAIN := "snow_mountain"
 const MAP_COLLIDER_GROUP := "arena_runtime_colliders"
-const LOBBY_SOURCE_SIZE := Vector2(1672.0, 941.0)
+const LOBBY_SOURCE_SIZE := Vector2(2560.0, 1440.0)
 const LOBBY_MAP_SIZE := Vector2(3840.0, 2160.0)
-const LOBBY_PLAYER_START_PX := Vector2(836.0, 560.0)
-const LOBBY_CAMERA_ZOOM := Vector2(0.82, 0.82)
-const LOBBY_CAMERA_OFFSET := Vector2(0.0, -180.0)
-const LOBBY_LEFT_BANNER_RECT_PX := Rect2(563.0, 183.0, 62.0, 94.0)
-const LOBBY_RIGHT_BANNER_RECT_PX := Rect2(1572.0, 324.0, 74.0, 108.0)
-const LOBBY_WENDAO_BEI_HIT_RECT_PX := Rect2(445.0, 190.0, 205.0, 245.0)
-const LOBBY_XIANMINGLU_HIT_RECT_PX := Rect2(1305.0, 310.0, 330.0, 285.0)
+const LOBBY_LEFT_BANNER_RECT_PX := Rect2(862.01, 280.04, 94.93, 143.85)
+const LOBBY_RIGHT_BANNER_RECT_PX := Rect2(2406.89, 495.81, 113.31, 165.27)
+const LOBBY_WENDAO_BEI_HIT_RECT_PX := Rect2(681.33, 290.76, 313.88, 374.92)
+const LOBBY_XIANMINGLU_HIT_RECT_PX := Rect2(1998.08, 474.39, 505.27, 436.13)
 const SNOW_SOURCE_SIZE := Vector2(1535.0, 1024.0)
 const SNOW_MAP_SIZE := Vector2(3840.0, 2560.0)
 const SNOW_PLAYER_START_PX := Vector2(300.0, 800.0)
@@ -168,11 +164,7 @@ const ANCIENT_BUILDINGS := [
 var arena_tile: Texture2D
 var arena_overlay: Texture2D
 var qingxu_lobby_map: Texture2D
-var qingxu_lobby_map_image: Image
 var qingxu_lobby_source_size := LOBBY_SOURCE_SIZE
-var qingxu_lobby_walk_mask: Texture2D
-var qingxu_lobby_walk_mask_image: Image
-var qingxu_lobby_walk_mask_size := LOBBY_SOURCE_SIZE
 var qingxu_lobby_left_banner: Texture2D
 var qingxu_lobby_right_banner: Texture2D
 var snow_mountain_map: Texture2D
@@ -227,8 +219,6 @@ func is_enemy_spawning_enabled() -> bool:
 
 
 func get_player_start_position() -> Vector2:
-	if map_id == MAP_ID_QINGXU_LOBBY:
-		return _map_px_to_world(LOBBY_PLAYER_START_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE)
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return _snow_px_to_world(SNOW_PLAYER_START_PX)
 	return Vector2.ZERO
@@ -246,25 +236,15 @@ func get_lobby_interaction_at_world(world_position: Vector2) -> String:
 
 
 func get_player_bounds_half_size() -> Vector2:
-	if map_id == MAP_ID_QINGXU_LOBBY:
-		return LOBBY_MAP_SIZE * 0.5
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return SNOW_MAP_SIZE * 0.5
 	return arena_size * 0.5 - Vector2.ONE * 40.0
 
 
 func get_player_camera_zoom() -> Vector2:
-	if map_id == MAP_ID_QINGXU_LOBBY:
-		return LOBBY_CAMERA_ZOOM
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return SNOW_CAMERA_ZOOM
 	return Vector2(0.95, 0.95)
-
-
-func get_player_camera_offset() -> Vector2:
-	if map_id == MAP_ID_QINGXU_LOBBY:
-		return LOBBY_CAMERA_OFFSET
-	return Vector2.ZERO
 
 
 func uses_world_y_sort() -> bool:
@@ -284,10 +264,6 @@ func get_exploration_hud_config() -> Dictionary:
 
 
 func is_position_walkable(world_position: Vector2) -> bool:
-	if map_id == MAP_ID_QINGXU_LOBBY:
-		if qingxu_lobby_walk_mask_image != null and not qingxu_lobby_walk_mask_image.is_empty():
-			return _is_qingxu_lobby_mask_walkable(world_position)
-		return true
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		if snow_walk_mask_image != null and not snow_walk_mask_image.is_empty():
 			return _is_snow_mask_walkable(world_position)
@@ -311,14 +287,7 @@ func _load_map_textures() -> void:
 	arena_overlay = _load_texture(ARENA_OVERLAY_PATH)
 	qingxu_lobby_map = _load_optional_texture(QINGXU_LOBBY_MAP_PATH)
 	if qingxu_lobby_map != null:
-		qingxu_lobby_map_image = qingxu_lobby_map.get_image()
-		if qingxu_lobby_map_image != null and not qingxu_lobby_map_image.is_empty():
-			qingxu_lobby_source_size = Vector2(qingxu_lobby_map_image.get_width(), qingxu_lobby_map_image.get_height())
-	qingxu_lobby_walk_mask = _load_optional_texture(QINGXU_LOBBY_WALK_MASK_PATH)
-	if qingxu_lobby_walk_mask != null:
-		qingxu_lobby_walk_mask_image = qingxu_lobby_walk_mask.get_image()
-		if qingxu_lobby_walk_mask_image != null and not qingxu_lobby_walk_mask_image.is_empty():
-			qingxu_lobby_walk_mask_size = Vector2(qingxu_lobby_walk_mask_image.get_width(), qingxu_lobby_walk_mask_image.get_height())
+		qingxu_lobby_source_size = Vector2(qingxu_lobby_map.get_width(), qingxu_lobby_map.get_height())
 	qingxu_lobby_left_banner = _load_optional_texture(QINGXU_LOBBY_LEFT_BANNER_PATH)
 	qingxu_lobby_right_banner = _load_optional_texture(QINGXU_LOBBY_RIGHT_BANNER_PATH)
 	snow_mountain_map = _load_optional_texture(SNOW_MOUNTAIN_MAP_PATH)
@@ -432,28 +401,6 @@ func _snow_world_to_walk_mask_px(world_position: Vector2) -> Vector2:
 	return _map_world_to_px(world_position, snow_walk_mask_size, SNOW_MAP_SIZE)
 
 
-func _qingxu_lobby_world_to_walk_mask_px(world_position: Vector2) -> Vector2:
-	return _map_world_to_px(world_position, qingxu_lobby_walk_mask_size, LOBBY_MAP_SIZE)
-
-
-func _is_qingxu_lobby_mask_walkable(world_position: Vector2) -> bool:
-	var pixel_position: Vector2 = _qingxu_lobby_world_to_walk_mask_px(world_position)
-	if pixel_position.x < 0.0 or pixel_position.y < 0.0:
-		return false
-	if pixel_position.x >= qingxu_lobby_walk_mask_size.x or pixel_position.y >= qingxu_lobby_walk_mask_size.y:
-		return false
-	var color := qingxu_lobby_walk_mask_image.get_pixelv(Vector2i(int(pixel_position.x), int(pixel_position.y)))
-	return _is_qingxu_lobby_walk_mask_pixel(color)
-
-
-func _is_qingxu_lobby_walk_mask_pixel(color: Color) -> bool:
-	var red := int(round(color.r * 255.0))
-	var green := int(round(color.g * 255.0))
-	var blue := int(round(color.b * 255.0))
-	var alpha := int(round(color.a * 255.0))
-	return red == 237 and green == 28 and blue == 36 and alpha >= 250
-
-
 func _is_snow_mask_walkable(world_position: Vector2) -> bool:
 	var pixel_position: Vector2 = _snow_world_to_walk_mask_px(world_position)
 	return _is_walk_mask_pixel_near(pixel_position, snow_walk_mask_image, snow_walk_mask_size)
@@ -536,8 +483,6 @@ func _draw_qingxu_lobby_map() -> void:
 		draw_texture_rect(qingxu_lobby_left_banner, _map_rect_px_to_world(LOBBY_LEFT_BANNER_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE), false)
 	if qingxu_lobby_right_banner != null:
 		draw_texture_rect(qingxu_lobby_right_banner, _map_rect_px_to_world(LOBBY_RIGHT_BANNER_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE), false)
-	if show_walkable_debug and qingxu_lobby_walk_mask != null:
-		draw_texture_rect(qingxu_lobby_walk_mask, rect, false, Color(1.0, 1.0, 1.0, 0.34))
 
 
 func _draw_ancient_buildings() -> void:

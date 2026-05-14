@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/start_menu_panel.gd" id="1"]
-[ext_resource type="Texture2D" path="res://art/backgrounds/start_menu_background_day_ink.png" id="2"]
+[ext_resource type="Texture2D" path="res://art/backgrounds/start_menu_background_day_ink_2k.png" id="2"]
 [ext_resource type="Texture2D" path="res://art/backgrounds/vignette.png" id="3"]
 
 [node name="StartMenuPanel" type="Control"]

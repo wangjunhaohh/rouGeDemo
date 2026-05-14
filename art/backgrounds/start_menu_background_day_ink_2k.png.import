@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://j7m1prhsalue"
-path="res://.godot/imported/qingxu_lobby_walk_mask.png-2deb45b90c3236893c948d79e5155fd2.ctex"
+uid="uid://bnel3ds56epq4"
+path="res://.godot/imported/start_menu_background_day_ink_2k.png-32d2ce948e27711a463ed2dcf0c81dfa.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/backgrounds/qingxu_lobby_walk_mask.png"
-dest_files=["res://.godot/imported/qingxu_lobby_walk_mask.png-2deb45b90c3236893c948d79e5155fd2.ctex"]
+source_file="res://art/backgrounds/start_menu_background_day_ink_2k.png"
+dest_files=["res://.godot/imported/start_menu_background_day_ink_2k.png-32d2ce948e27711a463ed2dcf0c81dfa.ctex"]
 
 [params]
 

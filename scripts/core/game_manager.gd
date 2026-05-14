@@ -314,6 +314,8 @@ func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
 		arena.set_map_id(target_map_id)
 	if arena.has_method("is_enemy_spawning_enabled"):
 		enemy_spawns_enabled = bool(arena.call("is_enemy_spawning_enabled"))
+	if target_map_id == LOBBY_MAP_ID:
+		return
 	if arena.has_method("get_player_start_position"):
 		player.global_position = arena.call("get_player_start_position")
 	var bounds_half_size := player.arena_half_size
