@@ -2,7 +2,6 @@ extends Control
 class_name HomePanel
 
 signal start_requested
-signal sky_palace_requested
 signal character_upgrade_requested(character_id: String, upgrade_id: String)
 
 const TREE_NODE_SIZE := Vector2(176.0, 88.0)
@@ -17,7 +16,6 @@ var _tree_buttons: Array[Button] = []
 @onready var subtitle_label: Label = $MarginContainer/Root/TopRow/TitleBox/SubTitleLabel
 @onready var shard_label: Label = $MarginContainer/Root/TopRow/ActionBox/ShardLabel
 @onready var start_button: Button = $MarginContainer/Root/TopRow/ActionBox/StartButton
-@onready var sky_palace_button: Button = $MarginContainer/Root/TopRow/ActionBox/SkyPalaceButton
 @onready var character_list: VBoxContainer = $MarginContainer/Root/Content/CharacterPanel/MarginContainer/VBoxContainer/CharacterList
 @onready var tree_title_label: Label = $MarginContainer/Root/Content/TreePanel/MarginContainer/VBoxContainer/TreeTitleLabel
 @onready var tree_detail_label: Label = $MarginContainer/Root/Content/TreePanel/MarginContainer/VBoxContainer/TreeDetailLabel
@@ -29,7 +27,6 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	hide()
 	start_button.pressed.connect(func() -> void: start_requested.emit())
-	sky_palace_button.pressed.connect(func() -> void: sky_palace_requested.emit())
 
 
 func present(characters: Array[Dictionary], meta_progression: MetaProgression, game_title: String) -> void:

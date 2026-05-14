@@ -221,6 +221,7 @@ var _attack_target_position := Vector2.ZERO
 var _attack_hit_resolved := false
 var _unstoppable_time_left := 0.0
 var _external_move_direction := Vector2.ZERO
+var _movement_enabled := true
 var _movement_constraint_provider: Node
 var _use_world_y_sort := false
 
@@ -354,6 +355,25 @@ func configure_map_movement(bounds_half_size: Vector2, camera_zoom: Vector2, con
 		else:
 			camera.position = Vector2.ZERO
 		_configure_camera()
+
+
+func set_movement_enabled(active: bool) -> void:
+	_movement_enabled = active
+	if active:
+		return
+	_external_move_direction = Vector2.ZERO
+	velocity = Vector2.ZERO
+	_body_is_moving = false
+	if _attack_phase == AttackPhase.IDLE:
+		_update_body_direction_sprite(_last_move_direction)
+
+
+func set_camera_active(active: bool) -> void:
+	if camera == null:
+		return
+	camera.enabled = active
+	if active:
+		camera.make_current()
 
 
 func set_forced_weapon_visual_hidden(active: bool) -> void:
@@ -804,6 +824,14 @@ func get_pause_detail_lines() -> Array[String]:
 
 
 func _handle_movement(delta: float) -> void:
+	if not _movement_enabled:
+		velocity = Vector2.ZERO
+		_body_is_moving = false
+		_sync_world_y_sort_index()
+		if _attack_phase == AttackPhase.IDLE:
+			_update_body_direction_sprite(_last_move_direction)
+		return
+
 	if _exclusive_skill_move_lock_left > 0.0:
 		var locked_previous_position := global_position
 		_body_is_moving = false

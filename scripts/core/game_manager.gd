@@ -11,7 +11,6 @@ const CHARACTER_CATALOG := preload("res://scripts/data/character_catalog.gd")
 const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn")
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
 const LOBBY_MAP_ID := "qingxu_lobby"
-const SKY_PALACE_MAP_ID := "sky_palace_manual"
 const ACTIVE_MAP_ID := "snow_mountain"
 
 const STAGE_CONFIGS := [
@@ -92,6 +91,7 @@ var start_menu_active := false
 var settings_active := false
 var settings_return_to_pause := false
 var home_active := false
+var lobby_active := false
 var manual_pause := false
 var manual_pause_previous_hud_visible := false
 var character_selection_active := false
@@ -111,6 +111,7 @@ var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 var enemy_spawns_enabled := true
 
 @onready var arena: Node2D = $Arena
+@onready var lobby_camera: Camera2D = $LobbyCamera
 @onready var player: Player = $Player
 @onready var enemies_layer: Node2D = $Enemies
 @onready var projectiles_layer: Node2D = $Projectiles
@@ -208,6 +209,7 @@ func _can_accept_gameplay_input() -> bool:
 		and not start_menu_active \
 		and not settings_active \
 		and not home_active \
+		and not lobby_active \
 		and not manual_pause \
 		and not character_selection_active \
 		and not branch_selection_active \
@@ -292,7 +294,6 @@ func _connect_signals() -> void:
 	start_menu_panel.exit_requested.connect(_on_start_menu_exit_requested)
 	settings_panel.back_requested.connect(_on_settings_back_requested)
 	home_panel.start_requested.connect(_on_home_start_requested)
-	home_panel.sky_palace_requested.connect(_on_home_sky_palace_requested)
 	home_panel.character_upgrade_requested.connect(_on_home_character_upgrade_requested)
 	character_select_panel.character_selected.connect(_on_character_selected)
 	branch_select_panel.branch_selected.connect(_on_branch_selected)
@@ -343,10 +344,12 @@ func _present_start_menu() -> void:
 	settings_active = false
 	settings_return_to_pause = false
 	home_active = false
+	lobby_active = false
 	hud.visible = false
 	_sync_mobile_controls()
 	player.set_world_health_visible(false)
 	player.set_forced_weapon_visual_hidden(true)
+	_set_lobby_presentation(false)
 	_set_modal_pause(true)
 	home_panel.hide_panel()
 	settings_panel.hide_panel()
@@ -392,6 +395,7 @@ func _present_lobby() -> void:
 	settings_active = false
 	settings_return_to_pause = false
 	home_active = false
+	lobby_active = true
 	character_selection_active = false
 	branch_selection_active = false
 	wendao_bei_active = false
@@ -399,29 +403,7 @@ func _present_lobby() -> void:
 	player.set_world_health_visible(false)
 	player.set_forced_weapon_visual_hidden(true)
 	_configure_current_map(LOBBY_MAP_ID)
-	_set_modal_pause(false)
-	start_menu_panel.hide_panel()
-	settings_panel.hide_panel()
-	home_panel.hide_panel()
-	character_select_panel.hide_panel()
-	branch_select_panel.hide_panel()
-	wendao_bei_panel.hide_panel()
-	_sync_mobile_controls()
-
-
-func _present_sky_palace() -> void:
-	start_menu_active = false
-	settings_active = false
-	settings_return_to_pause = false
-	home_active = false
-	character_selection_active = false
-	branch_selection_active = false
-	wendao_bei_active = false
-	hud.visible = false
-	player.set_world_health_visible(false)
-	player.set_forced_weapon_visual_hidden(true)
-	_configure_current_map(SKY_PALACE_MAP_ID)
-	_configure_exploration_hud()
+	_set_lobby_presentation(true)
 	_set_modal_pause(false)
 	start_menu_panel.hide_panel()
 	settings_panel.hide_panel()
@@ -471,15 +453,6 @@ func _on_home_start_requested() -> void:
 	hud.visible = true
 	_sync_mobile_controls()
 	_present_character_selection()
-
-
-func _on_home_sky_palace_requested() -> void:
-	if not home_active:
-		return
-	audio_manager.play_sfx("pickup", 1.0, -7.0)
-	home_active = false
-	home_panel.hide_panel()
-	_present_sky_palace()
 
 
 func _on_home_character_upgrade_requested(character_id: String, upgrade_id: String) -> void:
@@ -545,6 +518,9 @@ func _on_branch_selected(index: int) -> void:
 	current_branch_options.clear()
 	branch_selection_active = false
 	branch_select_panel.hide_panel()
+	lobby_active = false
+	_set_lobby_presentation(false)
+	_configure_current_map(ACTIVE_MAP_ID)
 	_set_modal_pause(false)
 	hud.visible = true
 	player.set_world_health_visible(true)
@@ -996,6 +972,7 @@ func _finish_run(victory: bool) -> void:
 	settings_active = false
 	settings_return_to_pause = false
 	home_active = false
+	lobby_active = false
 	manual_pause = false
 	character_selection_active = false
 	branch_selection_active = false
@@ -1165,6 +1142,18 @@ func _configure_process_modes() -> void:
 	result_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	special_card_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
 	hud.process_mode = Node.PROCESS_MODE_ALWAYS
+
+
+func _set_lobby_presentation(active: bool) -> void:
+	if lobby_camera != null:
+		lobby_camera.enabled = active
+		if active:
+			lobby_camera.make_current()
+	player.visible = not active
+	if player.has_method("set_movement_enabled"):
+		player.set_movement_enabled(not active)
+	if player.has_method("set_camera_active"):
+		player.set_camera_active(not active)
 
 
 func _refresh_hud() -> void:

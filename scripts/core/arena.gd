@@ -8,12 +8,10 @@ const QINGXU_LOBBY_LEFT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_left_
 const QINGXU_LOBBY_RIGHT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_right_banner.png"
 const SNOW_MOUNTAIN_MAP_PATH := "res://art/backgrounds/snow_mountain_map.png"
 const SNOW_MOUNTAIN_WALK_MASK_PATH := "res://art/backgrounds/snow_mountain_walk_mask.png"
-const SKY_PALACE_MAP_SCENE := preload("res://scenes/maps/sky_palace_map.tscn")
 const BUILDING_COLLISION_LAYER := 8
 const MAP_ID_DEFAULT := "default_arena"
 const MAP_ID_QINGXU_LOBBY := "qingxu_lobby"
 const MAP_ID_SNOW_MOUNTAIN := "snow_mountain"
-const MAP_ID_SKY_PALACE_MANUAL := "sky_palace_manual"
 const MAP_COLLIDER_GROUP := "arena_runtime_colliders"
 const LOBBY_SOURCE_SIZE := Vector2(1672.0, 941.0)
 const LOBBY_MAP_SIZE := Vector2(3840.0, 2160.0)
@@ -184,7 +182,6 @@ var snow_walk_mask: Texture2D
 var snow_walk_mask_image: Image
 var snow_walk_mask_size := SNOW_SOURCE_SIZE
 var snow_walkable_polygons: Array[PackedVector2Array] = []
-var sky_palace_map
 var boss_mode_active := false
 var boss_phase := 1
 
@@ -202,9 +199,6 @@ func _draw() -> void:
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		_draw_snow_mountain_map()
 		return
-	if map_id == MAP_ID_SKY_PALACE_MANUAL:
-		return
-
 	var half_size: Vector2 = arena_size * 0.5
 	var rect: Rect2 = Rect2(-half_size, arena_size)
 	draw_rect(rect, background_color, true)
@@ -229,7 +223,7 @@ func set_map_id(next_map_id: String) -> void:
 
 
 func is_enemy_spawning_enabled() -> bool:
-	return map_id != MAP_ID_QINGXU_LOBBY and map_id != MAP_ID_SNOW_MOUNTAIN and map_id != MAP_ID_SKY_PALACE_MANUAL
+	return map_id != MAP_ID_QINGXU_LOBBY and map_id != MAP_ID_SNOW_MOUNTAIN
 
 
 func get_player_start_position() -> Vector2:
@@ -237,8 +231,6 @@ func get_player_start_position() -> Vector2:
 		return _map_px_to_world(LOBBY_PLAYER_START_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE)
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return _snow_px_to_world(SNOW_PLAYER_START_PX)
-	if map_id == MAP_ID_SKY_PALACE_MANUAL and sky_palace_map != null:
-		return sky_palace_map.get_player_start_position()
 	return Vector2.ZERO
 
 
@@ -258,8 +250,6 @@ func get_player_bounds_half_size() -> Vector2:
 		return LOBBY_MAP_SIZE * 0.5
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return SNOW_MAP_SIZE * 0.5
-	if map_id == MAP_ID_SKY_PALACE_MANUAL and sky_palace_map != null:
-		return sky_palace_map.get_map_size() * 0.5
 	return arena_size * 0.5 - Vector2.ONE * 40.0
 
 
@@ -268,29 +258,20 @@ func get_player_camera_zoom() -> Vector2:
 		return LOBBY_CAMERA_ZOOM
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return SNOW_CAMERA_ZOOM
-	if map_id == MAP_ID_SKY_PALACE_MANUAL and sky_palace_map != null:
-		return sky_palace_map.get_player_camera_zoom()
 	return Vector2(0.95, 0.95)
 
 
 func get_player_camera_offset() -> Vector2:
 	if map_id == MAP_ID_QINGXU_LOBBY:
 		return LOBBY_CAMERA_OFFSET
-	if map_id == MAP_ID_SKY_PALACE_MANUAL and sky_palace_map != null:
-		return sky_palace_map.get_player_camera_offset()
 	return Vector2.ZERO
 
 
 func uses_world_y_sort() -> bool:
-	return map_id == MAP_ID_SKY_PALACE_MANUAL
+	return false
 
 
 func get_exploration_hud_config() -> Dictionary:
-	if map_id == MAP_ID_SKY_PALACE_MANUAL:
-		return {
-			"stage": "手拼仙宫",
-			"objective": "目标：测试手拼大厅的行走、碰撞与遮挡"
-		}
 	if map_id == MAP_ID_QINGXU_LOBBY:
 		return {
 			"stage": "青墟大厅",
@@ -315,8 +296,6 @@ func is_position_walkable(world_position: Vector2) -> bool:
 		if _is_point_in_snow_walkable_polygons(world_position):
 			return true
 		return false
-	if map_id == MAP_ID_SKY_PALACE_MANUAL and sky_palace_map != null:
-		return sky_palace_map.is_position_walkable(world_position)
 	return true
 
 
@@ -378,14 +357,10 @@ func _load_optional_texture(path: String) -> Texture2D:
 func _rebuild_map() -> void:
 	_clear_map_colliders()
 	snow_walkable_polygons.clear()
-	sky_palace_map = null
 	if map_id == MAP_ID_QINGXU_LOBBY:
 		return
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		_cache_snow_walkable_polygons()
-		return
-	if map_id == MAP_ID_SKY_PALACE_MANUAL:
-		_build_sky_palace_map()
 		return
 	_build_ancient_building_colliders()
 
@@ -394,15 +369,6 @@ func _clear_map_colliders() -> void:
 	for child in get_children():
 		if child.is_in_group(MAP_COLLIDER_GROUP):
 			child.queue_free()
-
-
-func _build_sky_palace_map() -> void:
-	sky_palace_map = SKY_PALACE_MAP_SCENE.instantiate()
-	if sky_palace_map == null:
-		push_error("Failed to instantiate sky palace map.")
-		return
-	sky_palace_map.add_to_group(MAP_COLLIDER_GROUP)
-	add_child(sky_palace_map)
 
 
 func _build_ancient_building_colliders() -> void:

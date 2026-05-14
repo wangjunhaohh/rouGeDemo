@@ -91,12 +91,6 @@ custom_minimum_size = Vector2(0, 56)
 theme_override_font_sizes/font_size = 22
 text = "开始游戏"
 
-[node name="SkyPalaceButton" type="Button" parent="MarginContainer/Root/TopRow/ActionBox"]
-layout_mode = 2
-custom_minimum_size = Vector2(0, 56)
-theme_override_font_sizes/font_size = 22
-text = "手拼仙宫"
-
 [node name="Content" type="HBoxContainer" parent="MarginContainer/Root"]
 layout_mode = 2
 size_flags_vertical = 3
