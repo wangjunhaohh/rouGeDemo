@@ -255,6 +255,11 @@ func _handle_lobby_interaction_input(event: InputEvent) -> bool:
 		return false
 
 	var interaction_id: String = String(arena.call("get_lobby_interaction_at_world", get_global_mouse_position()))
+	if interaction_id == "start_game":
+		get_viewport().set_input_as_handled()
+		audio_manager.play_sfx("pickup", 1.0, -7.0)
+		_start_default_run()
+		return true
 	if interaction_id == "wendao_bei":
 		get_viewport().set_input_as_handled()
 		_present_wendao_bei()
@@ -452,9 +457,7 @@ func _present_home() -> void:
 func _on_home_start_requested() -> void:
 	home_active = false
 	home_panel.hide_panel()
-	hud.visible = true
-	_sync_mobile_controls()
-	_present_character_selection()
+	_start_default_run()
 
 
 func _on_home_character_upgrade_requested(character_id: String, upgrade_id: String) -> void:
@@ -464,6 +467,51 @@ func _on_home_character_upgrade_requested(character_id: String, upgrade_id: Stri
 		return
 	audio_manager.play_sfx("level_up", 0.9, -4.0)
 	home_panel.refresh(meta_progression)
+
+
+func _start_default_run() -> void:
+	var character_options := CHARACTER_CATALOG.get_character_definitions()
+	var branch_options := BRANCH_CATALOG.get_branch_definitions()
+	if character_options.is_empty() or branch_options.is_empty():
+		push_warning("Cannot start run: missing character or branch definitions.")
+		return
+
+	var character: Dictionary = character_options[0]
+	var skill: Dictionary = CHARACTER_CATALOG.get_skill_definition(String(character.get("exclusive_skill_id", "")))
+	selected_character_id = String(character.get("id", ""))
+	selected_character_name = String(character.get("name", ""))
+	player.set_character_definition(character, skill)
+	meta_progression.apply_to_player(player)
+	meta_progression.apply_character_to_player(player, selected_character_id)
+
+	var branch: Dictionary = branch_options[0]
+	selected_branch_id = String(branch.get("id", ""))
+	selected_branch_name = String(branch.get("name", ""))
+	player.set_branch_definition(branch)
+	player.sync_upgrade_levels(upgrade_levels)
+
+	current_character_options.clear()
+	current_branch_options.clear()
+	home_active = false
+	lobby_active = false
+	character_selection_active = false
+	branch_selection_active = false
+	home_panel.hide_panel()
+	character_select_panel.hide_panel()
+	branch_select_panel.hide_panel()
+	_set_lobby_presentation(false)
+	_configure_current_map(ACTIVE_MAP_ID)
+	_set_modal_pause(false)
+	hud.visible = true
+	player.set_world_health_visible(true)
+	_sync_mobile_controls()
+	if enemy_spawns_enabled:
+		hud.configure_boss_goal(BOSS_SPAWN_TIME)
+	else:
+		_configure_exploration_hud()
+	hud.set_build_text(_compose_build_summary())
+	_refresh_hud()
+	hud.show_event("已出战：%s / %s" % [selected_character_name, selected_branch_name], 2.0)
 
 
 func _present_character_selection() -> void:

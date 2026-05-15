@@ -5,6 +5,7 @@ const ARENA_OVERLAY_PATH := "res://art/backgrounds/arena_overlay.png"
 const QINGXU_LOBBY_MAP_PATH := "res://art/backgrounds/qingxu_lobby_map.png"
 const QINGXU_LOBBY_LEFT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_left_banner.png"
 const QINGXU_LOBBY_RIGHT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_right_banner.png"
+const QINGXU_LOBBY_START_FONT := preload("res://art/fonts/MaShanZheng-Regular.ttf")
 const SNOW_MOUNTAIN_MAP_PATH := "res://art/backgrounds/snow_mountain_map.png"
 const SNOW_MOUNTAIN_WALK_MASK_PATH := "res://art/backgrounds/snow_mountain_walk_mask.png"
 const BUILDING_COLLISION_LAYER := 8
@@ -18,6 +19,8 @@ const LOBBY_LEFT_BANNER_RECT_PX := Rect2(862.01, 280.04, 94.93, 143.85)
 const LOBBY_RIGHT_BANNER_RECT_PX := Rect2(2406.89, 495.81, 113.31, 165.27)
 const LOBBY_WENDAO_BEI_HIT_RECT_PX := Rect2(681.33, 290.76, 313.88, 374.92)
 const LOBBY_XIANMINGLU_HIT_RECT_PX := Rect2(1998.08, 474.39, 505.27, 436.13)
+const LOBBY_START_TEXT := "开始游戏"
+const LOBBY_START_TEXT_RECT_PX := Rect2(1100.0, 1220.0, 360.0, 140.0)
 const SNOW_SOURCE_SIZE := Vector2(1535.0, 1024.0)
 const SNOW_MAP_SIZE := Vector2(3840.0, 2560.0)
 const SNOW_PLAYER_START_PX := Vector2(300.0, 800.0)
@@ -228,6 +231,8 @@ func get_lobby_interaction_at_world(world_position: Vector2) -> String:
 	if map_id != MAP_ID_QINGXU_LOBBY:
 		return ""
 	var map_pixel := _map_world_to_px(world_position, qingxu_lobby_source_size, LOBBY_MAP_SIZE)
+	if LOBBY_START_TEXT_RECT_PX.has_point(map_pixel):
+		return "start_game"
 	if LOBBY_WENDAO_BEI_HIT_RECT_PX.has_point(map_pixel) or LOBBY_LEFT_BANNER_RECT_PX.has_point(map_pixel):
 		return "wendao_bei"
 	if LOBBY_XIANMINGLU_HIT_RECT_PX.has_point(map_pixel) or LOBBY_RIGHT_BANNER_RECT_PX.has_point(map_pixel):
@@ -483,6 +488,23 @@ func _draw_qingxu_lobby_map() -> void:
 		draw_texture_rect(qingxu_lobby_left_banner, _map_rect_px_to_world(LOBBY_LEFT_BANNER_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE), false)
 	if qingxu_lobby_right_banner != null:
 		draw_texture_rect(qingxu_lobby_right_banner, _map_rect_px_to_world(LOBBY_RIGHT_BANNER_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE), false)
+	_draw_qingxu_lobby_start_text()
+
+
+func _draw_qingxu_lobby_start_text() -> void:
+	var text_rect := _map_rect_px_to_world(LOBBY_START_TEXT_RECT_PX, qingxu_lobby_source_size, LOBBY_MAP_SIZE)
+	var font_size := 118
+	var baseline_y := text_rect.position.y + (text_rect.size.y - QINGXU_LOBBY_START_FONT.get_height(font_size)) * 0.5 + QINGXU_LOBBY_START_FONT.get_ascent(font_size)
+	var baseline := Vector2(text_rect.position.x, baseline_y)
+	var shadow_offsets := [
+		Vector2(4.0, 5.0),
+		Vector2(-3.0, 3.0),
+		Vector2(0.0, 7.0)
+	]
+	for offset in shadow_offsets:
+		draw_string(QINGXU_LOBBY_START_FONT, baseline + offset, LOBBY_START_TEXT, HORIZONTAL_ALIGNMENT_CENTER, text_rect.size.x, font_size, Color(0.08, 0.07, 0.05, 0.78))
+	draw_string(QINGXU_LOBBY_START_FONT, baseline + Vector2(0.0, -2.0), LOBBY_START_TEXT, HORIZONTAL_ALIGNMENT_CENTER, text_rect.size.x, font_size, Color(0.94, 0.86, 0.58, 0.92))
+	draw_string(QINGXU_LOBBY_START_FONT, baseline, LOBBY_START_TEXT, HORIZONTAL_ALIGNMENT_CENTER, text_rect.size.x, font_size, Color(0.16, 0.12, 0.07, 1.0))
 
 
 func _draw_ancient_buildings() -> void:
