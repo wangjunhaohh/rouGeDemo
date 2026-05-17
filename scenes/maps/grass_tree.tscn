@@ -1,0 +1,25 @@
+[gd_scene format=3 uid="uid://cnswudplxiq2u"]
+
+[ext_resource type="Script" uid="uid://cnud2lnsvlp1r" path="res://scripts/maps/grass_tree.gd" id="1"]
+[ext_resource type="Texture2D" uid="uid://cwee6m42etyv3" path="res://art/backgrounds/grass_field_tree.png" id="2"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_gmkbe"]
+radius = 75.0
+height = 286.0
+
+[node name="GrassTree" type="Node2D" unique_id=1701323620]
+script = ExtResource("1")
+
+[node name="Visual" type="Sprite2D" parent="." unique_id=360283354]
+position = Vector2(0, -365)
+texture = ExtResource("2")
+
+[node name="Trunk" type="StaticBody2D" parent="." unique_id=653268635]
+position = Vector2(0, -62)
+collision_layer = 8
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Trunk" unique_id=855152253]
+position = Vector2(5, 112)
+rotation = -1.5707964
+shape = SubResource("CapsuleShape2D_gmkbe")

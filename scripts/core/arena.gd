@@ -8,10 +8,12 @@ const QINGXU_LOBBY_RIGHT_BANNER_PATH := "res://art/backgrounds/qingxu_lobby_righ
 const QINGXU_LOBBY_START_FONT := preload("res://art/fonts/MaShanZheng-Regular.ttf")
 const SNOW_MOUNTAIN_MAP_PATH := "res://art/backgrounds/snow_mountain_map.png"
 const SNOW_MOUNTAIN_WALK_MASK_PATH := "res://art/backgrounds/snow_mountain_walk_mask.png"
+const GRASS_FIELD_SCENE_PATH := "res://scenes/maps/grass_field_map.tscn"
 const BUILDING_COLLISION_LAYER := 8
 const MAP_ID_DEFAULT := "default_arena"
 const MAP_ID_QINGXU_LOBBY := "qingxu_lobby"
 const MAP_ID_SNOW_MOUNTAIN := "snow_mountain"
+const MAP_ID_GRASS_FIELD := "grass_field"
 const MAP_COLLIDER_GROUP := "arena_runtime_colliders"
 const LOBBY_SOURCE_SIZE := Vector2(2560.0, 1440.0)
 const LOBBY_MAP_SIZE := Vector2(3840.0, 2160.0)
@@ -25,6 +27,8 @@ const SNOW_SOURCE_SIZE := Vector2(1535.0, 1024.0)
 const SNOW_MAP_SIZE := Vector2(3840.0, 2560.0)
 const SNOW_PLAYER_START_PX := Vector2(300.0, 800.0)
 const SNOW_CAMERA_ZOOM := Vector2(0.92, 0.92)
+const GRASS_MAP_SIZE := Vector2(1920.0, 1080.0)
+const GRASS_CAMERA_ZOOM := Vector2(1.0, 1.0)
 const SNOW_WALK_MASK_SAMPLE_OFFSETS := [
 	Vector2.ZERO,
 	Vector2(10.0, 0.0),
@@ -177,6 +181,7 @@ var snow_walk_mask: Texture2D
 var snow_walk_mask_image: Image
 var snow_walk_mask_size := SNOW_SOURCE_SIZE
 var snow_walkable_polygons: Array[PackedVector2Array] = []
+var current_map_scene: Node2D
 var boss_mode_active := false
 var boss_phase := 1
 var arena_textures_loaded := false
@@ -196,6 +201,8 @@ func _draw() -> void:
 		return
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		_draw_snow_mountain_map()
+		return
+	if map_id == MAP_ID_GRASS_FIELD:
 		return
 	var half_size: Vector2 = arena_size * 0.5
 	var rect: Rect2 = Rect2(-half_size, arena_size)
@@ -248,17 +255,21 @@ func get_lobby_interaction_at_world(world_position: Vector2) -> String:
 func get_player_bounds_half_size() -> Vector2:
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return SNOW_MAP_SIZE * 0.5
+	if map_id == MAP_ID_GRASS_FIELD:
+		return GRASS_MAP_SIZE * 0.5 - Vector2.ONE * 40.0
 	return arena_size * 0.5 - Vector2.ONE * 40.0
 
 
 func get_player_camera_zoom() -> Vector2:
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		return SNOW_CAMERA_ZOOM
+	if map_id == MAP_ID_GRASS_FIELD:
+		return GRASS_CAMERA_ZOOM
 	return Vector2(0.95, 0.95)
 
 
 func uses_world_y_sort() -> bool:
-	return false
+	return map_id == MAP_ID_GRASS_FIELD
 
 
 func get_exploration_hud_config() -> Dictionary:
@@ -298,6 +309,8 @@ func _ensure_current_map_textures() -> void:
 			_ensure_qingxu_lobby_textures()
 		MAP_ID_SNOW_MOUNTAIN:
 			_ensure_snow_mountain_textures()
+		MAP_ID_GRASS_FIELD:
+			pass
 		_:
 			_ensure_arena_textures()
 
@@ -359,12 +372,16 @@ func _load_optional_texture(path: String) -> Texture2D:
 
 
 func _rebuild_map() -> void:
+	_clear_map_scene()
 	_clear_map_colliders()
 	snow_walkable_polygons.clear()
 	if map_id == MAP_ID_QINGXU_LOBBY:
 		return
 	if map_id == MAP_ID_SNOW_MOUNTAIN:
 		_cache_snow_walkable_polygons()
+		return
+	if map_id == MAP_ID_GRASS_FIELD:
+		_instantiate_grass_field_map()
 		return
 	_build_ancient_building_colliders()
 
@@ -373,6 +390,26 @@ func _clear_map_colliders() -> void:
 	for child in get_children():
 		if child.is_in_group(MAP_COLLIDER_GROUP):
 			child.queue_free()
+
+
+func _clear_map_scene() -> void:
+	if current_map_scene == null:
+		return
+	if is_instance_valid(current_map_scene):
+		current_map_scene.queue_free()
+	current_map_scene = null
+
+
+func _instantiate_grass_field_map() -> void:
+	var packed_scene := load(GRASS_FIELD_SCENE_PATH) as PackedScene
+	if packed_scene == null:
+		push_error("Failed to load grass field map scene: %s" % GRASS_FIELD_SCENE_PATH)
+		return
+	current_map_scene = packed_scene.instantiate() as Node2D
+	if current_map_scene == null:
+		push_error("Grass field map scene root must be Node2D.")
+		return
+	add_child(current_map_scene)
 
 
 func _build_ancient_building_colliders() -> void:

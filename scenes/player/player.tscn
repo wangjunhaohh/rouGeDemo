@@ -1,12 +1,12 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://ij23ag85v2g3"]
 
-[ext_resource type="Script" path="res://scripts/actors/player.gd" id="1"]
+[ext_resource type="Script" uid="uid://csyfaob0p1e51" path="res://scripts/actors/player.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/player_projectile.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/weapons/pulse_wave.tscn" id="3"]
 [ext_resource type="SpriteFrames" path="res://resources/animations/swordsman_body_sprite_frames.tres" id="4"]
 
-[sub_resource type="CircleShape2D" id="1"]
-radius = 14.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_lvxji"]
+size = Vector2(35, 34)
 
 [sub_resource type="CircleShape2D" id="2"]
 radius = 15.0
@@ -14,74 +14,69 @@ radius = 15.0
 [sub_resource type="CircleShape2D" id="3"]
 radius = 42.0
 
-[node name="Player" type="CharacterBody2D"]
+[node name="Player" type="CharacterBody2D" unique_id=336060418]
 script = ExtResource("1")
 projectile_scene = ExtResource("2")
 pulse_scene = ExtResource("3")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-shape = SubResource("1")
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1677898966]
+position = Vector2(0, 52)
+shape = SubResource("RectangleShape2D_lvxji")
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
-texture_filter = 0
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=317925607]
 sprite_frames = ExtResource("4")
 animation = &"right"
 
-[node name="WorldHealthBar" type="Node2D" parent="."]
-position = Vector2(0, -28)
+[node name="WorldHealthBar" type="Node2D" parent="." unique_id=746337876]
 z_index = 40
+position = Vector2(0, -28)
 
-[node name="Back" type="ColorRect" parent="WorldHealthBar"]
+[node name="Back" type="ColorRect" parent="WorldHealthBar" unique_id=1010030400]
 offset_left = -18.0
 offset_top = -3.0
 offset_right = 18.0
 offset_bottom = 3.0
 color = Color(0.0313726, 0.0666667, 0.0431373, 0.86)
 
-[node name="Fill" type="ColorRect" parent="WorldHealthBar"]
+[node name="Fill" type="ColorRect" parent="WorldHealthBar" unique_id=1946756292]
 offset_left = -17.0
 offset_top = -2.0
 offset_right = 17.0
 offset_bottom = 2.0
 color = Color(0.94, 0.14, 0.16, 1)
 
-[node name="Hurtbox" type="Area2D" parent="."]
+[node name="Hurtbox" type="Area2D" parent="." unique_id=329842622]
 collision_layer = 4
 collision_mask = 0
-monitoring = true
-monitorable = true
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox" unique_id=356858144]
 shape = SubResource("2")
 
-[node name="AttackPoint" type="Node2D" parent="."]
+[node name="AttackPoint" type="Node2D" parent="." unique_id=1513580085]
 
-[node name="WeaponPivot" type="Node2D" parent="."]
+[node name="WeaponPivot" type="Node2D" parent="." unique_id=7602773]
 
-[node name="Weapon" type="Sprite2D" parent="WeaponPivot"]
-texture_filter = 0
+[node name="Weapon" type="Sprite2D" parent="WeaponPivot" unique_id=799797930]
 z_index = 1
 
-[node name="WeaponTrail" type="Sprite2D" parent="WeaponPivot"]
-texture_filter = 0
+[node name="WeaponTrail" type="Sprite2D" parent="WeaponPivot" unique_id=258572396]
 z_index = 2
 
-[node name="WeaponImpact" type="Sprite2D" parent="WeaponPivot"]
-texture_filter = 0
+[node name="WeaponImpact" type="Sprite2D" parent="WeaponPivot" unique_id=1586702579]
 z_index = 3
 
-[node name="SlashHitbox" type="Area2D" parent="."]
+[node name="SlashHitbox" type="Area2D" parent="." unique_id=1250746051]
 collision_layer = 0
 collision_mask = 2
 monitoring = false
 monitorable = false
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="SlashHitbox"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SlashHitbox" unique_id=1242402543]
 shape = SubResource("3")
 
-[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." unique_id=111478977]
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1608279923]
+zoom = Vector2(0.95, 0.95)
 position_smoothing_enabled = true
 position_smoothing_speed = 7.0
-zoom = Vector2(0.95, 0.95)

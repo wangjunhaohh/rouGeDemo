@@ -1,0 +1,44 @@
+[gd_scene format=3 uid="uid://p8ctg5jx4iqw"]
+
+[ext_resource type="Texture2D" uid="uid://bdv4h84512bjc" path="res://art/backgrounds/grass_field_map.png" id="1"]
+[ext_resource type="PackedScene" uid="uid://cnswudplxiq2u" path="res://scenes/maps/grass_tree.tscn" id="2"]
+[ext_resource type="PackedScene" uid="uid://vkk14b347idv" path="res://scenes/maps/zhuting.tscn" id="3_fjkrm"]
+
+[node name="GrassFieldMap" type="Node2D" unique_id=248039656]
+
+[node name="Background" type="Sprite2D" parent="." unique_id=171940708]
+z_index = -4096
+z_as_relative = false
+scale = Vector2(1.31868, 1.02564)
+texture = ExtResource("1")
+
+[node name="TreeNorthWest" parent="." unique_id=1382980815 instance=ExtResource("2")]
+position = Vector2(-735, -290)
+scale = Vector2(0.43, 0.43)
+
+[node name="TreeNorthEast" parent="." unique_id=1339601111 instance=ExtResource("2")]
+position = Vector2(735, -290)
+scale = Vector2(0.43, 0.43)
+
+[node name="TreeNorthCenter" parent="." unique_id=155464577 instance=ExtResource("2")]
+position = Vector2(0, -430)
+scale = Vector2(0.36, 0.36)
+
+[node name="TreeMidLeft" parent="." unique_id=1125594757 instance=ExtResource("2")]
+position = Vector2(-385, 145)
+scale = Vector2(0.34, 0.34)
+
+[node name="TreeMidRight" parent="." unique_id=966605787 instance=ExtResource("2")]
+position = Vector2(405, 120)
+scale = Vector2(0.33, 0.33)
+
+[node name="TreeSouthWest" parent="." unique_id=1540359507 instance=ExtResource("2")]
+position = Vector2(-770, 430)
+scale = Vector2(0.46, 0.46)
+
+[node name="TreeSouthEast" parent="." unique_id=592141572 instance=ExtResource("2")]
+position = Vector2(760, 425)
+scale = Vector2(0.47, 0.47)
+
+[node name="GrassTree" parent="." unique_id=1701323620 instance=ExtResource("3_fjkrm")]
+position = Vector2(0, -94)

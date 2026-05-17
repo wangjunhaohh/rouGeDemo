@@ -5,6 +5,7 @@ const SWORDSMAN_BODY_SPRITE_FRAMES := preload("res://resources/animations/swords
 const SWORDSMAN_SKILL_EFFECT_SPRITE_FRAMES := preload("res://resources/animations/swordsman_skill_effect_sprite_frames.tres")
 const MAGE_BODY_SPRITE_FRAMES := preload("res://resources/animations/mage_body_sprite_frames.tres")
 const MAGE_ICE_BIRD_SPRITE_FRAMES := preload("res://resources/animations/mage_ice_bird_sprite_frames.tres")
+const BODY_VISUAL_SCALE := 0.78
 
 
 static func get_character_definitions() -> Array[Dictionary]:
@@ -19,7 +20,7 @@ static func get_character_definitions() -> Array[Dictionary]:
 			"weakness": "生存中低，被围住时风险较高。",
 			"exclusive_skill_id": "shadow_sword_array",
 			"body_sprite_frames": SWORDSMAN_BODY_SPRITE_FRAMES,
-			"body_visual_scale": 0.45,
+			"body_visual_scale": BODY_VISUAL_SCALE,
 			"body_visual_offset": Vector2(0.0, 3.0),
 			"body_texture_filter": CanvasItem.TEXTURE_FILTER_LINEAR,
 			"primary_attack_type": "melee",
@@ -55,7 +56,7 @@ static func get_character_definitions() -> Array[Dictionary]:
 			"weakness": "身板脆，怕被近身，技能空窗期压力较高。",
 			"exclusive_skill_id": "arcane_bombardment",
 			"body_sprite_frames": MAGE_BODY_SPRITE_FRAMES,
-			"body_visual_scale": 0.45,
+			"body_visual_scale": BODY_VISUAL_SCALE,
 			"body_visual_offset": Vector2(0.0, 3.0),
 			"body_texture_filter": CanvasItem.TEXTURE_FILTER_LINEAR,
 			"primary_attack_type": "projectile",
