@@ -179,10 +179,13 @@ var snow_walk_mask_size := SNOW_SOURCE_SIZE
 var snow_walkable_polygons: Array[PackedVector2Array] = []
 var boss_mode_active := false
 var boss_phase := 1
+var arena_textures_loaded := false
+var qingxu_lobby_textures_loaded := false
+var snow_mountain_textures_loaded := false
 
 
 func _ready() -> void:
-	_load_map_textures()
+	_ensure_current_map_textures()
 	_rebuild_map()
 	queue_redraw()
 
@@ -211,8 +214,10 @@ func _draw() -> void:
 
 func set_map_id(next_map_id: String) -> void:
 	if map_id == next_map_id:
+		_ensure_current_map_textures()
 		return
 	map_id = next_map_id
+	_ensure_current_map_textures()
 	_rebuild_map()
 	queue_redraw()
 
@@ -287,14 +292,39 @@ func _is_point_in_snow_walkable_polygons(world_position: Vector2) -> bool:
 	return false
 
 
-func _load_map_textures() -> void:
+func _ensure_current_map_textures() -> void:
+	match map_id:
+		MAP_ID_QINGXU_LOBBY:
+			_ensure_qingxu_lobby_textures()
+		MAP_ID_SNOW_MOUNTAIN:
+			_ensure_snow_mountain_textures()
+		_:
+			_ensure_arena_textures()
+
+
+func _ensure_arena_textures() -> void:
+	if arena_textures_loaded:
+		return
+	arena_textures_loaded = true
 	arena_tile = _load_texture(ARENA_TILE_PATH)
 	arena_overlay = _load_texture(ARENA_OVERLAY_PATH)
+
+
+func _ensure_qingxu_lobby_textures() -> void:
+	if qingxu_lobby_textures_loaded:
+		return
+	qingxu_lobby_textures_loaded = true
 	qingxu_lobby_map = _load_optional_texture(QINGXU_LOBBY_MAP_PATH)
 	if qingxu_lobby_map != null:
 		qingxu_lobby_source_size = Vector2(qingxu_lobby_map.get_width(), qingxu_lobby_map.get_height())
 	qingxu_lobby_left_banner = _load_optional_texture(QINGXU_LOBBY_LEFT_BANNER_PATH)
 	qingxu_lobby_right_banner = _load_optional_texture(QINGXU_LOBBY_RIGHT_BANNER_PATH)
+
+
+func _ensure_snow_mountain_textures() -> void:
+	if snow_mountain_textures_loaded:
+		return
+	snow_mountain_textures_loaded = true
 	snow_mountain_map = _load_optional_texture(SNOW_MOUNTAIN_MAP_PATH)
 	if snow_mountain_map != null:
 		snow_map_image = snow_mountain_map.get_image()
@@ -570,12 +600,6 @@ func _draw_boss_overlay(rect: Rect2) -> void:
 	draw_rect(rect, overlay_color, true)
 
 	var center: Vector2 = Vector2.ZERO
-	var ring_color: Color = Color(0.72, 0.16, 0.14, 0.22 if boss_phase == 1 else 0.32)
-	draw_arc(center, 220.0, 0.0, TAU, 72, ring_color, 3.0)
-	draw_arc(center, 380.0, 0.0, TAU, 96, ring_color.darkened(0.18), 2.0)
-	if boss_phase >= 2:
-		draw_arc(center, 540.0, 0.0, TAU, 120, Color(0.95, 0.28, 0.2, 0.18), 2.0)
-
 	for index in range(6):
 		var angle: float = TAU * float(index) / 6.0 + PI * 0.5
 		var inner: Vector2 = center + Vector2.RIGHT.rotated(angle) * 180.0

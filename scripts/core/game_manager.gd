@@ -12,6 +12,17 @@ const SPECIAL_CARD_SCENE := preload("res://scenes/props/special_card_pickup.tscn
 const SPECIAL_CARD_CATALOG := preload("res://scripts/data/special_card_catalog.gd")
 const LOBBY_MAP_ID := "qingxu_lobby"
 const ACTIVE_MAP_ID := "snow_mountain"
+const WORLD_RUNTIME_SCENE_PATH := "res://scenes/main/world_runtime.tscn"
+const START_MENU_PANEL_SCENE_PATH := "res://scenes/ui/start_menu_panel.tscn"
+const SETTINGS_PANEL_SCENE_PATH := "res://scenes/ui/settings_panel.tscn"
+const HOME_PANEL_SCENE_PATH := "res://scenes/ui/home_panel.tscn"
+const HUD_SCENE_PATH := "res://scenes/ui/hud.tscn"
+const CHARACTER_SELECT_PANEL_SCENE_PATH := "res://scenes/ui/character_select_panel.tscn"
+const BRANCH_SELECT_PANEL_SCENE_PATH := "res://scenes/ui/branch_select_panel.tscn"
+const LEVEL_UP_PANEL_SCENE_PATH := "res://scenes/ui/level_up_panel.tscn"
+const RESULT_PANEL_SCENE_PATH := "res://scenes/ui/result_panel.tscn"
+const SPECIAL_CARD_PANEL_SCENE_PATH := "res://scenes/ui/special_card_panel.tscn"
+const WENDAO_BEI_PANEL_SCENE_PATH := "res://scenes/ui/wendao_bei_panel.tscn"
 
 const STAGE_CONFIGS := [
 	{
@@ -110,48 +121,40 @@ var card_rng := RandomNumberGenerator.new()
 var card_event_times: Array[float] = [95.0, 205.0, 320.0]
 var enemy_spawns_enabled := true
 
-@onready var arena: Node2D = $Arena
-@onready var lobby_camera: Camera2D = $LobbyCamera
-@onready var player: Player = $Player
-@onready var enemies_layer: Node2D = $Enemies
-@onready var projectiles_layer: Node2D = $Projectiles
-@onready var drops_layer: Node2D = $Drops
-@onready var cards_layer: Node2D = $Cards
-@onready var effects_layer: Node2D = $Effects
+@onready var world_root: Node2D = $WorldRoot
 @onready var audio_manager: AudioManager = $AudioManager
-@onready var start_menu_panel: StartMenuPanel = $UI/StartMenuPanel
-@onready var settings_panel: SettingsPanel = $UI/SettingsPanel
-@onready var home_panel: HomePanel = $UI/HomePanel
-@onready var hud: HUD = $UI/HUD
-@onready var character_select_panel: CharacterSelectPanel = $UI/CharacterSelectPanel
-@onready var branch_select_panel: BranchSelectPanel = $UI/BranchSelectPanel
-@onready var level_up_panel: LevelUpPanel = $UI/LevelUpPanel
-@onready var result_panel: ResultPanel = $UI/ResultPanel
-@onready var special_card_panel: SpecialCardPanel = $UI/SpecialCardPanel
-@onready var wendao_bei_panel: WendaoBeiPanel = $UI/WendaoBeiPanel
+@onready var ui_root: CanvasLayer = $UI
+
+var world_runtime: Node2D
+var arena: Node2D
+var lobby_camera: Camera2D
+var player: Player
+var enemies_layer: Node2D
+var projectiles_layer: Node2D
+var drops_layer: Node2D
+var cards_layer: Node2D
+var effects_layer: Node2D
+var start_menu_panel: StartMenuPanel
+var settings_panel: SettingsPanel
+var home_panel: HomePanel
+var hud: HUD
+var character_select_panel: CharacterSelectPanel
+var branch_select_panel: BranchSelectPanel
+var level_up_panel: LevelUpPanel
+var result_panel: ResultPanel
+var special_card_panel: SpecialCardPanel
+var wendao_bei_panel: WendaoBeiPanel
 
 
 func _ready() -> void:
 	randomize()
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_configure_process_modes()
 	run_seed = int(Time.get_unix_time_from_system()) ^ randi()
 	card_rng.seed = run_seed
 	_ensure_input_map()
 	add_to_group("game")
 	meta_progression = MetaProgression.load_or_create()
 	_load_definitions()
-	_connect_signals()
-	_configure_current_map()
-	player.sync_upgrade_levels(upgrade_levels)
-	if enemy_spawns_enabled:
-		hud.configure_boss_goal(BOSS_SPAWN_TIME)
-		_update_stage(true)
-	else:
-		_configure_exploration_hud()
-	_refresh_hud()
-	hud.set_build_text(_compose_build_summary())
-	hud.set_pause_state(false)
 	_present_start_menu()
 
 
@@ -219,18 +222,24 @@ func _can_accept_gameplay_input() -> bool:
 
 
 func _try_use_player_skill() -> void:
+	if player == null or hud == null:
+		return
 	if player.try_use_exclusive_skill():
 		hud.set_build_text(_compose_build_summary())
 
 
 func _sync_mobile_controls() -> void:
+	if hud == null:
+		return
 	var active := hud.visible and _can_accept_gameplay_input()
 	hud.set_mobile_controls_active(active)
-	if not active:
+	if player != null and not active:
 		player.set_external_move_direction(Vector2.ZERO)
 
 
 func _on_mobile_move_changed(direction: Vector2) -> void:
+	if player == null:
+		return
 	if not _can_accept_gameplay_input():
 		player.set_external_move_direction(Vector2.ZERO)
 		return
@@ -245,6 +254,8 @@ func _on_mobile_skill_pressed() -> void:
 
 func _handle_lobby_interaction_input(event: InputEvent) -> bool:
 	if not _is_lobby_interaction_available():
+		return false
+	if arena == null:
 		return false
 	if not (event is InputEventMouseButton):
 		return false
@@ -286,35 +297,192 @@ func _is_lobby_interaction_available() -> bool:
 		and not enemy_spawns_enabled
 
 
-func _connect_signals() -> void:
-	player.projectile_spawned.connect(_on_projectile_spawned)
-	player.effect_spawned.connect(_on_effect_spawned)
-	player.health_changed.connect(_on_player_health_changed)
-	player.shot_fired.connect(_on_player_shot_fired)
-	player.exclusive_skill_used.connect(_on_player_exclusive_skill_used)
-	player.exclusive_skill_cooldown_changed.connect(_on_player_exclusive_skill_cooldown_changed)
-	player.died.connect(_on_player_died)
-	start_menu_panel.start_requested.connect(_on_start_menu_start_requested)
-	start_menu_panel.settings_requested.connect(_on_start_menu_settings_requested)
-	start_menu_panel.exit_requested.connect(_on_start_menu_exit_requested)
-	settings_panel.back_requested.connect(_on_settings_back_requested)
-	home_panel.start_requested.connect(_on_home_start_requested)
-	home_panel.character_upgrade_requested.connect(_on_home_character_upgrade_requested)
-	character_select_panel.character_selected.connect(_on_character_selected)
-	branch_select_panel.branch_selected.connect(_on_branch_selected)
-	level_up_panel.option_selected.connect(_on_upgrade_selected)
-	result_panel.restart_requested.connect(_restart_run)
-	result_panel.meta_upgrade_requested.connect(_on_meta_upgrade_requested)
-	special_card_panel.card_selected.connect(_on_special_card_selected)
-	wendao_bei_panel.back_requested.connect(_on_wendao_bei_back_requested)
-	hud.mobile_move_changed.connect(_on_mobile_move_changed)
-	hud.mobile_skill_pressed.connect(_on_mobile_skill_pressed)
-	hud.pause_resume_requested.connect(_on_pause_resume_requested)
-	hud.pause_settings_requested.connect(_on_pause_settings_requested)
-	hud.pause_main_menu_requested.connect(_on_pause_main_menu_requested)
+func _instantiate_scene(scene_path: String) -> Node:
+	var packed_scene := load(scene_path) as PackedScene
+	if packed_scene == null:
+		push_error("Unable to load scene: %s" % scene_path)
+		return null
+	return packed_scene.instantiate()
+
+
+func _instantiate_ui_panel(scene_path: String, node_name: String) -> Node:
+	var instance := _instantiate_scene(scene_path)
+	if instance == null:
+		return null
+	instance.name = node_name
+	ui_root.add_child(instance)
+	return instance
+
+
+func _connect_once(source: Object, signal_name: StringName, target: Callable) -> void:
+	if source == null or not source.has_signal(signal_name):
+		return
+	if source.is_connected(signal_name, target):
+		return
+	source.connect(signal_name, target)
+
+
+func _is_node_ready(node: Node) -> bool:
+	return node != null and is_instance_valid(node)
+
+
+func _hide_panel_if_ready(panel: Control) -> void:
+	if not _is_node_ready(panel):
+		return
+	if panel.has_method("hide_panel"):
+		panel.call("hide_panel")
+	else:
+		panel.hide()
+
+
+func _ensure_world_runtime() -> void:
+	if _is_node_ready(world_runtime):
+		return
+
+	world_runtime = _instantiate_scene(WORLD_RUNTIME_SCENE_PATH) as Node2D
+	if world_runtime == null:
+		return
+	world_root.add_child(world_runtime)
+
+	arena = world_runtime.get_node_or_null("Arena") as Node2D
+	lobby_camera = world_runtime.get_node_or_null("LobbyCamera") as Camera2D
+	player = world_runtime.get_node_or_null("Player") as Player
+	enemies_layer = world_runtime.get_node_or_null("Enemies") as Node2D
+	projectiles_layer = world_runtime.get_node_or_null("Projectiles") as Node2D
+	drops_layer = world_runtime.get_node_or_null("Drops") as Node2D
+	cards_layer = world_runtime.get_node_or_null("Cards") as Node2D
+	effects_layer = world_runtime.get_node_or_null("Effects") as Node2D
+
+	_configure_world_process_modes()
+	_connect_player_signals()
+	if player != null:
+		player.sync_upgrade_levels(upgrade_levels)
+
+
+func _connect_player_signals() -> void:
+	if player == null:
+		return
+	_connect_once(player, "projectile_spawned", Callable(self, "_on_projectile_spawned"))
+	_connect_once(player, "effect_spawned", Callable(self, "_on_effect_spawned"))
+	_connect_once(player, "health_changed", Callable(self, "_on_player_health_changed"))
+	_connect_once(player, "shot_fired", Callable(self, "_on_player_shot_fired"))
+	_connect_once(player, "exclusive_skill_used", Callable(self, "_on_player_exclusive_skill_used"))
+	_connect_once(player, "exclusive_skill_cooldown_changed", Callable(self, "_on_player_exclusive_skill_cooldown_changed"))
+	_connect_once(player, "died", Callable(self, "_on_player_died"))
+
+
+func _ensure_start_menu_panel() -> void:
+	if _is_node_ready(start_menu_panel):
+		return
+	start_menu_panel = _instantiate_ui_panel(START_MENU_PANEL_SCENE_PATH, "StartMenuPanel") as StartMenuPanel
+	if start_menu_panel == null:
+		return
+	start_menu_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(start_menu_panel, "start_requested", Callable(self, "_on_start_menu_start_requested"))
+	_connect_once(start_menu_panel, "settings_requested", Callable(self, "_on_start_menu_settings_requested"))
+	_connect_once(start_menu_panel, "exit_requested", Callable(self, "_on_start_menu_exit_requested"))
+
+
+func _ensure_settings_panel() -> void:
+	if _is_node_ready(settings_panel):
+		return
+	settings_panel = _instantiate_ui_panel(SETTINGS_PANEL_SCENE_PATH, "SettingsPanel") as SettingsPanel
+	if settings_panel == null:
+		return
+	settings_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(settings_panel, "back_requested", Callable(self, "_on_settings_back_requested"))
+
+
+func _ensure_home_panel() -> void:
+	if _is_node_ready(home_panel):
+		return
+	home_panel = _instantiate_ui_panel(HOME_PANEL_SCENE_PATH, "HomePanel") as HomePanel
+	if home_panel == null:
+		return
+	home_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(home_panel, "start_requested", Callable(self, "_on_home_start_requested"))
+	_connect_once(home_panel, "character_upgrade_requested", Callable(self, "_on_home_character_upgrade_requested"))
+
+
+func _ensure_hud() -> void:
+	if _is_node_ready(hud):
+		return
+	hud = _instantiate_ui_panel(HUD_SCENE_PATH, "HUD") as HUD
+	if hud == null:
+		return
+	hud.process_mode = Node.PROCESS_MODE_ALWAYS
+	_connect_once(hud, "mobile_move_changed", Callable(self, "_on_mobile_move_changed"))
+	_connect_once(hud, "mobile_skill_pressed", Callable(self, "_on_mobile_skill_pressed"))
+	_connect_once(hud, "pause_resume_requested", Callable(self, "_on_pause_resume_requested"))
+	_connect_once(hud, "pause_settings_requested", Callable(self, "_on_pause_settings_requested"))
+	_connect_once(hud, "pause_main_menu_requested", Callable(self, "_on_pause_main_menu_requested"))
+	hud.set_pause_state(false)
+
+
+func _ensure_character_select_panel() -> void:
+	if _is_node_ready(character_select_panel):
+		return
+	character_select_panel = _instantiate_ui_panel(CHARACTER_SELECT_PANEL_SCENE_PATH, "CharacterSelectPanel") as CharacterSelectPanel
+	if character_select_panel == null:
+		return
+	character_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(character_select_panel, "character_selected", Callable(self, "_on_character_selected"))
+
+
+func _ensure_branch_select_panel() -> void:
+	if _is_node_ready(branch_select_panel):
+		return
+	branch_select_panel = _instantiate_ui_panel(BRANCH_SELECT_PANEL_SCENE_PATH, "BranchSelectPanel") as BranchSelectPanel
+	if branch_select_panel == null:
+		return
+	branch_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(branch_select_panel, "branch_selected", Callable(self, "_on_branch_selected"))
+
+
+func _ensure_level_up_panel() -> void:
+	if _is_node_ready(level_up_panel):
+		return
+	level_up_panel = _instantiate_ui_panel(LEVEL_UP_PANEL_SCENE_PATH, "LevelUpPanel") as LevelUpPanel
+	if level_up_panel == null:
+		return
+	level_up_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(level_up_panel, "option_selected", Callable(self, "_on_upgrade_selected"))
+
+
+func _ensure_result_panel() -> void:
+	if _is_node_ready(result_panel):
+		return
+	result_panel = _instantiate_ui_panel(RESULT_PANEL_SCENE_PATH, "ResultPanel") as ResultPanel
+	if result_panel == null:
+		return
+	result_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(result_panel, "restart_requested", Callable(self, "_restart_run"))
+	_connect_once(result_panel, "meta_upgrade_requested", Callable(self, "_on_meta_upgrade_requested"))
+
+
+func _ensure_special_card_panel() -> void:
+	if _is_node_ready(special_card_panel):
+		return
+	special_card_panel = _instantiate_ui_panel(SPECIAL_CARD_PANEL_SCENE_PATH, "SpecialCardPanel") as SpecialCardPanel
+	if special_card_panel == null:
+		return
+	special_card_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(special_card_panel, "card_selected", Callable(self, "_on_special_card_selected"))
+
+
+func _ensure_wendao_bei_panel() -> void:
+	if _is_node_ready(wendao_bei_panel):
+		return
+	wendao_bei_panel = _instantiate_ui_panel(WENDAO_BEI_PANEL_SCENE_PATH, "WendaoBeiPanel") as WendaoBeiPanel
+	if wendao_bei_panel == null:
+		return
+	wendao_bei_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+	_connect_once(wendao_bei_panel, "back_requested", Callable(self, "_on_wendao_bei_back_requested"))
 
 
 func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
+	if arena == null or player == null:
+		return
 	if arena.has_method("set_map_id"):
 		arena.set_map_id(target_map_id)
 	if arena.has_method("is_enemy_spawning_enabled"):
@@ -333,13 +501,15 @@ func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
 
 
 func _configure_exploration_hud() -> void:
+	if hud == null:
+		return
 	if hud.has_method("set_timer_target_enabled"):
 		hud.set_timer_target_enabled(false)
 	var config: Dictionary = {
 		"stage": "雪山古道",
 		"objective": "目标：探索雪山古道"
 	}
-	if arena.has_method("get_exploration_hud_config"):
+	if arena != null and arena.has_method("get_exploration_hud_config"):
 		config = Dictionary(arena.call("get_exploration_hud_config"))
 	hud.set_stage_text(1, String(config.get("stage", "雪山古道")))
 	hud.set_objective_text(String(config.get("objective", "目标：探索雪山古道")))
@@ -347,36 +517,42 @@ func _configure_exploration_hud() -> void:
 
 
 func _present_start_menu() -> void:
+	_ensure_start_menu_panel()
 	start_menu_active = true
 	settings_active = false
 	settings_return_to_pause = false
 	home_active = false
 	lobby_active = false
-	hud.visible = false
+	if hud != null:
+		hud.visible = false
 	_sync_mobile_controls()
-	player.set_world_health_visible(false)
-	player.set_forced_weapon_visual_hidden(true)
+	if player != null:
+		player.set_world_health_visible(false)
+		player.set_forced_weapon_visual_hidden(true)
 	_set_lobby_presentation(false)
 	_set_modal_pause(true)
-	home_panel.hide_panel()
-	settings_panel.hide_panel()
-	start_menu_panel.present(GAME_TITLE)
+	_hide_panel_if_ready(home_panel)
+	_hide_panel_if_ready(settings_panel)
+	if start_menu_panel != null:
+		start_menu_panel.present(GAME_TITLE)
 
 
 func _on_start_menu_start_requested() -> void:
 	start_menu_active = false
 	settings_active = false
 	settings_return_to_pause = false
-	start_menu_panel.hide_panel()
-	settings_panel.hide_panel()
+	_hide_panel_if_ready(start_menu_panel)
+	_hide_panel_if_ready(settings_panel)
 	_present_lobby()
 
 
 func _on_start_menu_settings_requested() -> void:
+	_ensure_settings_panel()
 	settings_active = true
 	settings_return_to_pause = false
-	start_menu_panel.hide_panel()
-	settings_panel.present()
+	_hide_panel_if_ready(start_menu_panel)
+	if settings_panel != null:
+		settings_panel.present()
 
 
 func _on_start_menu_exit_requested() -> void:
@@ -385,19 +561,25 @@ func _on_start_menu_exit_requested() -> void:
 
 func _on_settings_back_requested() -> void:
 	settings_active = false
-	settings_panel.hide_panel()
+	_hide_panel_if_ready(settings_panel)
 	if settings_return_to_pause and manual_pause and not run_finished:
 		settings_return_to_pause = false
-		hud.visible = true
-		hud.set_pause_state(true, _pause_detail_title(), _pause_detail_lines(), _pause_build_summary())
+		_ensure_hud()
+		if hud != null:
+			hud.visible = true
+			hud.set_pause_state(true, _pause_detail_title(), _pause_detail_lines(), _pause_build_summary())
 		_sync_mobile_controls()
 		return
 	settings_return_to_pause = false
 	if start_menu_active:
-		start_menu_panel.present(GAME_TITLE)
+		_ensure_start_menu_panel()
+		if start_menu_panel != null:
+			start_menu_panel.present(GAME_TITLE)
 
 
 func _present_lobby() -> void:
+	_ensure_world_runtime()
+	_ensure_hud()
 	start_menu_active = false
 	settings_active = false
 	settings_return_to_pause = false
@@ -406,57 +588,68 @@ func _present_lobby() -> void:
 	character_selection_active = false
 	branch_selection_active = false
 	wendao_bei_active = false
-	hud.visible = false
-	player.set_world_health_visible(false)
-	player.set_forced_weapon_visual_hidden(true)
+	if hud != null:
+		hud.visible = false
+	if player != null:
+		player.set_world_health_visible(false)
+		player.set_forced_weapon_visual_hidden(true)
 	_configure_current_map(LOBBY_MAP_ID)
 	_set_lobby_presentation(true)
 	_set_modal_pause(false)
-	start_menu_panel.hide_panel()
-	settings_panel.hide_panel()
-	home_panel.hide_panel()
-	character_select_panel.hide_panel()
-	branch_select_panel.hide_panel()
-	wendao_bei_panel.hide_panel()
+	_hide_panel_if_ready(start_menu_panel)
+	_hide_panel_if_ready(settings_panel)
+	_hide_panel_if_ready(home_panel)
+	_hide_panel_if_ready(character_select_panel)
+	_hide_panel_if_ready(branch_select_panel)
+	_hide_panel_if_ready(wendao_bei_panel)
 	_sync_mobile_controls()
 
 
 func _present_wendao_bei() -> void:
+	_ensure_wendao_bei_panel()
 	wendao_bei_active = true
 	_sync_mobile_controls()
-	player.set_world_health_visible(false)
+	if player != null:
+		player.set_world_health_visible(false)
 	_set_modal_pause(true)
-	wendao_bei_panel.present()
+	if wendao_bei_panel != null:
+		wendao_bei_panel.present()
 
 
 func _on_wendao_bei_back_requested() -> void:
 	if not wendao_bei_active:
 		return
 	wendao_bei_active = false
-	wendao_bei_panel.hide_panel()
+	_hide_panel_if_ready(wendao_bei_panel)
 	_set_modal_pause(false)
 	_sync_mobile_controls()
 
 
 func _present_home() -> void:
+	_ensure_home_panel()
+	_ensure_hud()
 	start_menu_active = false
 	settings_active = false
 	settings_return_to_pause = false
 	home_active = true
-	hud.visible = false
+	if hud != null:
+		hud.visible = false
 	_sync_mobile_controls()
-	player.set_world_health_visible(false)
-	player.set_forced_weapon_visual_hidden(true)
-	hud.set_objective_text("目标：准备进入青墟")
+	if player != null:
+		player.set_world_health_visible(false)
+		player.set_forced_weapon_visual_hidden(true)
+	if hud != null:
+		hud.set_objective_text("目标：准备进入青墟")
 	_set_modal_pause(true)
-	start_menu_panel.hide_panel()
-	settings_panel.hide_panel()
-	home_panel.present(CHARACTER_CATALOG.get_character_definitions(), meta_progression, GAME_TITLE)
+	_hide_panel_if_ready(start_menu_panel)
+	_hide_panel_if_ready(settings_panel)
+	if home_panel != null:
+		home_panel.present(CHARACTER_CATALOG.get_character_definitions(), meta_progression, GAME_TITLE)
 
 
 func _on_home_start_requested() -> void:
 	home_active = false
-	home_panel.hide_panel()
+	_hide_panel_if_ready(home_panel)
 	_start_default_run()
 
 
@@ -470,6 +663,12 @@ func _on_home_character_upgrade_requested(character_id: String, upgrade_id: Stri
 
 
 func _start_default_run() -> void:
+	_ensure_world_runtime()
+	_ensure_hud()
+	if player == null or hud == null:
+		push_warning("Cannot start run: world runtime is not ready.")
+		return
+
 	var character_options := CHARACTER_CATALOG.get_character_definitions()
 	var branch_options := BRANCH_CATALOG.get_branch_definitions()
 	if character_options.is_empty() or branch_options.is_empty():
@@ -496,9 +695,9 @@ func _start_default_run() -> void:
 	lobby_active = false
 	character_selection_active = false
 	branch_selection_active = false
-	home_panel.hide_panel()
-	character_select_panel.hide_panel()
-	branch_select_panel.hide_panel()
+	_hide_panel_if_ready(home_panel)
+	_hide_panel_if_ready(character_select_panel)
+	_hide_panel_if_ready(branch_select_panel)
 	_set_lobby_presentation(false)
 	_configure_current_map(ACTIVE_MAP_ID)
 	_set_modal_pause(false)
@@ -515,6 +714,11 @@ func _start_default_run() -> void:
 
 
 func _present_character_selection() -> void:
+	_ensure_world_runtime()
+	_ensure_hud()
+	_ensure_character_select_panel()
+	if player == null or hud == null or character_select_panel == null:
+		return
 	current_character_options = CHARACTER_CATALOG.get_character_definitions()
 	character_selection_active = true
 	_sync_mobile_controls()
@@ -539,7 +743,7 @@ func _on_character_selected(index: int) -> void:
 	player.sync_upgrade_levels(upgrade_levels)
 	current_character_options.clear()
 	character_selection_active = false
-	character_select_panel.hide_panel()
+	_hide_panel_if_ready(character_select_panel)
 	_sync_mobile_controls()
 	hud.set_build_text(_compose_build_summary())
 	_refresh_hud()
@@ -548,6 +752,11 @@ func _on_character_selected(index: int) -> void:
 
 
 func _present_branch_selection() -> void:
+	_ensure_world_runtime()
+	_ensure_hud()
+	_ensure_branch_select_panel()
+	if player == null or hud == null or branch_select_panel == null:
+		return
 	current_branch_options = BRANCH_CATALOG.get_branch_definitions()
 	branch_selection_active = true
 	hud.visible = false
@@ -567,7 +776,7 @@ func _on_branch_selected(index: int) -> void:
 	player.sync_upgrade_levels(upgrade_levels)
 	current_branch_options.clear()
 	branch_selection_active = false
-	branch_select_panel.hide_panel()
+	_hide_panel_if_ready(branch_select_panel)
 	lobby_active = false
 	_set_lobby_presentation(false)
 	_configure_current_map(ACTIVE_MAP_ID)
@@ -904,9 +1113,12 @@ func _on_experience_collected(amount: int) -> void:
 
 
 func _present_level_up() -> void:
+	_ensure_level_up_panel()
 	current_upgrade_options = _pick_upgrade_options(3)
 	if current_upgrade_options.is_empty():
 		pending_level_ups = 0
+		return
+	if level_up_panel == null:
 		return
 
 	level_up_active = true
@@ -1001,7 +1213,7 @@ func _on_upgrade_selected(index: int) -> void:
 	hud.set_build_text(_compose_build_summary())
 	_refresh_hud()
 	pending_level_ups = maxi(pending_level_ups - 1, 0)
-	level_up_panel.hide_panel()
+	_hide_panel_if_ready(level_up_panel)
 
 	if pending_level_ups > 0:
 		current_upgrade_options.clear()
@@ -1029,18 +1241,20 @@ func _finish_run(victory: bool) -> void:
 	wendao_bei_active = false
 	level_up_active = false
 	special_card_active = false
-	start_menu_panel.hide_panel()
-	settings_panel.hide_panel()
-	home_panel.hide_panel()
-	character_select_panel.hide_panel()
-	branch_select_panel.hide_panel()
-	wendao_bei_panel.hide_panel()
-	level_up_panel.hide_panel()
-	special_card_panel.hide_panel()
-	hud.set_pause_state(false)
-	hud.hide_boss()
+	_hide_panel_if_ready(start_menu_panel)
+	_hide_panel_if_ready(settings_panel)
+	_hide_panel_if_ready(home_panel)
+	_hide_panel_if_ready(character_select_panel)
+	_hide_panel_if_ready(branch_select_panel)
+	_hide_panel_if_ready(wendao_bei_panel)
+	_hide_panel_if_ready(level_up_panel)
+	_hide_panel_if_ready(special_card_panel)
+	if hud != null:
+		hud.set_pause_state(false)
+		hud.hide_boss()
 	_sync_mobile_controls()
-	player.set_world_health_visible(false)
+	if player != null:
+		player.set_world_health_visible(false)
 	get_tree().paused = true
 
 	shard_gain_this_run = _calculate_shard_gain(victory)
@@ -1086,6 +1300,9 @@ func _build_run_record(victory: bool) -> Dictionary:
 
 
 func _refresh_result_panel(title: String, summary: String) -> void:
+	_ensure_result_panel()
+	if result_panel == null:
+		return
 	result_panel.show_result(
 		title,
 		summary,
@@ -1115,12 +1332,16 @@ func _on_meta_upgrade_requested(upgrade_id: String) -> void:
 	if not meta_progression.purchase(upgrade_id):
 		return
 	audio_manager.play_sfx("level_up", 0.9, -4.0)
-	_refresh_result_panel(result_panel.title_label.text, result_panel.summary_label.text)
+	if result_panel != null:
+		_refresh_result_panel(result_panel.title_label.text, result_panel.summary_label.text)
 
 
 func _toggle_manual_pause() -> void:
 	if manual_pause:
 		_resume_manual_pause()
+		return
+	_ensure_hud()
+	if hud == null:
 		return
 	manual_pause_previous_hud_visible = hud.visible
 	manual_pause = true
@@ -1149,6 +1370,9 @@ func _resume_manual_pause() -> void:
 func _on_pause_settings_requested() -> void:
 	if not manual_pause or settings_active:
 		return
+	_ensure_settings_panel()
+	if settings_panel == null:
+		return
 	settings_active = true
 	settings_return_to_pause = true
 	hud.set_pause_state(false)
@@ -1170,7 +1394,7 @@ func _restart_run() -> void:
 	get_tree().reload_current_scene()
 
 
-func _configure_process_modes() -> void:
+func _configure_world_process_modes() -> void:
 	var gameplay_nodes: Array[Node] = [
 		arena,
 		player,
@@ -1181,17 +1405,8 @@ func _configure_process_modes() -> void:
 		effects_layer
 	]
 	for node in gameplay_nodes:
-		node.process_mode = Node.PROCESS_MODE_PAUSABLE
-	start_menu_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	settings_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	home_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	character_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	branch_select_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	wendao_bei_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	level_up_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	result_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	special_card_panel.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
-	hud.process_mode = Node.PROCESS_MODE_ALWAYS
+		if node != null:
+			node.process_mode = Node.PROCESS_MODE_PAUSABLE
 
 
 func _set_lobby_presentation(active: bool) -> void:
@@ -1199,6 +1414,8 @@ func _set_lobby_presentation(active: bool) -> void:
 		lobby_camera.enabled = active
 		if active:
 			lobby_camera.make_current()
+	if player == null:
+		return
 	player.visible = not active
 	if player.has_method("set_movement_enabled"):
 		player.set_movement_enabled(not active)
@@ -1207,6 +1424,8 @@ func _set_lobby_presentation(active: bool) -> void:
 
 
 func _refresh_hud() -> void:
+	if hud == null or player == null:
+		return
 	hud.set_health(player.current_health, player.max_health)
 	hud.set_experience(current_experience, experience_to_next, level)
 	hud.set_elapsed_time(elapsed_time)
@@ -1244,7 +1463,8 @@ func _pause_detail_lines() -> Array[String]:
 			needed_experience
 		]
 	]
-	lines.append_array(player.get_pause_detail_lines())
+	if player != null:
+		lines.append_array(player.get_pause_detail_lines())
 	return lines
 
 
@@ -1266,7 +1486,9 @@ func _current_exploration_stage_name() -> String:
 
 
 func _compose_build_summary() -> String:
-	var summary: String = player.get_build_summary()
+	var summary := ""
+	if player != null:
+		summary = player.get_build_summary()
 	if not selected_special_cards.is_empty():
 		summary += " | 卡牌 " + " / ".join(selected_special_cards)
 	return summary
@@ -1404,8 +1626,11 @@ func _pick_card_spawn_position() -> Vector2:
 func _on_special_card_pickup(pickup: SpecialCardPickup) -> void:
 	if pickup != null and is_instance_valid(pickup):
 		pickup.queue_free()
+	_ensure_special_card_panel()
 	current_special_card_options = _pick_special_card_offers(3)
 	if current_special_card_options.is_empty():
+		return
+	if special_card_panel == null:
 		return
 	special_card_active = true
 	_sync_mobile_controls()
@@ -1479,12 +1704,14 @@ func _on_special_card_selected(index: int) -> void:
 	audio_manager.play_sfx("level_up", 0.94, -3.0)
 	current_special_card_options.clear()
 	special_card_active = false
-	special_card_panel.hide_panel()
+	_hide_panel_if_ready(special_card_panel)
 	_set_modal_pause(false)
 	_sync_mobile_controls()
 
 
 func _clear_special_card_pickups() -> void:
+	if cards_layer == null:
+		return
 	for child in cards_layer.get_children():
 		child.queue_free()
 

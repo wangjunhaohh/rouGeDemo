@@ -1,0 +1,26 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" uid="uid://bfsahnycqox6p" path="res://scripts/core/arena.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2"]
+
+[node name="WorldRuntime" type="Node2D"]
+
+[node name="Arena" type="Node2D" parent="."]
+script = ExtResource("1")
+map_id = "qingxu_lobby"
+
+[node name="LobbyCamera" type="Camera2D" parent="."]
+enabled = false
+zoom = Vector2(0.5, 0.5)
+
+[node name="Player" parent="." instance=ExtResource("2")]
+
+[node name="Enemies" type="Node2D" parent="."]
+
+[node name="Projectiles" type="Node2D" parent="."]
+
+[node name="Drops" type="Node2D" parent="."]
+
+[node name="Cards" type="Node2D" parent="."]
+
+[node name="Effects" type="Node2D" parent="."]
