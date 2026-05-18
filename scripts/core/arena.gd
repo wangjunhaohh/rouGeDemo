@@ -230,7 +230,9 @@ func set_map_id(next_map_id: String) -> void:
 
 
 func is_enemy_spawning_enabled() -> bool:
-	return map_id != MAP_ID_QINGXU_LOBBY and map_id != MAP_ID_SNOW_MOUNTAIN
+	return map_id != MAP_ID_QINGXU_LOBBY \
+		and map_id != MAP_ID_SNOW_MOUNTAIN \
+		and map_id != MAP_ID_GRASS_FIELD
 
 
 func get_player_start_position() -> Vector2:
@@ -277,6 +279,11 @@ func get_exploration_hud_config() -> Dictionary:
 		return {
 			"stage": "青墟大厅",
 			"objective": "目标：探索青墟大厅"
+		}
+	if map_id == MAP_ID_GRASS_FIELD:
+		return {
+			"stage": "草地场景",
+			"objective": "目标 调整场景"
 		}
 	return {
 		"stage": "雪山古道",

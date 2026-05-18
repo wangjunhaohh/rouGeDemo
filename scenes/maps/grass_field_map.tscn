@@ -1,8 +1,19 @@
 [gd_scene format=3 uid="uid://p8ctg5jx4iqw"]
 
 [ext_resource type="Texture2D" uid="uid://bdv4h84512bjc" path="res://art/backgrounds/grass_field_map.png" id="1"]
-[ext_resource type="PackedScene" uid="uid://cnswudplxiq2u" path="res://scenes/maps/grass_tree.tscn" id="2"]
-[ext_resource type="PackedScene" uid="uid://vkk14b347idv" path="res://scenes/maps/zhuting.tscn" id="3_fjkrm"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-022.tscn" id="2_osemr"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-023.tscn" id="3_6qdmd"]
+[ext_resource type="PackedScene" uid="uid://lhws1lrn3qq1" path="res://scenes/maps/assets/sprite-027.tscn" id="4_6halx"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-028.tscn" id="5_6halx"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-107.tscn" id="6_t1211"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-094.tscn" id="7_ip302"]
+[ext_resource type="PackedScene" uid="uid://dw0ikahm8ln0g" path="res://scenes/maps/assets/sprite-062.tscn" id="8_iybwh"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-061.tscn" id="9_uclew"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-059.tscn" id="10_gnwh7"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-057.tscn" id="11_kmmbu"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-056.tscn" id="12_rik0l"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-055.tscn" id="13_t44ik"]
+[ext_resource type="PackedScene" path="res://scenes/maps/assets/sprite-054.tscn" id="14_gnwh7"]
 
 [node name="GrassFieldMap" type="Node2D" unique_id=248039656]
 
@@ -12,33 +23,119 @@ z_as_relative = false
 scale = Vector2(1.31868, 1.02564)
 texture = ExtResource("1")
 
-[node name="TreeNorthWest" parent="." unique_id=1382980815 instance=ExtResource("2")]
-position = Vector2(-735, -290)
-scale = Vector2(0.43, 0.43)
+[node name="Sprite022" parent="." unique_id=1595771465 instance=ExtResource("2_osemr")]
+position = Vector2(-553, -173)
 
-[node name="TreeNorthEast" parent="." unique_id=1339601111 instance=ExtResource("2")]
-position = Vector2(735, -290)
-scale = Vector2(0.43, 0.43)
+[node name="Sprite023" parent="." unique_id=525274063 instance=ExtResource("2_osemr")]
+position = Vector2(-612, -155)
 
-[node name="TreeNorthCenter" parent="." unique_id=155464577 instance=ExtResource("2")]
-position = Vector2(0, -430)
-scale = Vector2(0.36, 0.36)
+[node name="Sprite024" parent="." unique_id=265666554 instance=ExtResource("3_6qdmd")]
+position = Vector2(101, -183)
 
-[node name="TreeMidLeft" parent="." unique_id=1125594757 instance=ExtResource("2")]
-position = Vector2(-385, 145)
-scale = Vector2(0.34, 0.34)
+[node name="Sprite027" parent="." unique_id=771788384 instance=ExtResource("4_6halx")]
+position = Vector2(-196, 133)
 
-[node name="TreeMidRight" parent="." unique_id=966605787 instance=ExtResource("2")]
-position = Vector2(405, 120)
-scale = Vector2(0.33, 0.33)
+[node name="Sprite028" parent="." unique_id=399377913 instance=ExtResource("4_6halx")]
+position = Vector2(-103, 151)
 
-[node name="TreeSouthWest" parent="." unique_id=1540359507 instance=ExtResource("2")]
-position = Vector2(-770, 430)
-scale = Vector2(0.46, 0.46)
+[node name="Sprite029" parent="." unique_id=422280185 instance=ExtResource("4_6halx")]
+position = Vector2(-18, 167)
 
-[node name="TreeSouthEast" parent="." unique_id=592141572 instance=ExtResource("2")]
-position = Vector2(760, 425)
-scale = Vector2(0.47, 0.47)
+[node name="Sprite030" parent="." unique_id=1595750215 instance=ExtResource("4_6halx")]
+position = Vector2(-184, 82)
 
-[node name="GrassTree" parent="." unique_id=1701323620 instance=ExtResource("3_fjkrm")]
-position = Vector2(0, -94)
+[node name="Sprite031" parent="." unique_id=1016431491 instance=ExtResource("4_6halx")]
+position = Vector2(-174, 35)
+
+[node name="Sprite032" parent="." unique_id=1360888042 instance=ExtResource("4_6halx")]
+position = Vector2(-269, 132)
+
+[node name="Sprite033" parent="." unique_id=1532563192 instance=ExtResource("4_6halx")]
+position = Vector2(64, 183)
+
+[node name="Sprite034" parent="." unique_id=1906371904 instance=ExtResource("4_6halx")]
+position = Vector2(-165, -8)
+
+[node name="Sprite035" parent="." unique_id=1264024152 instance=ExtResource("5_6halx")]
+position = Vector2(325, -94)
+
+[node name="Sprite036" parent="." unique_id=1316194465 instance=ExtResource("5_6halx")]
+position = Vector2(410, -91)
+
+[node name="Sprite037" parent="." unique_id=434945779 instance=ExtResource("5_6halx")]
+position = Vector2(324, -119)
+
+[node name="Sprite038" parent="." unique_id=1726088608 instance=ExtResource("5_6halx")]
+position = Vector2(404, -115)
+
+[node name="Sprite025" parent="." unique_id=613409308 instance=ExtResource("3_6qdmd")]
+position = Vector2(101, -183)
+
+[node name="Sprite026" parent="." unique_id=1987474483 instance=ExtResource("3_6qdmd")]
+position = Vector2(101, -183)
+
+[node name="Sprite039" parent="." unique_id=1834552462 instance=ExtResource("3_6qdmd")]
+position = Vector2(101, -183)
+
+[node name="Sprite040" parent="." unique_id=1587141310 instance=ExtResource("3_6qdmd")]
+position = Vector2(101, -183)
+
+[node name="Sprite041" parent="." unique_id=966761235 instance=ExtResource("3_6qdmd")]
+position = Vector2(101, -183)
+
+[node name="Sprite042" parent="." unique_id=1160808814 instance=ExtResource("3_6qdmd")]
+position = Vector2(-95, 66)
+
+[node name="Sprite043" parent="." unique_id=753034415 instance=ExtResource("4_6halx")]
+position = Vector2(-142, -100)
+
+[node name="Sprite044" parent="." unique_id=1503827766 instance=ExtResource("4_6halx")]
+position = Vector2(-155, -53)
+
+[node name="Sprite107" parent="." unique_id=403172419 instance=ExtResource("6_t1211")]
+position = Vector2(-193, 139)
+
+[node name="Sprite108" parent="." unique_id=1469416508 instance=ExtResource("6_t1211")]
+position = Vector2(-276, 139)
+
+[node name="Sprite109" parent="." unique_id=963385504 instance=ExtResource("6_t1211")]
+position = Vector2(-115, 144)
+
+[node name="Sprite110" parent="." unique_id=83278296 instance=ExtResource("6_t1211")]
+position = Vector2(-40, 155)
+
+[node name="Sprite111" parent="." unique_id=443077117 instance=ExtResource("6_t1211")]
+position = Vector2(40, 176)
+
+[node name="Sprite094" parent="." unique_id=58977833 instance=ExtResource("7_ip302")]
+position = Vector2(-76, -60)
+
+[node name="Sprite062" parent="." unique_id=1446832023 instance=ExtResource("8_iybwh")]
+position = Vector2(-529, -97)
+
+[node name="Sprite061" parent="." unique_id=1184919527 instance=ExtResource("9_uclew")]
+position = Vector2(-133, -163)
+
+[node name="Sprite059" parent="." unique_id=529351783 instance=ExtResource("10_gnwh7")]
+position = Vector2(209, 160)
+
+[node name="Sprite045" parent="." unique_id=1735869346 instance=ExtResource("4_6halx")]
+position = Vector2(146, 184)
+
+[node name="Sprite057" parent="." unique_id=1870889940 instance=ExtResource("11_kmmbu")]
+position = Vector2(-331, 107)
+
+[node name="Sprite056" parent="." unique_id=795005005 instance=ExtResource("12_rik0l")]
+position = Vector2(-390, -402)
+
+[node name="Sprite058" parent="." unique_id=588647131 instance=ExtResource("12_rik0l")]
+position = Vector2(-461, -171)
+
+[node name="Sprite055" parent="." unique_id=403808353 instance=ExtResource("13_t44ik")]
+position = Vector2(-407, -146)
+
+[node name="Sprite060" parent="." unique_id=1843850028 instance=ExtResource("13_t44ik")]
+position = Vector2(-425, -113)
+
+[node name="Sprite054" parent="." unique_id=1417850514 instance=ExtResource("14_gnwh7")]
+position = Vector2(-504, -196)

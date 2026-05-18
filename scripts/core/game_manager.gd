@@ -487,6 +487,8 @@ func _configure_current_map(target_map_id: String = ACTIVE_MAP_ID) -> void:
 		arena.set_map_id(target_map_id)
 	if arena.has_method("is_enemy_spawning_enabled"):
 		enemy_spawns_enabled = bool(arena.call("is_enemy_spawning_enabled"))
+	if not enemy_spawns_enabled:
+		_clear_combat_entities()
 	if target_map_id == LOBBY_MAP_ID:
 		return
 	if arena.has_method("get_player_start_position"):
@@ -1714,6 +1716,21 @@ func _clear_special_card_pickups() -> void:
 		return
 	for child in cards_layer.get_children():
 		child.queue_free()
+
+
+func _clear_combat_entities() -> void:
+	var layers: Array[Node2D] = [
+		enemies_layer,
+		projectiles_layer,
+		drops_layer,
+		cards_layer,
+		effects_layer
+	]
+	for layer in layers:
+		if layer == null:
+			continue
+		for child in layer.get_children():
+			child.queue_free()
 
 
 func _spawn_boss_support_wave(phase: int, origin: Vector2) -> void:

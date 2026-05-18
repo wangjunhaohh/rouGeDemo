@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3 uid="uid://lhws1lrn3qq1"]
+
+[ext_resource type="Texture2D" uid="uid://bs1ivhr7pesx1" path="res://art/asset/sprite-027.png" id="2"]
+
+[node name="Sprite027" type="Node2D" unique_id=422280185]
+
+[node name="Visual" type="Sprite2D" parent="." unique_id=1608944560]
+z_index = -4095
+z_as_relative = false
+position = Vector2(0, -38)
+texture = ExtResource("2")
